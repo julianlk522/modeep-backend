@@ -14,19 +14,14 @@ exec >> "$LOG_FILE" 2>&1
 # "2>&1" redirects stderr (file descriptor 2) to stdout (1)
 
 # pull changes
-if [ -z "$FITM_ROOT_PATH" ]; then
-    log "error: FITM_ROOT_PATH is not set"
+if [ -z "$FITM_BACKEND_ROOT" ]; then
+    log "error: FITM_BACKEND_ROOT is not set"
     exit 1
 fi
-cd "$FITM_ROOT_PATH" || { log "error: could not navigate to $FITM_ROOT_PATH"; exit 1; }
+cd "$FITM_BACKEND_ROOT" || { log "error: could not navigate to $FITM_BACKEND_ROOT"; exit 1; }
 git pull
 
 # update dependencies, rebuild
-if [ ! -d "backend" ]; then
-    log "error: 'backend' directory not found"
-    exit 1
-fi
-cd backend
 go mod tidy
 go build --tags 'fts5' .
 log "build complete"
@@ -67,7 +62,7 @@ if ! tmux has-session -t FITM 2>/dev/null; then
 fi
 
 # start new binary in tmux session
-tmux send-keys -t FITM "cd $FITM_ROOT_PATH/backend && ./fitm" ENTER
+tmux send-keys -t FITM "cd $FITM_BACKEND_ROOT && ./fitm" ENTER
 
 # detach
 tmux detach -s FITM

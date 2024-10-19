@@ -1,0 +1,39 @@
+name: FITM backend
+run-name: FITM backend tests
+on:
+    push:
+        branches: [main]
+
+    workflow_dispatch: # Run manually from Actions tab
+
+jobs:
+    fitm-backend-tests:
+        runs-on: self-hosted
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Build Docker image
+              run: |
+                  docker build -t fitm-backend-test -f .github/workflows/Dockerfile .
+
+            - name: Run tests in Docker
+              env:
+                  FITM_TEST_DATA_PATH: ${{ secrets.FITM_TEST_DATA_PATH }}
+                  FITM_JWT_SECRET: ${{ secrets.FITM_JWT_SECRET }}
+              # docker run --rm: remove container after running
+              # docker run -v: mount volume
+              # docker run -e: set environment variable
+              run: |
+                  echo "mounting ${{ github.workspace }} to /backend"
+                  docker run --rm \
+                    -v ${{ github.workspace }}:/backend \
+                    -v ${{ env.FITM_TEST_DATA_PATH }}:/test_data \
+                    -e FITM_TEST_DATA_PATH=/test_data \
+                    -e FITM_ERR_LOG_FILE=/test_data/err.log \
+                    -e FITM_JWT_SECRET=${{ env.FITM_JWT_SECRET }} \
+                    fitm-backend-test:latest
+
+            - name: Clean up
+              if: always() # run even if previous steps fail
+              run: docker rmi fitm-backend-test # docker rmi = docker image rm
