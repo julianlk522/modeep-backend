@@ -1,1 +1,0 @@
-pscp <Source_File> pi@<192.168.1.44:<Destination_Directory>
