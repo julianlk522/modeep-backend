@@ -1,0 +1,169 @@
+// Create
+// gcfts: link_id, global_cats, 
+CREATE VIRTUAL TABLE global_cats_fts
+USING FTS5(link_id, global_cats);
+
+INSERT INTO global_cats_fts(link_id, global_cats)
+SELECT id, global_cats
+FROM Links;
+
+CREATE TRIGGER global_cats_fts_ai AFTER INSERT ON Links BEGIN INSERT INTO global_cats_fts(link_id, global_cats) VALUES (new.id, new.global_cats); END
+
+CREATE TRIGGER global_cats_fts_au AFTER UPDATE ON Links BEGIN UPDATE global_cats_fts SET global_cats = new.global_cats WHERE link_id = new.id; END
+
+CREATE TRIGGER global_cats_fts_ad AFTER DELETE ON Links BEGIN DELETE FROM global_cats_fts WHERE link_id = old.id; END
+
+// ucfts: link_id, cats, submitted_by
+CREATE VIRTUAL TABLE user_cats_fts
+USING FTS5(link_id, cats, submitted_by);
+
+INSERT INTO user_cats_fts(link_id, cats, submitted_by)
+SELECT link_id, cats, submitted_by
+FROM Tags;
+
+CREATE TRIGGER user_cats_fts_ai AFTER INSERT ON Tags BEGIN INSERT INTO user_cats_fts(link_id, cats, submitted_by) VALUES (new.link_id, new.cats, new.submitted_by); END
+
+CREATE TRIGGER user_cats_fts_au AFTER UPDATE ON Tags BEGIN UPDATE user_cats_fts SET cats = new.cats WHERE link_id = new.link_id; END
+
+CREATE TRIGGER user_cats_fts_ad AFTER DELETE ON Tags BEGIN DELETE FROM user_cats_fts WHERE link_id = old.link_id; END
+
+## go run --tags 'fts5' .
+
+
+
+
+
+// Queries
+// all links having global_cats like "flowers" in last 4 months:
+// (g_fts needs link_id, global_cats)
+// (NOT submit_date)
+SELECT id, submitted_by
+FROM Links as l
+JOIN (
+	SELECT link_id
+	FROM global_cats_fts
+	WHERE global_cats MATCH 'flowers'
+) as g
+ON l.id = g.link_id
+WHERE julianday('now') - julianday(submit_date) > 120;
+
+// All links, all fields: ~5-10ms
+// All links, all fields, with 2 cats (old way): ~4-8ms
+// All links, all fields, 2 cats (new way): ~4-5ms
+
+
+
+// top contributors with cat 'flowers'
+SELECT submitted_by, count(submitted_by) as count
+FROM global_cats_fts as g
+WHERE g.global_cats MATCH 'flowers'
+GROUP BY submitted_by
+ORDER BY count DESC, submitted_by ASC;
+
+// top contributors with cat 'flowers' in last 4 months:
+// (g_fts still only needs link_id, submitted_by, global_cats)
+SELECT l.submitted_by, g.count
+FROM Links l
+JOIN (
+	SELECT link_id, count(submitted_by) as count
+	FROM global_cats_fts
+	WHERE global_cats MATCH 'flowers'
+	GROUP BY submitted_by
+) g ON g.link_id = l.id
+WHERE julianday('now') - julianday(l.submit_date) > 120
+GROUP BY submitted_by
+ORDER BY count DESC, submitted_by ASC;
+
+
+
+// nelson tmap submitted with cat filter "jungle"
+// (u_fts needs link_id, submitted_bym cats)
+SELECT 
+	l.id, 
+	l.url,
+	l.submitted_by, 
+	l.submit_date,
+	COALESCE(t.cats,l.global_cats) as cats,
+	0 as cats_from_user,
+	COALESCE(l.global_summary,'') as summary, 
+	COALESCE(summary_count,0) as summary_count, 
+	COALESCE(like_count,0) as like_count, 
+	COALESCE(tag_count,0) as tag_count, 
+	COALESCE(l.img_url,'') as img_url
+FROM Links l
+JOIN (
+	SELECT link_id, cats
+	FROM Tags
+	WHERE submitted_by = 'nelson'
+) t ON t.link_id = id
+LEFT JOIN
+	(
+	SELECT count(*) as summary_count, link_id
+	FROM Summaries
+	GROUP BY link_id
+	) s ON s.link_id = id
+LEFT JOIN
+	(
+	SELECT count(*) as like_count, link_id
+	FROM "Link Likes"
+	GROUP BY link_id
+	) ll ON ll.link_id = id
+LEFT JOIN
+	(
+	SELECT count(*) as tag_count, link_id
+	FROM Tags
+	GROUP BY link_id
+	) t2 ON t2.link_id = id
+WHERE l.id IN (
+	SELECT link_id
+	FROM user_cats_fts
+	WHERE submitted_by = 'nelson'
+	AND cats MATCH 'jungle'
+) AND l.submitted_by = 'nelson';
+
+
+
+
+// Claude suggested get links format:
+WITH LinkLikes AS (
+    SELECT link_id, COUNT(*) AS like_count 
+    FROM 'Link Likes'
+    GROUP BY link_id
+),
+SummariesCount AS (
+    SELECT link_id, COUNT(*) AS summary_count
+    FROM Summaries
+    GROUP BY link_id
+),
+TagsCount AS (
+    SELECT link_id, COUNT(*) AS tag_count
+    FROM Tags
+    GROUP BY link_id
+),
+FilteredLinks AS (
+    SELECT link_id
+    FROM global_cats_fts
+    WHERE global_cats MATCH 'flowers'
+      AND global_cats MATCH 'umvc3'
+)
+SELECT 
+    l.id, 
+    l.url, 
+    l.submitted_by AS sb, 
+    l.submit_date AS sd, 
+    COALESCE(l.global_cats, '') AS cats, 
+    COALESCE(l.global_summary, '') AS summary, 
+    COALESCE(s.summary_count, 0) AS summary_count,
+    COALESCE(t.tag_count, 0) AS tag_count,
+    COALESCE(ll.like_count, 0) AS like_count, 
+    COALESCE(l.img_url, '') AS img_url
+FROM 
+    LINKS l
+LEFT JOIN LinkLikes ll ON l.id = ll.link_id
+LEFT JOIN SummariesCount s ON l.id = s.link_id
+LEFT JOIN TagsCount t ON l.id = t.link_id
+INNER JOIN FilteredLinks f ON l.id = f.link_id
+ORDER BY 
+    like_count DESC, 
+    summary_count DESC, 
+    l.id DESC;

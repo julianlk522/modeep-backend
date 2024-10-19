@@ -1,0 +1,10 @@
+backend/db/profile-pics
+backend/db/backup
+!backend/db/backup/backup_now.sh
+backend/db/fitm.db
+backend/db/fitm_test*
+backend/db/source
+backend/db/spellfix.dll
+_*
+.vscode/
+.prettierignore

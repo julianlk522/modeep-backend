@@ -1,0 +1,87 @@
+package error
+
+import (
+	"net/http"
+
+	"github.com/go-chi/render"
+)
+
+var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."}
+
+type ErrResponse struct {
+	Err            error `json:"-"`
+	HTTPStatusCode int   `json:"-"`
+	StatusText string `json:"status"`
+	ErrorText  string `json:"error,omitempty"`
+}
+
+func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, e.HTTPStatusCode)
+	return nil
+}
+
+// malformed JSON
+func ErrInvalidRequest(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 400,
+		StatusText:     "Invalid request.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrUnauthenticated(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 401,
+		StatusText:     "Unauthenticated.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrUnauthorized(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 403,
+		StatusText:     "Unauthorized.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func Err404(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 404,
+		StatusText:     "Resource not found.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrContentTooLarge(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 413,
+		StatusText:     "Content too large.",
+		ErrorText:      err.Error(),
+	}
+}
+
+// "syntactically valid but semantically invalid"
+// e.g., nonexistent ID provided
+func ErrUnprocessable(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 422,
+		StatusText:     "Error rendering response.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func Err500(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 500,
+		StatusText:     "Server failed to process request.",
+		ErrorText:      err.Error(),
+	}
+}
