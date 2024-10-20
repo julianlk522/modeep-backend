@@ -2,7 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"math"
 	"slices"
 	"strings"
 
@@ -258,10 +257,6 @@ func CalculateAndSetGlobalCats(link_id string) error {
 
 	for _, tag := range tag_rankings {
 
-		// square root lifespan overlap to smooth out scores
-		// (allows brand-new tags to still have some influence)
-		tag.LifeSpanOverlap = float32(math.Sqrt(float64(tag.LifeSpanOverlap)))
-
 		// multiple cats
 		if strings.Contains(tag.Cats, ",") {
 			cats := strings.Split(tag.Cats, ",")
@@ -273,7 +268,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 				}
 			}
 
-			// single category
+			// single cat
 		} else {
 			overlap_scores[tag.Cats] += tag.LifeSpanOverlap
 
