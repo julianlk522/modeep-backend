@@ -124,7 +124,7 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 				TMAP_BASE_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				SUBMITTED_WHERE +
-				TMAP_ORDER_BY,
+				TMAP_DEFAULT_ORDER_BY,
 			// login_name used in PossibleUserCats, PossibleUserSummary, where
 			Args: []interface{}{login_name, login_name, login_name},
 		},
@@ -175,6 +175,17 @@ func (q *TmapSubmitted) NSFW() *TmapSubmitted {
 	return q
 }
 
+func (q *TmapSubmitted) SortByNewest() *TmapSubmitted {
+	q.Text = strings.Replace(
+		q.Text,
+		TMAP_DEFAULT_ORDER_BY,
+		TMAP_ORDER_BY_NEWEST,
+		1,
+	)
+
+	return q
+}
+
 // Copied links submitted by other users (global cats replaced with user-assigned if user has tagged)
 type TmapCopied struct {
 	*Query
@@ -193,7 +204,7 @@ func NewTmapCopied(login_name string) *TmapCopied {
 				TMAP_BASE_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				COPIED_WHERE +
-				TMAP_ORDER_BY,
+				TMAP_DEFAULT_ORDER_BY,
 			// login_name used in UserCopies, PossibleUserCats, 
 			// PossibleUserSummary, where
 			Args: []interface{}{login_name, login_name, login_name, login_name},
@@ -248,6 +259,16 @@ func (q *TmapCopied) NSFW() *TmapCopied {
 	return q
 }
 
+func (q *TmapCopied) SortByNewest() *TmapCopied {
+	q.Text = strings.Replace(
+		q.Text,
+		TMAP_DEFAULT_ORDER_BY,
+		TMAP_ORDER_BY_NEWEST,
+		1,
+	)
+
+	return q
+}
 // Tagged links submitted by other users (global cats replaced with user-assigned)
 type TmapTagged struct {
 	*Query
@@ -265,7 +286,7 @@ func NewTmapTagged(login_name string) *TmapTagged {
 				TAGGED_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				TAGGED_WHERE +
-				TMAP_ORDER_BY,
+				TMAP_DEFAULT_ORDER_BY,
 			// login_name used in UserCats, PossibleUserSummary, UserCopies, where
 			Args: []interface{}{login_name, login_name, login_name, login_name},
 		},
@@ -315,8 +336,8 @@ func (q *TmapTagged) FromCats(cats []string) *TmapTagged {
 
 	q.Text = strings.Replace(
 		q.Text,
-		TMAP_ORDER_BY,
-		cat_clause+TMAP_ORDER_BY,
+		TMAP_DEFAULT_ORDER_BY,
+		cat_clause+TMAP_DEFAULT_ORDER_BY,
 		1,
 	)
 
@@ -361,6 +382,17 @@ func (q *TmapTagged) NSFW() *TmapTagged {
 		"WHERE submitted_by !=",
 		1,
 	)
+	return q
+}
+
+func (q *TmapTagged) SortByNewest() *TmapTagged {
+	q.Text = strings.Replace(
+		q.Text,
+		TMAP_DEFAULT_ORDER_BY,
+		TMAP_ORDER_BY_NEWEST,
+		1,
+	)
+
 	return q
 }
 
@@ -431,8 +463,8 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 )`
 	q.Text = strings.Replace(
 		q.Text,
-		TMAP_ORDER_BY,
-		and_clause+TMAP_ORDER_BY,
+		TMAP_DEFAULT_ORDER_BY,
+		and_clause+TMAP_DEFAULT_ORDER_BY,
 		1,
 	)
 
@@ -526,8 +558,11 @@ LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
 
 const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
 
-const TMAP_ORDER_BY = `
+const TMAP_DEFAULT_ORDER_BY = `
 ORDER BY lc.like_count DESC, sc.summary_count DESC, l.id DESC;`
+
+const TMAP_ORDER_BY_NEWEST = `
+ORDER BY l.submit_date DESC, lc.like_count DESC, sc.summary_count DESC, l.id DESC;`
 
 // Authenticated
 const TMAP_AUTH_CTES = `

@@ -97,6 +97,16 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 		return nil, e.ErrInvalidNSFWParams
 	}
 
+	// sort by
+	sort_params := r.URL.Query().Get("sort_by")
+	if sort_params == "newest" {
+		submitted_sql = submitted_sql.SortByNewest()
+		copied_sql = copied_sql.SortByNewest()
+		tagged_sql = tagged_sql.SortByNewest()
+	} else if sort_params != "rating" && sort_params != "" {
+		return nil, e.ErrInvalidSortByParams
+	}
+
 	// Scan
 	// links
 	submitted, err := ScanTmapLinks[T](submitted_sql.Query)
@@ -141,14 +151,14 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 
 	if has_cat_filter {
 		return model.FilteredTmap[T]{
-			TmapSections: sections,
+			TmapSections:   sections,
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 
 	} else {
 		return model.Tmap[T]{
-			Profile:      profile,
-			TmapSections: sections,
+			Profile:        profile,
+			TmapSections:   sections,
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 	}
