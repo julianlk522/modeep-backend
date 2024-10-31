@@ -104,7 +104,27 @@ type SplitLogEntry struct {
 func (l *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
 	l.LogEntry.Write(status, bytes, header, elapsed, extra)
 
-	if status > 299 {
+	// save GitHub webhook responses
+	if l.Request.URL.Path == "/ghwh" {
+		status_text := "Unknown"
+		if crw, ok := extra.(*CustomResponseWriter); ok {
+			status_text = crw.StatusText
+		}
+
+		l.Formatter.FileLogger.Printf(
+			"GitHub Webhook: %d %s %s %s %s %dB %v\nStatus Text: %s",
+			status,
+			l.Request.Method,
+			l.Request.URL.Path,
+			l.Request.RemoteAddr,
+			l.Request.Header.Get("X-GitHub-Event"),
+			bytes,
+			elapsed,
+			status_text,
+		)
+
+	// save errors
+	} else if status > 299 {
 		status_text := "Unknown Error"
 		if crw, ok := extra.(*CustomResponseWriter); ok {
 			status_text = crw.StatusText
