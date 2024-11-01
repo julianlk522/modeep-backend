@@ -168,30 +168,43 @@ func NewTopGlobalCatCounts() *GlobalCatCounts {
 	})
 }
 
-const GLOBAL_CATS_BASE = `WITH RECURSIVE split(id, global_cats, str) AS 
-	(
-	SELECT id, '', global_cats||',' 
-	FROM Links
-	UNION ALL SELECT
-	id,
-	substr(str, 0, instr(str, ',')),
-	substr(str, instr(str, ',') + 1)
-	FROM split
-	WHERE str != ''
-	)
-SELECT global_cats, count(global_cats) as count
-FROM split
-WHERE global_cats != ''
-GROUP BY global_cats
-ORDER BY count DESC, LOWER(global_cats) ASC
+const GLOBAL_CATS_BASE = `WITH RECURSIVE Split(id, global_cats, str) AS (
+    SELECT id, '', global_cats||','
+    FROM Links
+    UNION ALL SELECT
+    id,
+    substr(str, 0, instr(str, ',')),
+    substr(str, instr(str, ',') + 1)
+    FROM Split
+    WHERE str != ''
+),
+OrderedCats AS (
+    SELECT 
+        FIRST_VALUE(global_cats) OVER (
+            PARTITION BY LOWER(global_cats)
+            ORDER BY global_cats = LOWER(global_cats) DESC
+        ) as preferred_cats,
+        id
+    FROM Split
+    WHERE global_cats != ''
+)
+SELECT 
+    preferred_cats as global_cats,
+    COUNT(preferred_cats) as count
+FROM OrderedCats
+GROUP BY preferred_cats
+ORDER BY count DESC, preferred_cats ASC
 LIMIT ?;`
+// preferred_cats is so that when the same cat appears twice, once capitalized and once not, the lowercase version is listed
+// unless the uppercase version has a higher count
 
 func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
-	cats := strings.Split(cats_params, ",")
+	// take lowercase to ensure all case variations are returned
+	cats := strings.Split(strings.ToLower(cats_params), ",")
 
 	// build NOT IN clause
 	not_in_clause := `
-	AND global_cats NOT IN (?`
+	AND LOWER(global_cats) NOT IN (?`
 
 	t.Args = append(t.Args, cats[0])
 	for i := 1; i < len(cats); i++ {
