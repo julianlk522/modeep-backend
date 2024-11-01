@@ -55,16 +55,8 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 	}
 
 	// tmap queries use escaped reserved chars for MATCH clauses
-	// but GetCatCountsFromTmapLinks later requires unescaped
-	var cats, cats_with_unescaped_reserved_chars []string
 	if has_cat_filter {
-		cats = strings.Split(cats_params, ",")
-
-		// copy before escaping reserved chars
-		// need to call make() so dst is not empty and has length
-		cats_with_unescaped_reserved_chars = make([]string, len(cats))
-		copy(cats_with_unescaped_reserved_chars, cats)
-
+		cats := strings.Split(cats_params, ",")
 		query.EscapeCatsReservedChars(cats)
 
 		submitted_sql = submitted_sql.FromCats(cats)
@@ -130,11 +122,14 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 	// Get cat counts from links
 	all_links := slices.Concat(*submitted, *copied, *tagged)
 	var cat_counts *[]model.CatCount
+	// cats_to_not_count have unescaped reserved chars
+	// they are lowercased to check against all capitalization variants
+	cats_to_not_count := strings.Split(strings.ToLower(cats_params), ",")
 	if has_cat_filter {
 		cat_counts = GetCatCountsFromTmapLinks(
 			&all_links,
 			&model.TmapCatCountsOpts{
-				OmittedCats: cats_with_unescaped_reserved_chars,
+				OmittedCats: cats_to_not_count,
 			},
 		)
 	} else {
@@ -249,10 +244,7 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 	return links.(*[]T), nil
 }
 
-// Get counts of each category found in links
-// Omit any cats passed via opts.OmittedCats
-// (omit used to retrieve subcats by passing directly searched cats)
-// TODO: refactor to make this clearer?
+// Get counts of each cat/subcat found in links
 func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOpts) *[]model.CatCount {
 	counts := []model.CatCount{}
 	found_cats := []string{}
@@ -268,14 +260,14 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 		}
 
 		for _, cat := range strings.Split(cats, ",") {
-			if opts != nil &&
-				slices.Contains(opts.OmittedCats, cat) {
+			if strings.TrimSpace(cat) == "" || (opts != nil &&
+				slices.Contains(opts.OmittedCats, strings.ToLower(cat))) {
 				continue
 			}
 
 			found = false
 			for _, found_cat := range found_cats {
-				if cat == found_cat {
+				if found_cat == cat {
 					found = true
 
 					for i, count := range counts {
@@ -294,15 +286,27 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 		}
 	}
 
-	SortAndLimitCatCounts(&counts, TMAP_CATS_PAGE_LIMIT)
+	slices.SortFunc(counts, model.SortCats)
 
-	return &counts
-}
+	// merge counts of capitalization variants e.g. "Music" and "music"
+	// TODO: consider ways to make this more efficient
+	for i, count := range counts {
+		for j := i + 1; j < len(counts); j++ {
+			if strings.EqualFold(count.Category, counts[j].Category) {
 
-func SortAndLimitCatCounts(cat_counts *[]model.CatCount, limit int) {
-	slices.SortFunc(*cat_counts, model.SortCats)
-
-	if len(*cat_counts) > limit {
-		*cat_counts = (*cat_counts)[:limit]
+				// skip if is some capitalization variant of a cat filter
+				if opts != nil && slices.Contains(opts.OmittedCats, strings.ToLower(counts[j].Category)) {
+					continue
+				}
+				counts[i].Count += counts[j].Count
+				counts = append(counts[:j], counts[j+1:]...)
+			}
+		}
 	}
+
+	if len(counts) > TMAP_CATS_PAGE_LIMIT {
+		counts = (counts)[:TMAP_CATS_PAGE_LIMIT]
+	}
+	
+	return &counts
 }
