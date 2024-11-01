@@ -278,29 +278,35 @@ func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
 	// hence the UNION
 	return (&SpellfixMatches{
 		Query: &Query{
-			Text: `WITH combined_results AS (
-					SELECT word, rank, distance
-					FROM global_cats_spellfix
-					WHERE word MATCH ?
-					UNION ALL
-					SELECT word, rank, distance
-					FROM global_cats_spellfix
-					WHERE word MATCH ? || '*'
-				),
-				ranked_results AS (
-					SELECT 
-						word, 
-						rank,
-						distance,
-						ROW_NUMBER() OVER (PARTITION BY word ORDER BY distance) AS row_num
-					FROM combined_results
-				)
-				SELECT word, rank
-				FROM ranked_results
-				WHERE row_num = 1
-				AND distance <= ?
-				ORDER BY distance, rank DESC
-				LIMIT ?;`,
+			Text: `WITH CombinedResults AS (
+		SELECT word, rank, distance
+		FROM global_cats_spellfix
+		WHERE word MATCH ?
+		UNION ALL
+		SELECT word, rank, distance
+		FROM global_cats_spellfix
+		WHERE word MATCH ? || '*'
+			),
+		RankedResults AS (
+			SELECT 
+				word, 
+				rank,
+				distance,
+				ROW_NUMBER() OVER (PARTITION BY word ORDER BY distance) AS row_num
+			FROM CombinedResults
+		),
+		TopResults AS (
+			SELECT word, rank, distance
+			FROM RankedResults
+			WHERE row_num = 1
+			AND distance <= ?
+			ORDER BY distance, rank DESC
+		)
+		SELECT word, SUM(rank) as rank
+		FROM TopResults
+		GROUP BY LOWER(word)
+		ORDER BY distance, rank DESC
+		LIMIT ?;`,
 			Args: []interface{}{
 				snippet,
 				snippet,
@@ -320,7 +326,7 @@ func (s *SpellfixMatches) OmitCats(cats []string) error {
 	s.Args = s.Args[0 : len(s.Args)-1]
 
 	not_in_clause := `
-	AND word NOT IN (?`
+	AND LOWER(word) NOT IN (?`
 	s.Args = append(s.Args, cats[0])
 
 	for i := 1; i < len(cats); i++ {

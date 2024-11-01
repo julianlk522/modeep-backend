@@ -137,7 +137,9 @@ func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 
 	omitted_params := r.URL.Query().Get("omitted")
 	if omitted_params != "" {
-		omitted_words := strings.Split(omitted_params, ",")
+
+		// take lowercase to ensure all case variations are returned
+		omitted_words := strings.Split(strings.ToLower(omitted_params), ",")
 		err := spfx_sql.OmitCats(omitted_words)
 		if err != nil {
 			render.Render(w, r, e.Err500(err))
