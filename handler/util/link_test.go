@@ -9,6 +9,53 @@ import (
 	"github.com/julianlk522/fitm/query"
 )
 
+func TestPrepareLinksResponse(t *testing.T) {
+	var test_requests = []struct{
+		LinksSQL *query.TopLinks
+		Page int
+		CatsParams string
+		Valid bool
+	}{
+		{
+			LinksSQL: query.NewTopLinks(),
+			Page: 1,
+			CatsParams: "",
+			Valid: true,
+		},
+		{
+			LinksSQL: query.NewTopLinks().FromCats([]string{"umvc3", "flowers"}).Page(1),
+			Page: 1,
+			CatsParams: "umvc3,flowers",
+			Valid: true,
+		},
+		{
+			LinksSQL: query.NewTopLinks().DuringPeriod("batman"),
+			Page: 1,
+			CatsParams: "",
+			Valid: false,
+		},
+		{
+			LinksSQL: &query.TopLinks{
+				Query: query.Query{
+					Text: "spiderman",
+				},
+			},
+			Page: 1,
+			CatsParams: "",
+			Valid: false,
+		},
+	}
+
+	for _, tr := range test_requests {
+		_, err := PrepareLinksResponse[model.Link](tr.LinksSQL, tr.Page, tr.CatsParams)
+		if tr.Valid && err != nil {
+			t.Fatal(err)
+		} else if !tr.Valid && err == nil {
+			t.Fatalf("expected error for request %+v\n", tr)
+		}
+	}
+}
+
 func TestScanLinks(t *testing.T) {
 	links_sql := query.NewTopLinks()
 	// NewTopLinks().Error tested in query/link_test.go

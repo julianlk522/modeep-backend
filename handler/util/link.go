@@ -13,8 +13,6 @@ import (
 	"fmt"
 
 	"net/http"
-
-	"github.com/go-chi/render"
 )
 
 const MAX_DAILY_LINKS = 50
@@ -34,9 +32,21 @@ func UserHasSubmittedMaxDailyLinks(login_name string) (bool, error) {
 	return count >= MAX_DAILY_LINKS, nil
 }
 
-func RenderZeroLinks(w http.ResponseWriter, r *http.Request) {
-	render.JSON(w, r, &model.PaginatedLinks[model.Link]{NextPage: -1})
-	render.Status(r, http.StatusOK)
+func PrepareLinksResponse[T model.HasCats](links_sql *query.TopLinks, page int, cats_params string) (*model.PaginatedLinks[T], error) {
+	if links_sql.Error != nil {
+		return nil, links_sql.Error
+	}
+
+	links, err := ScanLinks[T](links_sql)
+	if err != nil {
+		return nil, err
+	}
+	pl := PaginateLinks(links, page)
+	if cats_params != "" {
+		CountMergedCatSpellingVariants(pl, cats_params)
+	}
+
+	return pl, nil
 }
 
 func ScanLinks[T model.Link | model.LinkSignedIn](get_links_sql *query.TopLinks) (*[]T, error) {

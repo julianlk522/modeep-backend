@@ -70,28 +70,19 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// scan
+	// prepare response
+	var lr interface{}
+	var err error
 	if req_user_id != "" {
-		links, err := util.ScanLinks[model.LinkSignedIn](links_sql)
-		if err != nil {
-			render.Render(w, r, e.Err500(err))
-		}
-		paginated_links := util.PaginateLinks(links, page)
-		if cats_params != "" {
-			util.CountMergedCatSpellingVariants(paginated_links, cats_params)
-		}
-		render.JSON(w, r, paginated_links)
+		lr, err = util.PrepareLinksResponse[model.LinkSignedIn](links_sql, page, cats_params)
 	} else {
-		links, err := util.ScanLinks[model.Link](links_sql)
-		if err != nil {
-			render.Render(w, r, e.Err500(err))
-		}
-		paginated_links := util.PaginateLinks(links, page)
-		if cats_params != "" {
-			util.CountMergedCatSpellingVariants(paginated_links, cats_params)
-		}
-		render.JSON(w, r, paginated_links)
+		lr, err = util.PrepareLinksResponse[model.Link](links_sql, page, cats_params)
 	}
+
+	if err != nil {
+		render.Render(w, r, e.Err500(err))
+	}
+	render.JSON(w, r, lr)
 }
 
 func AddLink(w http.ResponseWriter, r *http.Request) {
