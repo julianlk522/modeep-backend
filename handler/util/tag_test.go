@@ -412,11 +412,15 @@ func TestGetLinkIDFromTagID(t *testing.T) {
 func TestCalculateAndSetGlobalCats(t *testing.T) {
 	var test_link_ids = []struct {
 		ID         string
-		GlobalCats string
+		ExpectedGlobalCats string
 	}{
 		{"0", "flowers"},
-		{"7", "7,lucky,arrest,Best,jest,Molest,winchest"},
+		{"7", "7,lucky,arrest,Best,jest,Test,winchest"},
 		{"11", "test"},
+		// test that calculated global cats are limited to top MAX_TAG_CATS
+		// link 1234567890 has 1 tag with cats "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17" so should be shortened to top 15
+		// (all same scores so sort alphabetically)
+		{"1234567890", "1,10,11,12,13,14,15,16,17,2,3,4,5,6,7"},
 	}
 
 	for _, l := range test_link_ids {
@@ -440,14 +444,61 @@ func TestCalculateAndSetGlobalCats(t *testing.T) {
 				err,
 				l.ID,
 			)
-		} else if gc != l.GlobalCats {
+		} else if gc != l.ExpectedGlobalCats {
 			t.Fatalf(
 				"got global cats %s for link with ID %s, want %s",
 				gc,
 				l.ID,
-				l.GlobalCats,
+				l.ExpectedGlobalCats,
 			)
 		}
+	}
+}
+
+func TestLimitToTopCatRankings(t *testing.T) {
+	test_rankings := map[string]float32{
+		"cat1": 1,
+		"cat2": 2,
+		"cat3": 3,
+		"cat4": 4,
+		"cat5": 5,
+		"cat6": 6,
+		"cat7": 7,
+		"cat8": 8,
+		"cat9": 9,
+		"cat10": 10,
+		"cat11": 11,
+		"cat12": 12,
+		"cat13": 13,
+		"cat14": 14,
+		"cat15": 15,
+		"cat16": 16,
+		"cat17": 17,
+	}
+
+	limited_rankings := LimitToTopCatRankings(test_rankings)
+	if len(limited_rankings) != MAX_TAG_CATS {
+		t.Fatalf(
+			"expected %d cats, got %d",
+			MAX_TAG_CATS,
+			len(limited_rankings),
+		)
+	}
+
+	// test with fewer cats just in case, even though this condition should
+	// be unreachable
+	test_rankings = map[string]float32{
+		"cat1": 1,
+		"cat2": 2,
+	}
+
+	limited_rankings = LimitToTopCatRankings(test_rankings)
+	if len(limited_rankings) != len(test_rankings) {
+		t.Fatalf(
+			"expected %d cats, got %d",
+			len(test_rankings),
+			len(limited_rankings),
+		)
 	}
 }
 

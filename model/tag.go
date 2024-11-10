@@ -33,14 +33,19 @@ func SortCats(i, j CatCount) int {
 }
 
 type TagRanking struct {
+	Cats  string
 	LifeSpanOverlap float32
-	Cats            string
 }
 
 type TagRankingPublic struct {
 	TagRanking
 	SubmittedBy string
 	LastUpdated string
+}
+
+type CatRanking struct {
+	Cat string
+	Score float32
 }
 
 type TagPage[T Link | LinkSignedIn] struct {

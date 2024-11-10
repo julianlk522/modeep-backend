@@ -112,6 +112,7 @@ const TAG_PAGE_LINK_AUTH_JOINS = `
 	ON copy_link_id = link_id;`
 
 // Tag Rankings (cat overlap scores)
+// ranked from highest lifespan overlap to lowest
 type TagRankings struct {
 	*Query
 }
@@ -120,17 +121,17 @@ func NewTagRankings(link_id string) *TagRankings {
 	return (&TagRankings{Query: 
 		&Query{
 			Text: 
-				TOP_OVERLAP_SCORES_BASE,
+				TAG_RANKINGS_BASE,
 			Args: []interface{}{link_id, TAG_RANKINGS_PAGE_LIMIT},
 		},
 	})
 }
 
-const TOP_OVERLAP_SCORES_BASE_FIELDS = `SELECT
+const TAG_RANKINGS_BASE_FIELDS = `SELECT
 	(julianday('now') - julianday(last_updated)) / (julianday('now') - julianday(submit_date)) * 100 AS lifespan_overlap, 
 	cats`
 
-var TOP_OVERLAP_SCORES_BASE = TOP_OVERLAP_SCORES_BASE_FIELDS + ` 
+var TAG_RANKINGS_BASE = TAG_RANKINGS_BASE_FIELDS + ` 
 FROM Tags 
 INNER JOIN Links 
 ON Links.id = Tags.link_id
@@ -141,15 +142,15 @@ LIMIT ?`
 func (o *TagRankings) Public() *TagRankings {
 	o.Text = strings.Replace(
 		o.Text,
-		TOP_OVERLAP_SCORES_BASE_FIELDS,
-		TOP_OVERLAP_SCORES_BASE_FIELDS + TOP_OVERLAP_SCORES_PUBLIC_FIELDS,
+		TAG_RANKINGS_BASE_FIELDS,
+		TAG_RANKINGS_BASE_FIELDS + TAG_RANKINGS_PUBLIC_FIELDS,
 		1,
 	)
 
 	return o
 }
 
-const TOP_OVERLAP_SCORES_PUBLIC_FIELDS = `, 
+const TAG_RANKINGS_PUBLIC_FIELDS = `, 
 	Tags.submitted_by, 
 	last_updated`
 

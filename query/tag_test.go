@@ -94,7 +94,7 @@ func TestNewTagRankings(t *testing.T) {
 	tags_sql = NewTagRankings(test_link_id)
 
 	tags_sql.Text = strings.Replace(tags_sql.Text,
-		TOP_OVERLAP_SCORES_BASE_FIELDS,
+		TAG_RANKINGS_BASE_FIELDS,
 		`SELECT link_id`,
 		1)
 	tags_sql.Text = strings.Replace(tags_sql.Text,

@@ -14,6 +14,8 @@ import (
 	"github.com/go-chi/render"
 )
 
+const MAX_TAG_CATS = 15
+
 // Get tags for link
 func ScanTagPageLink[T model.Link | model.LinkSignedIn](link_sql *query.TagPageLink) (*T, error) {
 	var link interface{}
@@ -231,12 +233,12 @@ func IsOnlyTag(tag_id string) (bool, error) {
 
 // Calculate global cats
 func CalculateAndSetGlobalCats(link_id string) error {
-	overlap_scores_sql := query.NewTagRankings(link_id)
-	if overlap_scores_sql.Error != nil {
-		return overlap_scores_sql.Error
+	tag_rankings_sql := query.NewTagRankings(link_id)
+	if tag_rankings_sql.Error != nil {
+		return tag_rankings_sql.Error
 	}
 
-	rows, err := db.Client.Query(overlap_scores_sql.Text, overlap_scores_sql.Args...)
+	rows, err := db.Client.Query(tag_rankings_sql.Text, tag_rankings_sql.Args...)
 	if err != nil {
 		return err
 	}
@@ -252,7 +254,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 		tag_rankings = append(tag_rankings, t)
 	}
 
-	overlap_scores := make(map[string]float32)
+	cat_rankings := make(map[string]float32)
 	var max_cat_score float32
 
 	for _, tag := range tag_rankings {
@@ -261,30 +263,35 @@ func CalculateAndSetGlobalCats(link_id string) error {
 		if strings.Contains(tag.Cats, ",") {
 			cats := strings.Split(tag.Cats, ",")
 			for _, cat := range cats {
-				overlap_scores[cat] += tag.LifeSpanOverlap
+				cat_rankings[cat] += tag.LifeSpanOverlap
 
-				if overlap_scores[cat] > max_cat_score {
-					max_cat_score = overlap_scores[cat]
+				if cat_rankings[cat] > max_cat_score {
+					max_cat_score = cat_rankings[cat]
 				}
 			}
 
-			// single cat
+		// single cat
 		} else {
-			overlap_scores[tag.Cats] += tag.LifeSpanOverlap
+			cat_rankings[tag.Cats] += tag.LifeSpanOverlap
 
-			if overlap_scores[tag.Cats] > max_cat_score {
-				max_cat_score = overlap_scores[tag.Cats]
+			if cat_rankings[tag.Cats] > max_cat_score {
+				max_cat_score = cat_rankings[tag.Cats]
 			}
 		}
 	}
 
+	// sort by values and limit if more than MAX_TAG_CATS cats
+	if len(cat_rankings) > MAX_TAG_CATS {
+		cat_rankings = LimitToTopCatRankings(cat_rankings)
+	}
+
 	// Alphabetize so global cats are assigned in order
-	alphabetized_cats := AlphabetizeOverlapScoreCats(overlap_scores)
+	alphabetized_cats := AlphabetizeOverlapScoreCats(cat_rankings)
 
 	// Assign to global cats if >= 25% of max category score
 	var global_cats string
 	for _, cat := range alphabetized_cats {
-		if overlap_scores[cat] >= max_cat_score*0.25 {
+		if cat_rankings[cat] >= max_cat_score*0.25 {
 			global_cats += cat + ","
 		}
 	}
@@ -300,6 +307,38 @@ func CalculateAndSetGlobalCats(link_id string) error {
 	}
 
 	return nil
+}
+
+func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
+
+	// should never happen but just in case...
+	if len(cat_rankings) <= MAX_TAG_CATS {
+		return cat_rankings
+	}
+
+	sorted_rankings_slice := make([]model.CatRanking, 0, len(cat_rankings))
+	for cat, score := range cat_rankings {
+		sorted_rankings_slice = append(sorted_rankings_slice, model.CatRanking{
+			Cat:  cat,
+			Score: score,
+		})
+	}
+
+	slices.SortFunc(sorted_rankings_slice, func(i, j model.CatRanking) int {
+		if i.Score > j.Score {
+			return -1
+		} else if i.Score == j.Score && strings.ToLower(i.Cat) < strings.ToLower(j.Cat) {
+			return -1
+		}
+		return 1
+	})
+
+	limited_cat_rankings := make(map[string]float32, MAX_TAG_CATS)
+	for i := 0; i < MAX_TAG_CATS; i++ {
+		limited_cat_rankings[sorted_rankings_slice[i].Cat] = sorted_rankings_slice[i].Score
+	}
+	
+	return limited_cat_rankings
 }
 
 func AlphabetizeOverlapScoreCats(scores map[string]float32) []string {
