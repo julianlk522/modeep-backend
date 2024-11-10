@@ -8,3 +8,4 @@ db/spellfix.dll
 _*
 .vscode/
 .prettierignore
+.envrc
