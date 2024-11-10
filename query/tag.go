@@ -203,8 +203,6 @@ LIMIT ?;`
 func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	// take lowercase to ensure all case variations are returned
 	cats := strings.Split(strings.ToLower(cats_params), ",")
-	// add optional singular/plural variants
-	ConvertCatsToOptionalPluralOrSingularForms(cats)
 
 	// build NOT IN clause
 	not_in_clause := `
@@ -224,6 +222,11 @@ func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 		FROM global_cats_fts
 		WHERE global_cats MATCH ?
 		)`
+	
+	// add optional singular/plural variants
+	// (skip for NOT IN clause otherwise subcats include filters)
+	ConvertCatsToOptionalPluralOrSingularForms(cats)
+
 	// here (only with MATCH) reserved chars MUST be surrounded with ""
 	match_arg := SurroundReservedCharsWithDoubleQuotes(cats[0])
 	for i := 1; i < len(cats); i++ {
