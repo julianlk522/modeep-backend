@@ -123,7 +123,45 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
-	util.RenderCatCounts(counts, w, r)
+
+	// if more params passed, need to run through the results to check
+	// if any cat plural/singular spelling variations were merged
+
+	// (on pages with links it is more accurate to search the links, but
+	// that is not possible from the /more page because there are none)
+
+	// it is more accurate to check links because that way you know for sure
+	// whether a seemingly merged cat was actually merged or just a subcat
+
+	// this approach is not 100% reliable but for now I can't think of a better
+	// way to do it
+	if more_params == "true" && cats_params != "" {
+		split_cats_params := strings.Split(cats_params, ",")
+		merged_cats := []string{}
+
+		for _, cc := range *counts {
+			for _, cp := range split_cats_params {
+				if util.CatsAreSingularOrPluralVariationsOfEachOther(cc.Category, cp) {
+					merged_cats = append(merged_cats, cc.Category)
+				}
+			}
+		}
+
+		counts_and_merges := struct {
+            Counts  []model.CatCount
+            MergedCats []string
+        }{
+			Counts: *counts,
+			MergedCats: merged_cats,
+		}
+
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, counts_and_merges)
+		return
+	}
+
+	render.Status(r, http.StatusOK)
+	render.JSON(w, r, counts)
 }
 
 func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {

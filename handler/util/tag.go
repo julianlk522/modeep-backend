@@ -8,10 +8,6 @@ import (
 	"github.com/julianlk522/fitm/db"
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
-
-	"net/http"
-
-	"github.com/go-chi/render"
 )
 
 const MAX_TAG_CATS = 15
@@ -140,9 +136,16 @@ func ScanGlobalCatCounts(global_cats_sql *query.GlobalCatCounts) (*[]model.CatCo
 	return &counts, nil
 }
 
-func RenderCatCounts(cat_counts *[]model.CatCount, w http.ResponseWriter, r *http.Request) {
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, cat_counts)
+func CatsAreSingularOrPluralVariationsOfEachOther(a string, b string) bool {
+	if a == b {
+		return false
+	}
+
+	if a + "s" == b || b + "s" == a || a+"es" == b || b+"es" == a {
+		return true
+	}
+
+	return false
 }
 
 // Add tag
