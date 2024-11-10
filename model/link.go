@@ -11,6 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type HasCats interface {
+	Link | LinkSignedIn
+
+	GetCats() string
+}
+
 type Link struct {
 	ID           string
 	URL          string
@@ -22,6 +28,10 @@ type Link struct {
 	TagCount     int
 	LikeCount    int64
 	ImgURL       string
+}
+
+func (l Link) GetCats() string {
+	return l.Cats
 }
 
 // YouTube links
@@ -48,8 +58,13 @@ type LinkSignedIn struct {
 	IsCopied bool
 }
 
+func (lsi LinkSignedIn) GetCats() string {
+	return lsi.Cats
+}
+
 type PaginatedLinks[T Link | LinkSignedIn] struct {
 	Links    *[]T
+	MergedCats []string
 	NextPage int
 }
 

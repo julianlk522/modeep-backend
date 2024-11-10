@@ -76,13 +76,21 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			render.Render(w, r, e.Err500(err))
 		}
-		render.JSON(w, r, util.PaginateLinks(links, page))
+		paginated_links := util.PaginateLinks(links, page)
+		if cats_params != "" {
+			util.CountMergedCatSpellingVariants(paginated_links, cats_params)
+		}
+		render.JSON(w, r, paginated_links)
 	} else {
 		links, err := util.ScanLinks[model.Link](links_sql)
 		if err != nil {
 			render.Render(w, r, e.Err500(err))
 		}
-		render.JSON(w, r, util.PaginateLinks(links, page))
+		paginated_links := util.PaginateLinks(links, page)
+		if cats_params != "" {
+			util.CountMergedCatSpellingVariants(paginated_links, cats_params)
+		}
+		render.JSON(w, r, paginated_links)
 	}
 }
 

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/julianlk522/fitm/db"
@@ -42,15 +43,11 @@ func TestPaginateLinks(t *testing.T) {
 		t.Fatal("expected no links")
 	}
 
-	res := PaginateLinks(links, 0)
-	if l, ok := res.(*model.PaginatedLinks[model.Link]); ok {
-		if l.Links != nil {
-			t.Fatal("expected no links")
-		} else if l.NextPage != -1 {
-			t.Fatal("expected no more pages")
-		}
-	} else {
-		t.Fatalf("expected type %T, got %T (no links)", model.PaginatedLinks[model.Link]{}, res)
+	pl := PaginateLinks(links, 0)
+	if pl.Links != nil {
+		t.Fatal("expected no links")
+	} else if pl.NextPage != -1 {
+		t.Fatal("expected no more pages")
 	}
 
 	// single page
@@ -60,15 +57,11 @@ func TestPaginateLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res = PaginateLinks(links, 1)
-	if l, ok := res.(*model.PaginatedLinks[model.Link]); ok {
-		if len(*l.Links) == 0 {
-			t.Fatal("expected links")
-		} else if l.NextPage != -1 {
-			t.Fatal("expected no more pages")
-		}
-	} else {
-		t.Fatalf("expected type %T, got %T (single page)", model.PaginatedLinks[model.Link]{}, res)
+	pl = PaginateLinks(links, 1)
+	if len(*pl.Links) == 0 {
+		t.Fatal("expected links")
+	} else if pl.NextPage != -1 {
+		t.Fatal("expected no more pages")
 	}
 
 	// multiple pages
@@ -81,16 +74,71 @@ func TestPaginateLinks(t *testing.T) {
 		t.Fatal("expected links")
 	}
 
-	res = PaginateLinks(links, 1)
-	if l, ok := res.(*model.PaginatedLinks[model.Link]); ok {
-		if len(*l.Links) == 0 {
-			t.Fatal("expected links")
-		} else if l.NextPage != 2 {
-			t.Fatalf("expected next page to be 2, got %d (%d links)", l.NextPage, len(*l.Links))
-		}
-	} else {
-		t.Fatalf("expected type %T, got %T (multiple pages)", model.PaginatedLinks[model.Link]{}, res)
+	pl = PaginateLinks(links, 1)
+	if len(*pl.Links) == 0 {
+		t.Fatal("expected links")
+	} else if pl.NextPage != 2 {
+		t.Fatalf("expected next page to be 2, got %d (%d links)", pl.NextPage, len(*pl.Links))
 	}
+}
+
+func TestCountMergedCatSpellingVariants(t *testing.T) {
+	// no links; no merged cats
+	test_cat := "umvc3"
+	links_sql := query.NewTopLinks().FromCats([]string{test_cat}).DuringPeriod("day").Page(1)
+	links, err := ScanLinks[model.Link](links_sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pl := PaginateLinks(links, 1)
+	CountMergedCatSpellingVariants(pl, test_cat)
+	if len(pl.MergedCats) != 0 {
+		t.Fatal("expected no merged cats")
+	}
+
+	// 1 merged cat
+	test_cat = "flower" // should merge "flowers"
+	links_sql = query.NewTopLinks().FromCats([]string{test_cat})
+	links, err = ScanLinks[model.Link](links_sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pl = PaginateLinks(links, 1)
+	CountMergedCatSpellingVariants(pl, test_cat)
+	if len(pl.MergedCats) != 1 {
+		t.Fatalf("expected 1 merged cat, got %d (%v)", len(pl.MergedCats), pl.MergedCats)
+	}
+
+	// multiple merged cats
+	test_cats := []string{"flower", "tests"} // should merge "flowers" and "test"
+	links_sql = query.NewTopLinks().FromCats(test_cats)
+	links, err = ScanLinks[model.Link](links_sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pl = PaginateLinks(links, 1)
+	CountMergedCatSpellingVariants(pl, strings.Join(test_cats, ","))
+	if len(pl.MergedCats) != 2 {
+		t.Fatalf("expected 2 merged cats, got %d (%v)", len(pl.MergedCats), pl.MergedCats)
+	}
+
+	// inconsistent capitalization: should still merge
+	test_cat = "Flower" // should merge "flowers"
+	links_sql = query.NewTopLinks().FromCats([]string{test_cat})
+	links, err = ScanLinks[model.Link](links_sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pl = PaginateLinks(links, 1)
+	CountMergedCatSpellingVariants(pl, test_cat)
+	if len(pl.MergedCats) != 1 {
+		t.Fatalf("expected 1 merged cat, got %d (%v)", len(pl.MergedCats), pl.MergedCats)
+	}
+
 }
 
 // Add link

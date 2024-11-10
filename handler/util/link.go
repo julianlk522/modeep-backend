@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/julianlk522/fitm/db"
@@ -107,9 +108,9 @@ func ScanLinks[T model.Link | model.LinkSignedIn](get_links_sql *query.TopLinks)
 	return links.(*[]T), nil
 }
 
-func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T, page int) interface{} {
+func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T, page int) *model.PaginatedLinks[T] {
 	if links == nil || len(*links) == 0 {
-		return &model.PaginatedLinks[model.Link]{NextPage: -1}
+		return &model.PaginatedLinks[T]{NextPage: -1}
 	}
 
 	if len(*links) == query.LINKS_PAGE_LIMIT+1 {
@@ -122,6 +123,38 @@ func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T, page int) inte
 		return &model.PaginatedLinks[T]{
 			NextPage: -1,
 			Links:    links,
+		}
+	}
+}
+
+func CountMergedCatSpellingVariants[T model.HasCats](pl *model.PaginatedLinks[T], cats_params string) {
+	if pl.Links == nil || len(*pl.Links) == 0 {
+		return
+	}
+
+	cat_fiters := strings.Split(strings.ToLower(cats_params), ",")
+
+	for _, link := range *pl.Links {
+		link_cats := strings.Split(strings.ToLower(link.GetCats()), ",")
+		has_cat_from_filters := false
+		for _, cat := range link_cats {
+			if slices.Contains(cat_fiters, cat) {
+				has_cat_from_filters = true
+				break
+			}
+		}
+
+		if !has_cat_from_filters {
+			// find out which cat(s) spelling variants were added
+			// and add them to MergedCats so that frontend can alert user
+			for _, lc := range link_cats {
+				for _, cf := range cat_fiters {
+					if (strings.Contains(cf, lc) || strings.Contains(lc, cf)) && !slices.Contains(pl.MergedCats, lc) {
+						pl.MergedCats = append(pl.MergedCats, lc)
+					}
+				}
+			}
+
 		}
 	}
 }
