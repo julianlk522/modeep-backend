@@ -54,10 +54,12 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 		}
 	}
 
-	// tmap queries use escaped reserved chars for MATCH clauses
+	// tmap queries use escaped reserved chars and both singular/plural
+	// forms for MATCH clauses
 	if has_cat_filter {
 		cats := strings.Split(cats_params, ",")
 		query.EscapeCatsReservedChars(cats)
+		query.ConvertCatsToOptionalPluralOrSingularForms(cats)
 
 		submitted_sql = submitted_sql.FromCats(cats)
 		copied_sql = copied_sql.FromCats(cats)
