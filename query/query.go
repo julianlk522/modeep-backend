@@ -68,7 +68,7 @@ var reserved_chars_double_quotes_replacer = strings.NewReplacer(
 	"@", `"@"`,
 )
 
-func ConvertCatsToOptionalPluralOrSingularForm(cats []string) {
+func ConvertCatsToOptionalPluralOrSingularForms(cats []string) {
 	for i := 0; i < len(cats); i++ {
 		cats[i] = ToOptionalPluralOrSingularForm(cats[i])
 	}

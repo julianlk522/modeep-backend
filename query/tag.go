@@ -198,10 +198,13 @@ ORDER BY count DESC, preferred_cats ASC
 LIMIT ?;`
 // preferred_cats is so that when the same cat appears twice, once capitalized and once not, the lowercase version is listed
 // unless the uppercase version has a higher count
+// ORDER BY global_cats = LOWER(global_cats) DESC ensures that the lowercase version is listed first
 
 func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	// take lowercase to ensure all case variations are returned
 	cats := strings.Split(strings.ToLower(cats_params), ",")
+	// add optional singular/plural variants
+	ConvertCatsToOptionalPluralOrSingularForms(cats)
 
 	// build NOT IN clause
 	not_in_clause := `
