@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -29,9 +30,13 @@ func init() {
 
 // creates a new SplitLogFormatter
 func NewSplitLogFormatter(logger middleware.LoggerInterface) (*SplitLogFormatter, error) {
-	log_file, err := os.OpenFile(os.Getenv("FITM_ERR_LOG_FILE"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	err_log_file_path := os.Getenv("FITM_ERR_LOG_FILE")
+	if err_log_file_path == "" {
+		return nil, fmt.Errorf("FITM_ERR_LOG_FILE not set")
+	}
+	log_file, err := os.OpenFile(err_log_file_path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Printf("unable to locate err log file: %s", err)
+		log.Printf("could not open err log file: %s", err)
 		return nil, err
 	}
 	log.Printf("logging errs to %s", os.Getenv("FITM_ERR_LOG_FILE"))
