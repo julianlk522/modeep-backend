@@ -80,3 +80,36 @@ func TestEscapeCatsReservedChars(t *testing.T) {
 		}
 	}
 }
+
+func TestToOptionalPluralOrSingularForm(t *testing.T) {
+	var test_cats = struct {
+		Cats            []string
+		ExpectedResults []string
+	}{
+		Cats:            []string{
+			"cat",
+			"cats",
+			"dress",
+			"dresses",
+			"iris",
+			"irises",
+			"music",
+		},
+		ExpectedResults: []string{
+			"(cat OR cats)",
+			"(cats OR catses OR cat)",
+			"(dress OR dresses)",
+			"(dresses OR dress)",
+			"(iris OR irises OR iri)",
+			"(irises OR iris)",
+			"(music OR musics)",
+		},
+	}
+
+	for i, cat := range test_cats.Cats {
+		cat = ToOptionalPluralOrSingularForm(cat)
+		if cat != test_cats.ExpectedResults[i] {
+			t.Fatalf("got %s, want %s", cat, test_cats.ExpectedResults[i])
+		}
+	}
+}

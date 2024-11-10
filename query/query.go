@@ -67,3 +67,21 @@ var reserved_chars_double_quotes_replacer = strings.NewReplacer(
 	"?", `"?"`,
 	"@", `"@"`,
 )
+
+func ConvertCatsToOptionalPluralOrSingularForm(cats []string) {
+	for i := 0; i < len(cats); i++ {
+		cats[i] = ToOptionalPluralOrSingularForm(cats[i])
+	}
+}
+
+func ToOptionalPluralOrSingularForm(cat string) string {
+	if strings.HasSuffix(cat, "ss") {
+		return fmt.Sprintf("(%s OR %s)", cat, cat+"es")
+	} else if strings.HasSuffix(cat, "es") {
+		return fmt.Sprintf("(%s OR %s)", cat, strings.TrimSuffix(cat, "es"))
+	} else if strings.HasSuffix(cat, "s") {
+		return fmt.Sprintf("(%s OR %s OR %s)", cat, cat+"es", strings.TrimSuffix(cat, "s"))
+	} else {
+		return fmt.Sprintf("(%s OR %s)", cat, cat+"s")
+	}
+}
