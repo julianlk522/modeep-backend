@@ -68,10 +68,13 @@ var reserved_chars_double_quotes_replacer = strings.NewReplacer(
 	"@", `"@"`,
 )
 
-func ConvertCatsToOptionalPluralOrSingularForms(cats []string) {
+func GetCatsWithOptionalPluralOrSingularForms(cats []string) []string {
+	modified_cats := make([]string, len(cats))
 	for i := 0; i < len(cats); i++ {
-		cats[i] = ToOptionalPluralOrSingularForm(cats[i])
+		modified_cats[i] = ToOptionalPluralOrSingularForm(cats[i])
 	}
+
+	return modified_cats
 }
 
 func ToOptionalPluralOrSingularForm(cat string) string {

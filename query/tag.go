@@ -225,7 +225,7 @@ func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	
 	// add optional singular/plural variants
 	// (skip for NOT IN clause otherwise subcats include filters)
-	ConvertCatsToOptionalPluralOrSingularForms(cats)
+	cats = GetCatsWithOptionalPluralOrSingularForms(cats)
 
 	// here (only with MATCH) reserved chars MUST be surrounded with ""
 	match_arg := SurroundReservedCharsWithDoubleQuotes(cats[0])

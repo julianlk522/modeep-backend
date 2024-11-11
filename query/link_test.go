@@ -294,7 +294,8 @@ func TestAsSignedInUser(t *testing.T) {
 	}
 
 	// args should be test_user_id * 2, "go AND coding", limit
-	expected_args = []interface{}{test_user_id, test_user_id, "go AND coding", LINKS_PAGE_LIMIT}
+	// "go AND coding" modified to include plural/singular variations
+	expected_args = []interface{}{test_user_id, test_user_id, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT}
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {
 			t.Fatalf("arg %d: got %v, want %v", i, arg, expected_args[i])
@@ -431,7 +432,8 @@ func TestPage(t *testing.T) {
 
 	// args should be test_user_id * 2, "go AND coding", limit, offset
 	// in that order
-	var expected_args = []interface{}{test_user_id, test_user_id, "go AND coding", LINKS_PAGE_LIMIT + 1, LINKS_PAGE_LIMIT}
+	// "go AND coding" modified to include plural/singular variations
+	var expected_args = []interface{}{test_user_id, test_user_id, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT + 1, LINKS_PAGE_LIMIT}
 
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {

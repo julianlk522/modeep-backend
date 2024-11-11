@@ -420,7 +420,7 @@ func TestDecrementSpellfixRanksForCats(t *testing.T) {
 		},
 		{
 			[]string{"coding", "hacking"},
-			[]int{6, 2},
+			[]int{7, 2},
 		},
 	}
 

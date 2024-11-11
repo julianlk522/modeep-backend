@@ -90,7 +90,7 @@ func (l *TopLinks) FromCats(cats []string) *TopLinks {
 	
 	// build and add match arg
 	EscapeCatsReservedChars(cats)
-	ConvertCatsToOptionalPluralOrSingularForms(cats)
+	cats = GetCatsWithOptionalPluralOrSingularForms(cats)
 
 	var match_arg = cats[0]
 	for i := 1; i < len(cats); i++ {
