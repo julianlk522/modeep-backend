@@ -59,7 +59,7 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 	if has_cat_filter {
 		cats := strings.Split(cats_params, ",")
 		query.EscapeCatsReservedChars(cats)
-		cats = query.GetCatsWithOptionalPluralOrSingularForms(cats)
+		cats = query.GetCatsOptionalPluralOrSingularForms(cats)
 
 		submitted_sql = submitted_sql.FromCats(cats)
 		copied_sql = copied_sql.FromCats(cats)

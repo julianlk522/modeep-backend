@@ -33,11 +33,11 @@ func GetPeriodClause(period string) (clause string, err error) {
 
 func EscapeCatsReservedChars(cats []string) {
 	for i := 0; i < len(cats); i++ {
-		cats[i] = SurroundReservedCharsWithDoubleQuotes(cats[i])
+		cats[i] = WithDoubleQuotesAroundReservedChars(cats[i])
 	}
 }
 
-func SurroundReservedCharsWithDoubleQuotes(cat string) string {
+func WithDoubleQuotesAroundReservedChars(cat string) string {
 	return reserved_chars_double_quotes_replacer.Replace(cat)
 }
 
@@ -68,16 +68,16 @@ var reserved_chars_double_quotes_replacer = strings.NewReplacer(
 	"@", `"@"`,
 )
 
-func GetCatsWithOptionalPluralOrSingularForms(cats []string) []string {
+func GetCatsOptionalPluralOrSingularForms(cats []string) []string {
 	modified_cats := make([]string, len(cats))
 	for i := 0; i < len(cats); i++ {
-		modified_cats[i] = ToOptionalPluralOrSingularForm(cats[i])
+		modified_cats[i] = WithOptionalPluralOrSingularForm(cats[i])
 	}
 
 	return modified_cats
 }
 
-func ToOptionalPluralOrSingularForm(cat string) string {
+func WithOptionalPluralOrSingularForm(cat string) string {
 	if strings.HasSuffix(cat, "ss") {
 		return fmt.Sprintf("(%s OR %s)", cat, cat+"es")
 	} else if strings.HasSuffix(cat, "es") {

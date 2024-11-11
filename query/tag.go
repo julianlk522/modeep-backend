@@ -222,16 +222,24 @@ func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 		FROM global_cats_fts
 		WHERE global_cats MATCH ?
 		)`
-	
+
+	// with MATCH, reserved chars must be surrounded with ""
+	match_arg := 
+		// and singular/plural variants are added after escaping
+		// reserved chars so that "(" and ")" are preserved
+		WithOptionalPluralOrSingularForm(
+			WithDoubleQuotesAroundReservedChars(
+				cats[0],
+			),
+		)
+	for i := 1; i < len(cats); i++ {
+		match_arg += " AND " + 
+			WithOptionalPluralOrSingularForm(
+				WithDoubleQuotesAroundReservedChars(cats[i]),
+		)
+	}
 	// add optional singular/plural variants
 	// (skip for NOT IN clause otherwise subcats include filters)
-	cats = GetCatsWithOptionalPluralOrSingularForms(cats)
-
-	// here (only with MATCH) reserved chars MUST be surrounded with ""
-	match_arg := SurroundReservedCharsWithDoubleQuotes(cats[0])
-	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + SurroundReservedCharsWithDoubleQuotes(cats[i])
-	}
 	t.Args = append(t.Args, match_arg)
 
 	t.Text = strings.Replace(

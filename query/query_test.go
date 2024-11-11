@@ -81,7 +81,7 @@ func TestEscapeCatsReservedChars(t *testing.T) {
 	}
 }
 
-func TestToOptionalPluralOrSingularForm(t *testing.T) {
+func TestWithOptionalPluralOrSingularForm(t *testing.T) {
 	var test_cats = struct {
 		Cats            []string
 		ExpectedResults []string
@@ -107,7 +107,7 @@ func TestToOptionalPluralOrSingularForm(t *testing.T) {
 	}
 
 	for i, cat := range test_cats.Cats {
-		cat = ToOptionalPluralOrSingularForm(cat)
+		cat = WithOptionalPluralOrSingularForm(cat)
 		if cat != test_cats.ExpectedResults[i] {
 			t.Fatalf("got %s, want %s", cat, test_cats.ExpectedResults[i])
 		}
