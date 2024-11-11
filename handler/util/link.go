@@ -159,7 +159,7 @@ func CountMergedCatSpellingVariants[T model.HasCats](pl *model.PaginatedLinks[T]
 			// and add them to MergedCats so that frontend can alert user
 			for _, lc := range link_cats {
 				for _, cf := range cat_fiters {
-					if (strings.Contains(cf, lc) || strings.Contains(lc, cf)) && !slices.Contains(pl.MergedCats, lc) {
+					if CatsAreSingularOrPluralVariationsOfEachOther(lc, cf) && !slices.Contains(pl.MergedCats, lc) {
 						pl.MergedCats = append(pl.MergedCats, lc)
 					}
 				}

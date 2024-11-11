@@ -131,7 +131,7 @@ func TestPaginateLinks(t *testing.T) {
 
 func TestCountMergedCatSpellingVariants(t *testing.T) {
 	// no links; no merged cats
-	test_cat := "umvc3"
+	test_cat := "nonexistentcat"
 	links_sql := query.NewTopLinks().FromCats([]string{test_cat}).DuringPeriod("day").Page(1)
 	links, err := ScanLinks[model.Link](links_sql)
 	if err != nil {
@@ -173,7 +173,7 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 	}
 
 	// inconsistent capitalization: should still merge
-	test_cat = "Flower" // should merge "flowers"
+	test_cat = "FlOwEr" // should merge "flowers"
 	links_sql = query.NewTopLinks().FromCats([]string{test_cat})
 	links, err = ScanLinks[model.Link](links_sql)
 	if err != nil {
@@ -404,9 +404,6 @@ func TestIncrementSpellfixRanksForCats(t *testing.T) {
 		}
 	}
 }
-
-// IsRedirect / AssignSortedCats are pretty simple
-// don't really need tests
 
 // Delete link
 func TestDecrementSpellfixRanksForCats(t *testing.T) {
