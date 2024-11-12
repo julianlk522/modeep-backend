@@ -283,13 +283,13 @@ func CalculateAndSetGlobalCats(link_id string) error {
 		}
 	}
 
-	// sort by values and limit if more than MAX_TAG_CATS cats
+	// limit if more than MAX_TAG_CATS cats
 	if len(cat_rankings) > MAX_TAG_CATS {
 		cat_rankings = LimitToTopCatRankings(cat_rankings)
 	}
 
 	// Alphabetize so global cats are assigned in order
-	alphabetized_cats := AlphabetizeOverlapScoreCats(cat_rankings)
+	alphabetized_cats := AlphabetizeCatRankings(cat_rankings)
 
 	// Assign to global cats if >= 25% of max category score
 	var global_cats string
@@ -319,6 +319,7 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 		return cat_rankings
 	}
 
+	// sort by values
 	sorted_rankings_slice := make([]model.CatRanking, 0, len(cat_rankings))
 	for cat, score := range cat_rankings {
 		sorted_rankings_slice = append(sorted_rankings_slice, model.CatRanking{
@@ -326,7 +327,6 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 			Score: score,
 		})
 	}
-
 	slices.SortFunc(sorted_rankings_slice, func(i, j model.CatRanking) int {
 		if i.Score > j.Score {
 			return -1
@@ -344,7 +344,7 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 	return limited_cat_rankings
 }
 
-func AlphabetizeOverlapScoreCats(scores map[string]float32) []string {
+func AlphabetizeCatRankings(scores map[string]float32) []string {
 	cats := make([]string, 0, len(scores))
 	for cat := range scores {
 		cats = append(cats, cat)

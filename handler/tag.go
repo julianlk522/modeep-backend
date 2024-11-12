@@ -139,10 +139,10 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 		split_cats_params := strings.Split(cats_params, ",")
 		merged_cats := []string{}
 
-		for _, cc := range *counts {
-			for _, cp := range split_cats_params {
-				if util.CatsAreSingularOrPluralVariationsOfEachOther(cc.Category, cp) {
-					merged_cats = append(merged_cats, cc.Category)
+		for _, count := range *counts {
+			for _, cat_param := range split_cats_params {
+				if util.CatsAreSingularOrPluralVariationsOfEachOther(count.Category, cat_param) {
+					merged_cats = append(merged_cats, count.Category)
 				}
 			}
 		}

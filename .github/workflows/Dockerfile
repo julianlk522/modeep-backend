@@ -18,5 +18,4 @@ RUN go mod download
 # Copy other source code in new cache layer separate from dependencies
 COPY . .
 
-# Download dependencies and run tests
 CMD ["go", "test", "--tags", "fts5", "-v", "./..."]

@@ -502,9 +502,6 @@ func TestLimitToTopCatRankings(t *testing.T) {
 	}
 }
 
-// AlphabetizeOverlapScoreCats() is simple usage of slices.Sort()
-// no point in testing
-
 func TestSetGlobalCats(t *testing.T) {
 	var test_link_id = "11"
 	var test_cats = "reference,food"
