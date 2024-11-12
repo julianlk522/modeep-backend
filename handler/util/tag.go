@@ -362,19 +362,57 @@ func AlphabetizeOverlapScoreCats(scores map[string]float32) []string {
 	return cats
 }
 
-func SetGlobalCats(link_id string, text string) error {
+func SetGlobalCats(link_id string, new_global_cats string) error {
+	cats_diff, err := GetGlobalCatsDiff(link_id, new_global_cats)
+	if err != nil {
+		return err
+	}
 
-	// determine diff to adjust spellfix ranks
+	// start transaction
+	tx, err := db.Client.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// set link new cats
+	_, err = tx.Exec(`
+		UPDATE Links 
+		SET global_cats = ? 
+		WHERE id = ?`,
+		new_global_cats,
+		link_id)
+	if err != nil {
+		return err
+	}
+
+	// update spellfix
+	if err = IncrementSpellfixRanksForCats(tx, cats_diff.Added); err != nil {
+		return err
+	}
+	if err = DecrementSpellfixRanksForCats(tx, cats_diff.Removed); err != nil {
+		return err
+	}
+
+	// commit
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetGlobalCatsDiff(link_id string, new_cats_str string) (*model.GlobalCatsDiff, error) {
 	var old_cats_str string
 	err := db.Client.QueryRow(
 		"SELECT global_cats FROM Links WHERE id = ?;",
 		link_id,
 	).Scan(&old_cats_str)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var new_cats = strings.Split(text, ",")
+	var new_cats = strings.Split(new_cats_str, ",")
 	var old_cats = strings.Split(old_cats_str, ",")
 
 	var added_cats []string
@@ -390,36 +428,8 @@ func SetGlobalCats(link_id string, text string) error {
 		}
 	}
 
-	// start transaction
-	tx, err := db.Client.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// set link new cats
-	_, err = tx.Exec(`
-		UPDATE Links 
-		SET global_cats = ? 
-		WHERE id = ?`,
-		text,
-		link_id)
-	if err != nil {
-		return err
-	}
-
-	// update spellfix
-	if err = IncrementSpellfixRanksForCats(tx, added_cats); err != nil {
-		return err
-	}
-	if err = DecrementSpellfixRanksForCats(tx, removed_cats); err != nil {
-		return err
-	}
-
-	// commit
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return &model.GlobalCatsDiff{
+		Added: added_cats,
+		Removed: removed_cats,
+	}, nil
 }

@@ -48,6 +48,11 @@ type CatRanking struct {
 	Score float32
 }
 
+type GlobalCatsDiff struct {
+	Added []string
+	Removed []string
+}
+
 type TagPage[T Link | LinkSignedIn] struct {
 	Link        *T
 	UserTag     *Tag
