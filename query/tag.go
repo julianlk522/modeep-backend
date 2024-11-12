@@ -169,36 +169,23 @@ func NewTopGlobalCatCounts() *GlobalCatCounts {
 	})
 }
 
-const GLOBAL_CATS_BASE = `WITH RECURSIVE Split(id, global_cats, str) AS (
+// id used for .SubcatsOfCats; don't remove
+const GLOBAL_CATS_BASE = `WITH RECURSIVE GlobalCatsSplit(id, global_cat, str) AS (
     SELECT id, '', global_cats||','
     FROM Links
     UNION ALL SELECT
-    id,
+	id,
     substr(str, 0, instr(str, ',')),
     substr(str, instr(str, ',') + 1)
-    FROM Split
+    FROM GlobalCatsSplit
     WHERE str != ''
-),
-OrderedCats AS (
-    SELECT 
-        FIRST_VALUE(global_cats) OVER (
-            PARTITION BY LOWER(global_cats)
-            ORDER BY global_cats = LOWER(global_cats) DESC
-        ) as preferred_cats,
-        id
-    FROM Split
-    WHERE global_cats != ''
 )
-SELECT 
-    preferred_cats as global_cats,
-    COUNT(preferred_cats) as count
-FROM OrderedCats
-GROUP BY preferred_cats
-ORDER BY count DESC, preferred_cats ASC
-LIMIT ?;`
-// preferred_cats is so that when the same cat appears twice, once capitalized and once not, the lowercase version is listed
-// unless the uppercase version has a higher count
-// ORDER BY global_cats = LOWER(global_cats) DESC ensures that the lowercase version is listed first
+SELECT global_cat, count(global_cat) as count
+FROM GlobalCatsSplit
+WHERE global_cat != ''
+GROUP BY LOWER(global_cat)
+ORDER BY count DESC
+LIMIT ?`
 
 func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	// take lowercase to ensure all case variations are returned
@@ -206,7 +193,7 @@ func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 
 	// build NOT IN clause
 	not_in_clause := `
-	AND LOWER(global_cats) NOT IN (?`
+	AND LOWER(global_cat) NOT IN (?`
 
 	t.Args = append(t.Args, cats[0])
 	for i := 1; i < len(cats); i++ {
@@ -244,8 +231,8 @@ func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 
 	t.Text = strings.Replace(
 		t.Text,
-		"WHERE global_cats != ''",
-		"WHERE global_cats != ''" + 
+		"WHERE global_cat != ''",
+		"WHERE global_cat != ''" + 
 		not_in_clause + 
 		match_clause,
 		1)
@@ -278,7 +265,6 @@ func (t *GlobalCatCounts) DuringPeriod(period string) *GlobalCatCounts {
 
 func (t *GlobalCatCounts) More() *GlobalCatCounts {
 	t.Args[len(t.Args)-1] = MORE_GLOBAL_CATS_PAGE_LIMIT
-
 	return t
 }
 
