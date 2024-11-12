@@ -184,7 +184,7 @@ SELECT global_cat, count(global_cat) as count
 FROM GlobalCatsSplit
 WHERE global_cat != ''
 GROUP BY LOWER(global_cat)
-ORDER BY count DESC
+ORDER BY count DESC, LOWER(global_cat) ASC
 LIMIT ?`
 
 func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
