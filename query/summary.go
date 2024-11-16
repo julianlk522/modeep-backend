@@ -65,21 +65,21 @@ LEFT JOIN
 	)
 ON tlink_id = links_id;`
 
-func (l *SummaryPageLink) AsSignedInUser(user_id string) *SummaryPageLink {
-	l.Text = strings.Replace(
-		l.Text, 
+func (spl *SummaryPageLink) AsSignedInUser(user_id string) *SummaryPageLink {
+	spl.Text = strings.Replace(
+		spl.Text, 
 		SUMMARY_PAGE_LINK_BASE_FIELDS, 
 		SUMMARY_PAGE_LINK_BASE_FIELDS + 
 		SUMMARY_PAGE_LINK_AUTH_FIELDS, 
 	1)
 
-	l.Text = strings.Replace(
-		l.Text, ";",
+	spl.Text = strings.Replace(
+		spl.Text, ";",
 		SUMMARY_PAGE_LINK_AUTH_JOINS,
 		1)
-	l.Args = append(l.Args, user_id, user_id)
+	spl.Args = append(spl.Args, user_id, user_id)
 
-	return l
+	return spl
 }
 
 const SUMMARY_PAGE_LINK_AUTH_FIELDS = `, 
@@ -116,7 +116,7 @@ func NewSummariesForLink(link_id string) *Summaries {
 				SUMMARIES_BASE_FIELDS +
 				SUMMARIES_FROM +
 				SUMMARIES_JOIN +
-				SUMMARIES_GBL,
+				SUMMARIES_GROUP_BY_AND_LIMIT,
 			Args: []interface{}{link_id, SUMMARIES_PAGE_LIMIT},
 		},
 	})
@@ -147,7 +147,7 @@ const SUMMARIES_JOIN = `
 LEFT JOIN "Summary Likes" as sl 
 ON sl.summary_id = sumid`
 
-const SUMMARIES_GBL = `
+const SUMMARIES_GROUP_BY_AND_LIMIT = `
 GROUP BY sumid
 LIMIT ?;`
 
@@ -174,7 +174,7 @@ func (s *Summaries) AsSignedInUser(user_id string) *Summaries {
 
 	// pop limit arg
 	s.Args = s.Args[0 : len(s.Args)-1]
-	// insert user_id arg
+	// push user_id arg
 	s.Args = append(s.Args, user_id)
 	// push limit arg back
 	s.Args = append(s.Args, SUMMARIES_PAGE_LIMIT)

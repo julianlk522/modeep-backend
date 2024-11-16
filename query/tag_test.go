@@ -64,7 +64,6 @@ func TestNewTagPageLink(t *testing.T) {
 // Tag Rankings (cat overlap scores)
 func TestNewTagRankings(t *testing.T) {
 	test_link_id := "1"
-
 	tags_sql := NewTagRankings(test_link_id)
 	if tags_sql.Error != nil {
 		t.Fatal(tags_sql.Error)
@@ -150,10 +149,10 @@ func TestNewTagRankings(t *testing.T) {
 	}
 }
 
-// All Global Cats
+// Top Global Cats
 func TestNewTopGlobalCatCounts(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts()
-	// no opportunity for counts_sql.Error to have been set so no need to check
+	// no opportunity for counts_sql.Error to have been set
 
 	_, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
 	if err != nil {
@@ -277,7 +276,7 @@ func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 
 func TestOmitCats(t *testing.T) {
 	var expected_rankings = map[string]int{
-		// "test": 11, // filter out
+		// "test": 11, // filter out TEST_SNIPPET
 		"tech":       2,
 		"technology": 1,
 	}

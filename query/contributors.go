@@ -36,7 +36,7 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 	EscapeCatsReservedChars(cats)
 	cats = GetCatsOptionalPluralOrSingularForms(cats)
 
-	clause := " WHERE global_cats MATCH ?"
+	match_clause := " WHERE global_cats MATCH ?"
 	match_arg := cats[0]
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " + cats[i]
@@ -44,14 +44,14 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 	c.Args = append(c.Args, match_arg)
 
 	// build CTE
-	cats_cte := `WITH CatsFilter AS (
+	cats_CTE := `WITH CatsFilter AS (
 	SELECT link_id
-	FROM global_cats_fts` + clause + `
+	FROM global_cats_fts` + match_clause + `
 	)
 	`
 
 	// prepend CTE
-	c.Text = cats_cte + c.Text
+	c.Text = cats_CTE + c.Text
 
 	// append join
 	c.Text = strings.Replace(
@@ -71,24 +71,23 @@ const CONTRIBUTORS_CATS_FROM = `
 INNER JOIN CatsFilter f ON l.id = f.link_id`
 
 func (c *Contributors) DuringPeriod(period string) *Contributors {
-	clause, err := GetPeriodClause(period)
+	period_clause, err := GetPeriodClause(period)
 	if err != nil {
 		c.Error = err
 		return c
 	}
 
-	clause = strings.Replace(
-		clause,
+	period_clause = strings.Replace(
+		period_clause,
 		"submit_date",
 		"l.submit_date",
 		1,
 	)
 
-	// Prepend new clause
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		"WHERE "+clause+"\n"+"GROUP BY l.submitted_by",
+		"WHERE "+period_clause+"\n"+"GROUP BY l.submitted_by",
 		1)
 
 	return c

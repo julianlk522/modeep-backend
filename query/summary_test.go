@@ -10,7 +10,6 @@ import (
 // Summaries Page Link
 func TestNewSummaryPageLink(t *testing.T) {
 	link_sql := NewSummaryPageLink("1")
-
 	if link_sql.Error != nil {
 		t.Fatal(link_sql.Error)
 	}
@@ -56,7 +55,6 @@ func TestNewSummaryPageLink(t *testing.T) {
 func Test_SummaryPageLinkFromID(t *testing.T) {
 	var test_link_id = "1"
 	link_sql := NewSummaryPageLink(test_link_id)
-
 	if link_sql.Error != nil {
 		t.Fatal(link_sql.Error)
 	}
@@ -85,7 +83,6 @@ func Test_SummaryPageLinkFromID(t *testing.T) {
 func TestSummaryPageLinkAsSignedInUser(t *testing.T) {
 	var test_link_id, test_user_id = "1", "2"
 	link_sql := NewSummaryPageLink(test_link_id).AsSignedInUser(test_user_id)
-
 	if link_sql.Error != nil {
 		t.Fatal(link_sql.Error)
 	}

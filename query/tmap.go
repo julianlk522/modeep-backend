@@ -81,29 +81,26 @@ AND (
 		)
 	);`
 
-func (lc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 	if len(cats) == 0 || cats[0] == "" {
-		return lc
+		return tnlc
 	}
 
-	lc.Text = strings.ReplaceAll(lc.Text, "'NSFW'", "?")
+	tnlc.Text = strings.ReplaceAll(tnlc.Text, "'NSFW'", "?")
 
 	// build MATCH clause
-	cat_match := "NSFW AND " + cats[0]
+	match_arg := "NSFW AND " + cats[0]
 	for i := 1; i < len(cats); i++ {
-		cat_match += " AND " + cats[i]
+		match_arg += " AND " + cats[i]
 	}
 
-	// insert cat_match arg * 2 after first login_name arg and before last 2
-	// copy trailing args to re-append after insert
-	trailing_args := make([]interface{}, len(lc.Args[1:]))
-	copy(trailing_args, lc.Args[1:])
-
-	// insert
-	lc.Args = append(lc.Args[:1], cat_match, cat_match)
-	lc.Args = append(lc.Args, trailing_args...)
+	// insert match_arg arg * 2 after first login_name arg and before last 2
+	trailing_args := make([]interface{}, len(tnlc.Args[1:]))
+	copy(trailing_args, tnlc.Args[1:])
+	tnlc.Args = append(tnlc.Args[:1], match_arg, match_arg)
+	tnlc.Args = append(tnlc.Args, trailing_args...)
 	
-	return lc
+	return tnlc
 }
 
 // LINKS
@@ -136,54 +133,54 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 const SUBMITTED_WHERE = `
 AND l.submitted_by = ?`
 
-func (q *TmapSubmitted) FromCats(cats []string) *TmapSubmitted {
-	q.Query = FromUserOrGlobalCats(q.Query, cats)
-	return q
+func (ts *TmapSubmitted) FromCats(cats []string) *TmapSubmitted {
+	ts.Query = FromUserOrGlobalCats(ts.Query, cats)
+	return ts
 }
 
-func (q *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
+func (ts *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
 	fields_replacer := strings.NewReplacer(
 		TMAP_BASE_CTES, TMAP_BASE_CTES+","+TMAP_AUTH_CTES,
 		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS+TMAP_AUTH_FIELDS,
 		TMAP_BASE_JOINS, TMAP_BASE_JOINS+TMAP_AUTH_JOINS,
 	)
-	q.Text = fields_replacer.Replace(q.Text)
+	ts.Text = fields_replacer.Replace(ts.Text)
 
 	// prepend req_user_id arg * 2
-	q.Args = append([]interface{}{req_user_id, req_user_id}, q.Args...)
+	ts.Args = append([]interface{}{req_user_id, req_user_id}, ts.Args...)
 
-	return q
+	return ts
 }
 
-func (q *TmapSubmitted) NSFW() *TmapSubmitted {
+func (ts *TmapSubmitted) NSFW() *TmapSubmitted {
 
 	// remove NSFW clause
-	q.Text = strings.Replace(
-		q.Text,
+	ts.Text = strings.Replace(
+		ts.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
 		"",
 		1,
 	)
 
 	// swap AND to WHERE in WHERE clause
-	q.Text = strings.Replace(
-		q.Text,
+	ts.Text = strings.Replace(
+		ts.Text,
 		"AND l.submitted_by",
 		"WHERE l.submitted_by",
 		1,
 	)
-	return q
+	return ts
 }
 
-func (q *TmapSubmitted) SortByNewest() *TmapSubmitted {
-	q.Text = strings.Replace(
-		q.Text,
+func (ts *TmapSubmitted) SortByNewest() *TmapSubmitted {
+	ts.Text = strings.Replace(
+		ts.Text,
 		TMAP_DEFAULT_ORDER_BY,
 		TMAP_ORDER_BY_NEWEST,
 		1,
 	)
 
-	return q
+	return ts
 }
 
 // Copied links submitted by other users (global cats replaced with user-assigned if user has tagged)
@@ -220,54 +217,54 @@ INNER JOIN UserCopies uc ON l.id = uc.link_id`
 const COPIED_WHERE = ` 
 AND submitted_by != ?`
 
-func (q *TmapCopied) FromCats(cats []string) *TmapCopied {
-	q.Query = FromUserOrGlobalCats(q.Query, cats)
-	return q
+func (tc *TmapCopied) FromCats(cats []string) *TmapCopied {
+	tc.Query = FromUserOrGlobalCats(tc.Query, cats)
+	return tc
 }
 
-func (q *TmapCopied) AsSignedInUser(req_user_id string) *TmapCopied {
+func (tc *TmapCopied) AsSignedInUser(req_user_id string) *TmapCopied {
 	fields_replacer := strings.NewReplacer(
 		TMAP_BASE_CTES, TMAP_BASE_CTES+","+TMAP_AUTH_CTES,
 		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS+TMAP_AUTH_FIELDS,
 		COPIED_JOIN, COPIED_JOIN+TMAP_AUTH_JOINS,
 	)
-	q.Text = fields_replacer.Replace(q.Text)
+	tc.Text = fields_replacer.Replace(tc.Text)
 
 	// prepend req_user_id arg * 2
-	q.Args = append([]interface{}{req_user_id, req_user_id}, q.Args...)
+	tc.Args = append([]interface{}{req_user_id, req_user_id}, tc.Args...)
 
-	return q
+	return tc
 }
 
-func (q *TmapCopied) NSFW() *TmapCopied {
+func (tc *TmapCopied) NSFW() *TmapCopied {
 
 	// remove NSFW clause
-	q.Text = strings.Replace(
-		q.Text,
+	tc.Text = strings.Replace(
+		tc.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
 		"",
 		1,
 	)
 
 	// swap AND to WHERE in WHERE clause
-	q.Text = strings.Replace(
-		q.Text,
+	tc.Text = strings.Replace(
+		tc.Text,
 		"AND submitted_by !=",
 		"WHERE submitted_by !=",
 		1,
 	)
-	return q
+	return tc
 }
 
-func (q *TmapCopied) SortByNewest() *TmapCopied {
-	q.Text = strings.Replace(
-		q.Text,
+func (tc *TmapCopied) SortByNewest() *TmapCopied {
+	tc.Text = strings.Replace(
+		tc.Text,
 		TMAP_DEFAULT_ORDER_BY,
 		TMAP_ORDER_BY_NEWEST,
 		1,
 	)
 
-	return q
+	return tc
 }
 // Tagged links submitted by other users (global cats replaced with user-assigned)
 type TmapTagged struct {
@@ -325,75 +322,75 @@ AND submitted_by != ?
 AND l.id NOT IN
 	(SELECT link_id FROM UserCopies)`
 
-func (q *TmapTagged) FromCats(cats []string) *TmapTagged {
+func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 	if len(cats) == 0 || cats[0] == "" {
-		return q
+		return tt
 	}
 
 	// append clause
-	cat_clause := `
+	match_clause := `
 	AND uct.user_cats MATCH ?`
 
-	q.Text = strings.Replace(
-		q.Text,
+	tt.Text = strings.Replace(
+		tt.Text,
 		TMAP_DEFAULT_ORDER_BY,
-		cat_clause+TMAP_DEFAULT_ORDER_BY,
+		match_clause+TMAP_DEFAULT_ORDER_BY,
 		1,
 	)
 
 	// append arg
-	cat_match := cats[0]
+	match_arg := cats[0]
 	for i := 1; i < len(cats); i++ {
-		cat_match += " AND " + cats[i]
+		match_arg += " AND " + cats[i]
 	}
-	q.Args = append(q.Args, cat_match)
+	tt.Args = append(tt.Args, match_arg)
 
-	return q
+	return tt
 }
 
-func (q *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
+func (tt *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
 	fields_replacer := strings.NewReplacer(
 		TMAP_BASE_CTES, TMAP_BASE_CTES+","+TMAP_AUTH_CTES,
 		TAGGED_FIELDS, TAGGED_FIELDS+TMAP_AUTH_FIELDS,
 		TAGGED_JOINS, TAGGED_JOINS+TMAP_AUTH_JOINS,
 	)
-	q.Text = fields_replacer.Replace(q.Text)
+	tt.Text = fields_replacer.Replace(tt.Text)
 
 	// prepend req_user_id arg * 2
-	q.Args = append([]interface{}{req_user_id, req_user_id}, q.Args...)
+	tt.Args = append([]interface{}{req_user_id, req_user_id}, tt.Args...)
 
-	return q
+	return tt
 }
 
-func (q *TmapTagged) NSFW() *TmapTagged {
+func (tt *TmapTagged) NSFW() *TmapTagged {
 
 	// remove NSFW clause
-	q.Text = strings.Replace(
-		q.Text,
+	tt.Text = strings.Replace(
+		tt.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
 		"",
 		1,
 	)
 
 	// swap AND to WHERE in WHERE clause
-	q.Text = strings.Replace(
-		q.Text,
+	tt.Text = strings.Replace(
+		tt.Text,
 		"AND submitted_by !=",
 		"WHERE submitted_by !=",
 		1,
 	)
-	return q
+	return tt
 }
 
-func (q *TmapTagged) SortByNewest() *TmapTagged {
-	q.Text = strings.Replace(
-		q.Text,
+func (tt *TmapTagged) SortByNewest() *TmapTagged {
+	tt.Text = strings.Replace(
+		tt.Text,
 		TMAP_DEFAULT_ORDER_BY,
 		TMAP_ORDER_BY_NEWEST,
 		1,
 	)
 
-	return q
+	return tt
 }
 
 func FromUserOrGlobalCats(q *Query, cats []string) *Query {
@@ -420,12 +417,12 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 	)
 
 	// build MATCH arg
-	cat_match := cats[0]
+	match_arg := cats[0]
 	for i := 1; i < len(cats); i++ {
-		cat_match += " AND " + cats[i]
+		match_arg += " AND " + cats[i]
 	}
 
-	// rebuild args with cat_match * 2 (once for PossibleUserCats CTE, once
+	// rebuild args with match_arg * 2 (once for PossibleUserCats CTE, once
 	// for GlobalCatsFTS CTE) 
 	// order for TmapSubmitted: login_name, MATCH, login_name, MATCH, login_name 
 	// order for TmapCopied: login_name, login_name, MATCH, login_name, 
@@ -440,10 +437,10 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 
 	// TmapCopied
 	if strings.Contains(q.Text, USER_COPIES_CTE) {
-		q.Args = []interface{}{login_name, login_name, cat_match, login_name, cat_match, login_name}
+		q.Args = []interface{}{login_name, login_name, match_arg, login_name, match_arg, login_name}
 	// TmapSubmitted
 	} else {
-		q.Args = []interface{}{login_name, cat_match, login_name, cat_match, login_name}
+		q.Args = []interface{}{login_name, match_arg, login_name, match_arg, login_name}
 	}
 
 	// insert GLOBAL_CATS_JOIN

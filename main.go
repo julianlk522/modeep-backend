@@ -82,7 +82,6 @@ func main() {
 			"Authorization",
 			"Content-Type",
 		},
-		// Debug: true,
 	}))
 
 	// ROUTES

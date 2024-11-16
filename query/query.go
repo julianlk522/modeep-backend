@@ -38,10 +38,10 @@ func EscapeCatsReservedChars(cats []string) {
 }
 
 func WithDoubleQuotesAroundReservedChars(cat string) string {
-	return reserved_chars_double_quotes_replacer.Replace(cat)
+	return reserved_chars_double_quotes_surrounder.Replace(cat)
 }
 
-var reserved_chars_double_quotes_replacer = strings.NewReplacer(
+var reserved_chars_double_quotes_surrounder = strings.NewReplacer(
 	// ! seems to work already with no modifications
 	".", `"."`,
 	"-", `"-"`,

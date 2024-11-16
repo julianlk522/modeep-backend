@@ -70,23 +70,23 @@ LEFT JOIN
 	)
 ON slink_id = links_id;`
 
-func (l *TagPageLink) AsSignedInUser(user_id string) *TagPageLink {
-	l.Text = strings.Replace(
-		l.Text,
+func (tpl *TagPageLink) AsSignedInUser(user_id string) *TagPageLink {
+	tpl.Text = strings.Replace(
+		tpl.Text,
 		TAG_PAGE_LINK_BASE_FIELDS,
 		TAG_PAGE_LINK_BASE_FIELDS+TAG_PAGE_LINK_AUTH_FIELDS,
 		1,
 	)
 
-	l.Text = strings.Replace(
-		l.Text,
+	tpl.Text = strings.Replace(
+		tpl.Text,
 		";",
 		TAG_PAGE_LINK_AUTH_JOINS,
 		1,
 	)
-	l.Args = append(l.Args, user_id, user_id)
+	tpl.Args = append(tpl.Args, user_id, user_id)
 
-	return l
+	return tpl
 }
 
 const TAG_PAGE_LINK_AUTH_FIELDS = `,
@@ -139,15 +139,15 @@ WHERE link_id = ?
 ORDER BY lifespan_overlap DESC
 LIMIT ?`
 
-func (o *TagRankings) Public() *TagRankings {
-	o.Text = strings.Replace(
-		o.Text,
+func (tr *TagRankings) Public() *TagRankings {
+	tr.Text = strings.Replace(
+		tr.Text,
 		TAG_RANKINGS_BASE_FIELDS,
 		TAG_RANKINGS_BASE_FIELDS + TAG_RANKINGS_PUBLIC_FIELDS,
 		1,
 	)
 
-	return o
+	return tr
 }
 
 const TAG_RANKINGS_PUBLIC_FIELDS = `, 
@@ -187,7 +187,7 @@ GROUP BY LOWER(global_cat)
 ORDER BY count DESC, LOWER(global_cat) ASC
 LIMIT ?`
 
-func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
+func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	// take lowercase to ensure all case variations are returned
 	cats := strings.Split(strings.ToLower(cats_params), ",")
 
@@ -195,10 +195,10 @@ func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	not_in_clause := `
 	AND LOWER(global_cat) NOT IN (?`
 
-	t.Args = append(t.Args, cats[0])
+	gcc.Args = append(gcc.Args, cats[0])
 	for i := 1; i < len(cats); i++ {
 		not_in_clause += ", ?"
-		t.Args = append(t.Args, cats[i])
+		gcc.Args = append(gcc.Args, cats[i])
 	}
 	not_in_clause += ")"
 
@@ -227,10 +227,10 @@ func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	}
 	// add optional singular/plural variants
 	// (skip for NOT IN clause otherwise subcats include filters)
-	t.Args = append(t.Args, match_arg)
+	gcc.Args = append(gcc.Args, match_arg)
 
-	t.Text = strings.Replace(
-		t.Text,
+	gcc.Text = strings.Replace(
+		gcc.Text,
 		"WHERE global_cat != ''",
 		"WHERE global_cat != ''" + 
 		not_in_clause + 
@@ -238,20 +238,20 @@ func (t *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 		1)
 
 	// move LIMIT arg to end
-	t.Args = append(t.Args[1:], GLOBAL_CATS_PAGE_LIMIT)
+	gcc.Args = append(gcc.Args[1:], GLOBAL_CATS_PAGE_LIMIT)
 
-	return t
+	return gcc
 }
 
-func (t *GlobalCatCounts) DuringPeriod(period string) *GlobalCatCounts {
+func (gcc *GlobalCatCounts) DuringPeriod(period string) *GlobalCatCounts {
 	clause, err := GetPeriodClause(period)
 	if err != nil {
-		t.Error = err
-		return t
+		gcc.Error = err
+		return gcc
 	}
 
-	t.Text = strings.Replace(
-		t.Text,
+	gcc.Text = strings.Replace(
+		gcc.Text,
 		"FROM Links",
 		fmt.Sprintf(
 			`FROM Links
@@ -260,12 +260,12 @@ func (t *GlobalCatCounts) DuringPeriod(period string) *GlobalCatCounts {
 		),
 		1)
 
-	return t
+	return gcc
 }
 
-func (t *GlobalCatCounts) More() *GlobalCatCounts {
-	t.Args[len(t.Args)-1] = MORE_GLOBAL_CATS_PAGE_LIMIT
-	return t
+func (gcc *GlobalCatCounts) More() *GlobalCatCounts {
+	gcc.Args[len(gcc.Args)-1] = MORE_GLOBAL_CATS_PAGE_LIMIT
+	return gcc
 }
 
 // Global Cats Spellfix Matches For Snippet
@@ -318,34 +318,34 @@ func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
 	})
 }
 
-func (s *SpellfixMatches) OmitCats(cats []string) error {
+func (sm *SpellfixMatches) OmitCats(cats []string) error {
 	if len(cats) == 0 || cats[0] == "" {
 		return e.ErrNoOmittedCats
 	}
 
 	// pop SPELLFIX_MATCHES_LIMIT arg
-	s.Args = s.Args[0 : len(s.Args)-1]
+	sm.Args = sm.Args[0 : len(sm.Args)-1]
 
 	not_in_clause := `
 	AND LOWER(word) NOT IN (?`
-	s.Args = append(s.Args, cats[0])
+	sm.Args = append(sm.Args, cats[0])
 
 	for i := 1; i < len(cats); i++ {
 		not_in_clause += ", ?"
-		s.Args = append(s.Args, cats[i])
+		sm.Args = append(sm.Args, cats[i])
 	}
 	not_in_clause += ")"
 
 	distance_clause := `AND distance <= ?`
-	s.Text = strings.Replace(
-		s.Text,
+	sm.Text = strings.Replace(
+		sm.Text,
 		distance_clause,
 		distance_clause+not_in_clause,
 		1,
 	)
 
 	// push SPELLFIX_MATCHES_LIMIT arg back to end
-	s.Args = append(s.Args, SPELLFIX_MATCHES_LIMIT)
+	sm.Args = append(sm.Args, SPELLFIX_MATCHES_LIMIT)
 
 	return nil
 }
