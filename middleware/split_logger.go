@@ -28,7 +28,6 @@ func init() {
 	}
 }
 
-// creates a new SplitLogFormatter
 func NewSplitLogFormatter(logger middleware.LoggerInterface) (*SplitLogFormatter, error) {
 	err_log_file_path := os.Getenv("FITM_ERR_LOG_FILE")
 	if err_log_file_path == "" {
@@ -50,7 +49,7 @@ func NewSplitLogFormatter(logger middleware.LoggerInterface) (*SplitLogFormatter
 	}, nil
 }
 
-// middleware that logs requests using SplitLogFormatter
+// SplitLogFormatter middleware
 func SplitRequestLogger(f *SplitLogFormatter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
@@ -71,58 +70,44 @@ func SplitRequestLogger(f *SplitLogFormatter) func(next http.Handler) http.Handl
 	}
 }
 
-// CustomResponseWriter wraps the http.ResponseWriter to capture any
-// custom status text
-type CustomResponseWriter struct {
-	http.ResponseWriter
-	StatusText string
-}
-
-func (crw *CustomResponseWriter) Write(b []byte) (int, error) {
-	if crw.StatusText == "" {
-		crw.StatusText = string(b)
-	}
-	return crw.ResponseWriter.Write(b)
-}
-
-// wraps DefaultLogFormatter to allow "teeing" err logs to file
+// wraps DefaultLogFormatter
 type SplitLogFormatter struct {
 	middleware.DefaultLogFormatter
 	FileLogger *log.Logger
 }
 
-func (l *SplitLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
+func (slf *SplitLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
 	return &SplitLogEntry{
-		LogEntry:  l.DefaultLogFormatter.NewLogEntry(r),
-		Formatter: l,
+		LogEntry:  slf.DefaultLogFormatter.NewLogEntry(r),
+		Formatter: slf,
 		Request:   r,
 	}
 }
 
-// wraps default log entry
+// wraps default log entry to allow splitting to stdout / log file
 type SplitLogEntry struct {
 	middleware.LogEntry
 	Formatter *SplitLogFormatter
 	Request   *http.Request
 }
 
-func (l *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
-	l.LogEntry.Write(status, bytes, header, elapsed, extra)
+func (sle *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
+	sle.LogEntry.Write(status, bytes, header, elapsed, extra)
 
 	// save GitHub webhook responses
-	if l.Request.URL.Path == "/ghwh" {
+	if sle.Request.URL.Path == "/ghwh" {
 		status_text := "Unknown"
 		if crw, ok := extra.(*CustomResponseWriter); ok {
 			status_text = crw.StatusText
 		}
 
-		l.Formatter.FileLogger.Printf(
+		sle.Formatter.FileLogger.Printf(
 			"GitHub Webhook: %d %s %s %s %s %dB %v\nStatus Text: %s",
 			status,
-			l.Request.Method,
-			l.Request.URL.Path,
-			l.Request.RemoteAddr,
-			l.Request.Header.Get("X-GitHub-Event"),
+			sle.Request.Method,
+			sle.Request.URL.Path,
+			sle.Request.RemoteAddr,
+			sle.Request.Header.Get("X-GitHub-Event"),
 			bytes,
 			elapsed,
 			status_text,
@@ -134,15 +119,28 @@ func (l *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed tim
 		if crw, ok := extra.(*CustomResponseWriter); ok {
 			status_text = crw.StatusText
 		}
-		l.Formatter.FileLogger.Printf(
+		sle.Formatter.FileLogger.Printf(
 			"Err: %d %s %s %s %dB %v\nStatus Text: %s",
 			status,
-			l.Request.Method,
-			l.Request.URL.Path,
-			l.Request.RemoteAddr,
+			sle.Request.Method,
+			sle.Request.URL.Path,
+			sle.Request.RemoteAddr,
 			bytes,
 			elapsed,
 			status_text,
 		)
 	}
+}
+
+// wraps http.ResponseWriter to capture any custom status text
+type CustomResponseWriter struct {
+	http.ResponseWriter
+	StatusText string
+}
+
+func (crw *CustomResponseWriter) Write(b []byte) (int, error) {
+	if crw.StatusText == "" {
+		crw.StatusText = string(b)
+	}
+	return crw.ResponseWriter.Write(b)
 }

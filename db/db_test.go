@@ -33,7 +33,7 @@ func TestLoadSpellfix(t *testing.T) {
 		db_dir := filepath.Dir(dbtest_file)
 		sql_dump_path = filepath.Join(db_dir, "fitm_test.db.sql")
 	} else {
-		sql_dump_path = test_data_path + "/fitm_test.db.sql"
+		sql_dump_path = filepath.Join(test_data_path, "fitm_test.db.sql")
 	}
 
 	sql_dump, err := os.ReadFile(sql_dump_path)

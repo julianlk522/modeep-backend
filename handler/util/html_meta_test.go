@@ -14,15 +14,15 @@ func NewMockPage(s string) MockPage {
 	return MockPage{Content: s}
 }
 
-func (m *MockPage) Read(p []byte) (n int, err error) {
-	if m.done {
+func (mp *MockPage) Read(p []byte) (n int, err error) {
+	if mp.done {
 		return 0, io.EOF
 	}
-	for i, b := range []byte(m.Content) {
+	for i, b := range []byte(mp.Content) {
 		p[i] = b
 	}
-	m.done = true
-	return len(m.Content), nil
+	mp.done = true
+	return len(mp.Content), nil
 }
 
 func TestTitle(t *testing.T) {

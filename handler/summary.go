@@ -67,9 +67,9 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	summary_id, err := util.GetIDOfUserSummaryForLink(req_user_id, summary_data.LinkID)
-	if err != nil {
 
-		// Create summary if not already exists
+	// Create summary if not already exists
+	if err != nil {
 		if err == sql.ErrNoRows {
 			_, err = db.Client.Exec(
 				`INSERT INTO Summaries VALUES (?,?,?,?,?)`,
@@ -89,9 +89,8 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+	// Update summary if exists
 	} else {
-
-		// Update summary if already submitted
 		_, err = db.Client.Exec(
 			`UPDATE Summaries SET text = ?, last_updated = ? WHERE submitted_by = ? AND link_id = ?`,
 			summary_data.Text,

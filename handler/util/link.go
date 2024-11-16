@@ -49,8 +49,8 @@ func PrepareLinksResponse[T model.HasCats](links_sql *query.TopLinks, page int, 
 	return pl, nil
 }
 
-func ScanLinks[T model.Link | model.LinkSignedIn](get_links_sql *query.TopLinks) (*[]T, error) {
-	rows, err := db.Client.Query(get_links_sql.Text, get_links_sql.Args...)
+func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[]T, error) {
+	rows, err := db.Client.Query(links_sql.Text, links_sql.Args...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -221,24 +221,24 @@ func InvalidURLError(url string) error {
 	return fmt.Errorf("invalid URL: %s", url)
 }
 
-func AssignMetadata(meta HTMLMeta, link_data *model.NewLinkRequest) {
+func AssignMetadata(meta HTMLMeta, request *model.NewLinkRequest) {
 	switch {
 	case meta.OGDescription != "":
-		link_data.AutoSummary = meta.OGDescription
+		request.AutoSummary = meta.OGDescription
 	case meta.Description != "":
-		link_data.AutoSummary = meta.Description
+		request.AutoSummary = meta.Description
 	case meta.OGTitle != "":
-		link_data.AutoSummary = meta.OGTitle
+		request.AutoSummary = meta.OGTitle
 	case meta.Title != "":
-		link_data.AutoSummary = meta.Title
+		request.AutoSummary = meta.Title
 	case meta.OGSiteName != "":
-		link_data.AutoSummary = meta.OGSiteName
+		request.AutoSummary = meta.OGSiteName
 	}
 
 	if meta.OGImage != "" {
 		resp, err := http.Get(meta.OGImage)
 		if err == nil && resp.StatusCode != 404 && !IsRedirect(resp.StatusCode) {
-			link_data.ImgURL = meta.OGImage
+			request.ImgURL = meta.OGImage
 		}
 	}
 }
@@ -260,8 +260,6 @@ func LinkAlreadyAdded(url string) (bool, string) {
 }
 
 func IncrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
-
-	// exec as part of transaction if tx is not nil
 	if tx != nil {
 		for _, cat := range cats {
 
@@ -292,8 +290,6 @@ func IncrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 				return err
 			}
 		}
-
-		// else run against DB connection directly
 	} else {
 		for _, cat := range cats {
 			var rank int
@@ -327,8 +323,6 @@ func IncrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 
 // Delete link
 func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
-
-	// exec as part of transaction if tx is not nil
 	if tx != nil {
 		for _, cat := range cats {
 
@@ -354,8 +348,6 @@ func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 				return err
 			}
 		}
-
-		// else run against DB connection directly
 	} else {
 		for _, cat := range cats {
 			_, err := db.Client.Exec(

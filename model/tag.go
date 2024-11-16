@@ -70,28 +70,28 @@ type NewTagRequest struct {
 	LastUpdated string
 }
 
-func (t *NewTagRequest) Bind(r *http.Request) error {
-	if t.NewTag.LinkID == "" {
+func (ntr *NewTagRequest) Bind(r *http.Request) error {
+	if ntr.NewTag.LinkID == "" {
 		return e.ErrNoLinkID
 	}
 
 	switch {
-	case t.NewTag.Cats == "":
+	case ntr.NewTag.Cats == "":
 		return e.ErrNoCats
-	case util.HasTooLongCats(t.NewTag.Cats):
+	case util.HasTooLongCats(ntr.NewTag.Cats):
 		return e.CatCharsExceedLimit(util.CAT_CHAR_LIMIT)
-	case util.HasTooManyCats(t.NewTag.Cats):
+	case util.HasTooManyCats(ntr.NewTag.Cats):
 		return e.NumCatsExceedsLimit(util.NUM_CATS_LIMIT)
-	case util.HasDuplicateCats(t.NewTag.Cats):
+	case util.HasDuplicateCats(ntr.NewTag.Cats):
 		return e.ErrDuplicateCats
 	}
 
 	// capitalize 'nsfw' if found
-	t.NewTag.Cats = util.CapitalizeNSFWCatIfNotAlready(t.NewTag.Cats)
+	ntr.NewTag.Cats = util.CapitalizeNSFWCatIfNotAlready(ntr.NewTag.Cats)
 
-	t.ID = uuid.New().String()
-	t.Cats = util.TrimExcessAndTrailingSpaces(t.NewTag.Cats)
-	t.LastUpdated = util.NEW_LONG_TIMESTAMP()
+	ntr.ID = uuid.New().String()
+	ntr.Cats = util.TrimExcessAndTrailingSpaces(ntr.NewTag.Cats)
+	ntr.LastUpdated = util.NEW_LONG_TIMESTAMP()
 
 	return nil
 }
@@ -102,27 +102,27 @@ type EditTagRequest struct {
 	LastUpdated string
 }
 
-func (et *EditTagRequest) Bind(r *http.Request) error {
-	if et.ID == "" {
+func (etr *EditTagRequest) Bind(r *http.Request) error {
+	if etr.ID == "" {
 		return e.ErrNoTagID
 	}
 
 	switch {
-	case et.Cats == "":
+	case etr.Cats == "":
 		return e.ErrNoCats
-	case util.HasTooLongCats(et.Cats):
+	case util.HasTooLongCats(etr.Cats):
 		return e.CatCharsExceedLimit(util.CAT_CHAR_LIMIT)
-	case util.HasTooManyCats(et.Cats):
+	case util.HasTooManyCats(etr.Cats):
 		return e.NumCatsExceedsLimit(util.NUM_CATS_LIMIT)
-	case util.HasDuplicateCats(et.Cats):
+	case util.HasDuplicateCats(etr.Cats):
 		return e.ErrDuplicateCats
 	}
 
 	// capitalize 'nsfw' if found
-	et.Cats = util.CapitalizeNSFWCatIfNotAlready(et.Cats)
+	etr.Cats = util.CapitalizeNSFWCatIfNotAlready(etr.Cats)
 
-	et.Cats = util.TrimExcessAndTrailingSpaces(et.Cats)
-	et.LastUpdated = util.NEW_LONG_TIMESTAMP()
+	etr.Cats = util.TrimExcessAndTrailingSpaces(etr.Cats)
+	etr.LastUpdated = util.NEW_LONG_TIMESTAMP()
 
 	return nil
 }
@@ -131,8 +131,8 @@ type DeleteTagRequest struct {
 	ID string `json:"tag_id"`
 }
 
-func (dt *DeleteTagRequest) Bind(r *http.Request) error {
-	if dt.ID == "" {
+func (dtr *DeleteTagRequest) Bind(r *http.Request) error {
+	if dtr.ID == "" {
 		return e.ErrNoTagID
 	}
 

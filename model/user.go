@@ -21,27 +21,27 @@ type SignUpRequest struct {
 	CreatedAt string
 }
 
-func (s *SignUpRequest) Bind(r *http.Request) error {
+func (sr *SignUpRequest) Bind(r *http.Request) error {
 	switch {
-	case s.Auth.LoginName == "":
+	case sr.Auth.LoginName == "":
 		return e.ErrNoLoginName
-	case len(s.Auth.LoginName) < util.LOGIN_NAME_LOWER_LIMIT:
+	case len(sr.Auth.LoginName) < util.LOGIN_NAME_LOWER_LIMIT:
 		return e.LoginNameExceedsLowerLimit(util.LOGIN_NAME_LOWER_LIMIT)
-	case len(s.Auth.LoginName) > util.LOGIN_NAME_UPPER_LIMIT:
+	case len(sr.Auth.LoginName) > util.LOGIN_NAME_UPPER_LIMIT:
 		return e.LoginNameExceedsUpperLimit(util.LOGIN_NAME_UPPER_LIMIT)
-	case util.ContainsInvalidChars(s.Auth.LoginName):
+	case util.ContainsInvalidChars(sr.Auth.LoginName):
 		return e.ErrLoginNameContainsInvalidChars
 
-	case s.Auth.Password == "":
+	case sr.Auth.Password == "":
 		return e.ErrNoPassword
-	case len(s.Auth.Password) < util.PASSWORD_LOWER_LIMIT:
+	case len(sr.Auth.Password) < util.PASSWORD_LOWER_LIMIT:
 		return e.PasswordExceedsLowerLimit(util.PASSWORD_LOWER_LIMIT)
-	case len(s.Auth.Password) > util.PASSWORD_UPPER_LIMIT:
+	case len(sr.Auth.Password) > util.PASSWORD_UPPER_LIMIT:
 		return e.PasswordExceedsUpperLimit(util.PASSWORD_UPPER_LIMIT)
 	}
 
-	s.ID = uuid.New().String()
-	s.CreatedAt = util.NEW_SHORT_TIMESTAMP()
+	sr.ID = uuid.New().String()
+	sr.CreatedAt = util.NEW_SHORT_TIMESTAMP()
 	return nil
 }
 
@@ -49,10 +49,10 @@ type LogInRequest struct {
 	*Auth
 }
 
-func (l *LogInRequest) Bind(r *http.Request) error {
-	if l.Auth.LoginName == "" {
+func (lr *LogInRequest) Bind(r *http.Request) error {
+	if lr.Auth.LoginName == "" {
 		return e.ErrNoLoginName
-	} else if l.Auth.Password == "" {
+	} else if lr.Auth.Password == "" {
 		return e.ErrNoPassword
 	}
 
@@ -71,10 +71,10 @@ type EditAboutRequest struct {
 	About string `json:"about"`
 }
 
-func (ea *EditAboutRequest) Bind(r *http.Request) error {
-	if len(ea.About) > util.PROFILE_ABOUT_CHAR_LIMIT {
+func (ear *EditAboutRequest) Bind(r *http.Request) error {
+	if len(ear.About) > util.PROFILE_ABOUT_CHAR_LIMIT {
 		return e.ProfileAboutLengthExceedsLimit(util.PROFILE_ABOUT_CHAR_LIMIT)
-	} else if len(ea.About) > 0 && !regexp.MustCompile(`[^\n\r\s\p{C}]`).MatchString(ea.About) {
+	} else if len(ear.About) > 0 && !regexp.MustCompile(`[^\n\r\s\p{C}]`).MatchString(ear.About) {
 		return e.ErrAboutHasInvalidChars
 	}
 

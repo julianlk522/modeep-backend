@@ -15,8 +15,8 @@ type ErrResponse struct {
 	ErrorText  string `json:"error,omitempty"`
 }
 
-func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	render.Status(r, e.HTTPStatusCode)
+func (er *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, er.HTTPStatusCode)
 	return nil
 }
 

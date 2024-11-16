@@ -71,18 +71,18 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// prepare response
-	var lr interface{}
+	var resp interface{}
 	var err error
 	if req_user_id != "" {
-		lr, err = util.PrepareLinksResponse[model.LinkSignedIn](links_sql, page, cats_params)
+		resp, err = util.PrepareLinksResponse[model.LinkSignedIn](links_sql, page, cats_params)
 	} else {
-		lr, err = util.PrepareLinksResponse[model.Link](links_sql, page, cats_params)
+		resp, err = util.PrepareLinksResponse[model.Link](links_sql, page, cats_params)
 	}
 
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
 	}
-	render.JSON(w, r, lr)
+	render.JSON(w, r, resp)
 }
 
 func AddLink(w http.ResponseWriter, r *http.Request) {
@@ -132,8 +132,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 
 	// Verified: add link
 	request.SubmittedBy = req_login_name
-
-	// sort cats
 	request.Cats = util.AlphabetizeCats(request.NewLink.Cats)
 
 	// Start Transaction
@@ -276,8 +274,7 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// fetch global cats before deleting
-	// (to properly update spellfix ranks)
+	// fetch global cats before deleting so spellfix ranks can be updated
 	var gc string
 	err = db.Client.QueryRow("SELECT global_cats FROM Links WHERE id = ?;", request.LinkID).Scan(&gc)
 	if err != nil {

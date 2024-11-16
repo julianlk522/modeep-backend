@@ -124,7 +124,7 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if more params passed, need to run through the results to check
+	// if "more" params passed, need to run through the results to check
 	// if any cat plural/singular spelling variations were merged
 
 	// (on pages with links it is more accurate to search the links, but

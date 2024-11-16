@@ -188,35 +188,6 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 	var links interface{}
 
 	switch any(new(T)).(type) {
-	case *model.TmapLinkSignedIn:
-		var signed_in_links = []model.TmapLinkSignedIn{}
-
-		for rows.Next() {
-			l := model.TmapLinkSignedIn{}
-			err := rows.Scan(
-				&l.ID,
-				&l.URL,
-				&l.SubmittedBy,
-				&l.SubmitDate,
-				&l.Cats,
-				&l.CatsFromUser,
-				&l.Summary,
-				&l.SummaryCount,
-				&l.LikeCount,
-				&l.TagCount,
-				&l.ImgURL,
-
-				// Add IsLiked / IsCopied
-				&l.IsLiked,
-				&l.IsCopied)
-			if err != nil {
-				return nil, err
-			}
-			signed_in_links = append(signed_in_links, l)
-		}
-
-		links = &signed_in_links
-
 	case *model.TmapLink:
 		var signed_out_links = []model.TmapLink{}
 
@@ -241,12 +212,39 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 		}
 
 		links = &signed_out_links
+	case *model.TmapLinkSignedIn:
+		var signed_in_links = []model.TmapLinkSignedIn{}
+
+		for rows.Next() {
+			l := model.TmapLinkSignedIn{}
+			err := rows.Scan(
+				&l.ID,
+				&l.URL,
+				&l.SubmittedBy,
+				&l.SubmitDate,
+				&l.Cats,
+				&l.CatsFromUser,
+				&l.Summary,
+				&l.SummaryCount,
+				&l.LikeCount,
+				&l.TagCount,
+				&l.ImgURL,
+
+				// signed-in only properties
+				&l.IsLiked,
+				&l.IsCopied)
+			if err != nil {
+				return nil, err
+			}
+			signed_in_links = append(signed_in_links, l)
+		}
+
+		links = &signed_in_links
 	}
 
 	return links.(*[]T), nil
 }
 
-// Get counts of each cat/subcat found in links
 func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOpts) *[]model.CatCount {
 	counts := []model.CatCount{}
 	found_cats := []string{}
@@ -255,9 +253,9 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	for _, link := range *links {
 		var cats string
 		switch l := any(link).(type) {
-		case model.TmapLinkSignedIn:
-			cats = l.Cats
 		case model.TmapLink:
+			cats = l.Cats
+		case model.TmapLinkSignedIn:
 			cats = l.Cats
 		}
 
@@ -291,7 +289,6 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	slices.SortFunc(counts, model.SortCats)
 
 	// merge counts of capitalization variants e.g. "Music" and "music"
-	// TODO: consider ways to make this more efficient
 	for i, count := range counts {
 		for j := i + 1; j < len(counts); j++ {
 			if strings.EqualFold(count.Category, counts[j].Category) {

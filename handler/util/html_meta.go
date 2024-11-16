@@ -57,33 +57,33 @@ var meta_properties = []string{
 	"og:site_name",
 }
 
-func AssignTokenPropertyToHTMLMeta(t html.Token, hm *HTMLMeta) {
-	for _, prop := range meta_properties {
-		m, ok := ExtractMetaProperty(t, prop)
+func AssignTokenPropertyToHTMLMeta(token html.Token, hm *HTMLMeta) {
+	for _, mp := range meta_properties {
+		prop, ok := ExtractMetaPropertyFromToken(mp, token)
 		if ok {
-			switch prop {
+			switch mp {
 			case "description":
-				hm.Description = m
+				hm.Description = prop
 			case "og:title":
-				hm.OGTitle = m
+				hm.OGTitle = prop
 			case "og:description":
-				hm.OGDescription = m
+				hm.OGDescription = prop
 			case "og:image":
-				hm.OGImage = m
+				hm.OGImage = prop
 			case "og:author":
-				hm.OGAuthor = m
+				hm.OGAuthor = prop
 			case "og:publisher":
-				hm.OGPublisher = m
+				hm.OGPublisher = prop
 			case "og:site_name":
-				hm.OGSiteName = m
+				hm.OGSiteName = prop
 			}
 		}
 	}
 }
 
-func ExtractMetaProperty(t html.Token, prop string) (content string, ok bool) {
-	for _, attr := range t.Attr {
-		if (attr.Key == "property" || attr.Key == "name") && attr.Val == prop {
+func ExtractMetaPropertyFromToken(mp string, token html.Token) (content string, ok bool) {
+	for _, attr := range token.Attr {
+		if (attr.Key == "property" || attr.Key == "name") && attr.Val == mp {
 			ok = true
 		}
 

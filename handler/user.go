@@ -35,7 +35,6 @@ func init() {
 // Auth
 func SignUp(w http.ResponseWriter, r *http.Request) {
 	signup_data := &model.SignUpRequest{}
-
 	if err := render.Bind(r, signup_data); err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(err))
 		return
@@ -79,7 +78,6 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 
 func LogIn(w http.ResponseWriter, r *http.Request) {
 	login_data := &model.LogInRequest{}
-
 	if err := render.Bind(r, login_data); err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(err))
 		return
@@ -142,7 +140,7 @@ func GetProfilePic(w http.ResponseWriter, r *http.Request) {
 
 func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 
-	// Get file (up to 10MB)
+	// Get file (up to 10MB, or 10 * 2^20 bytes)
 	r.ParseMultipartForm(10 << 20)
 	file, handler, err := r.FormFile("pic")
 	if err != nil {

@@ -104,39 +104,39 @@ type NewLinkRequest struct {
 	ImgURL       string
 }
 
-func (l *NewLinkRequest) Bind(r *http.Request) error {
+func (nlr *NewLinkRequest) Bind(r *http.Request) error {
 
 	// URL
-	if l.NewLink.URL == "" {
+	if nlr.NewLink.URL == "" {
 		return e.ErrNoURL
-	} else if len(l.NewLink.URL) > util.URL_CHAR_LIMIT {
+	} else if len(nlr.NewLink.URL) > util.URL_CHAR_LIMIT {
 		return e.ErrLinkURLCharsExceedLimit(util.URL_CHAR_LIMIT)
 	}
 
 	// Cats
 	switch {
-	case l.NewLink.Cats == "":
+	case nlr.NewLink.Cats == "":
 		return e.ErrNoTagCats
-	case util.HasTooLongCats(l.NewLink.Cats):
+	case util.HasTooLongCats(nlr.NewLink.Cats):
 		return e.CatCharsExceedLimit(util.CAT_CHAR_LIMIT)
-	case util.HasTooManyCats(l.NewLink.Cats):
+	case util.HasTooManyCats(nlr.NewLink.Cats):
 		return e.NumCatsExceedsLimit(util.NUM_CATS_LIMIT)
-	case util.HasDuplicateCats(l.NewLink.Cats):
+	case util.HasDuplicateCats(nlr.NewLink.Cats):
 		return e.ErrDuplicateCats
 	}
 
 	// Summary
-	if len(l.NewLink.Summary) > util.SUMMARY_CHAR_LIMIT {
+	if len(nlr.NewLink.Summary) > util.SUMMARY_CHAR_LIMIT {
 		return e.SummaryLengthExceedsLimit(util.SUMMARY_CHAR_LIMIT)
 	}
 
-	if strings.Contains(l.NewLink.Summary, "\"") {
-		l.NewLink.Summary = strings.ReplaceAll(l.NewLink.Summary, "\"", "'")
+	if strings.Contains(nlr.NewLink.Summary, "\"") {
+		nlr.NewLink.Summary = strings.ReplaceAll(nlr.NewLink.Summary, "\"", "'")
 	}
 
-	l.ID = uuid.New().String()
-	l.SubmitDate = util.NEW_LONG_TIMESTAMP()
-	l.LikeCount = 0
+	nlr.ID = uuid.New().String()
+	nlr.SubmitDate = util.NEW_LONG_TIMESTAMP()
+	nlr.LikeCount = 0
 
 	return nil
 }
@@ -145,8 +145,8 @@ type DeleteLinkRequest struct {
 	LinkID string `json:"link_id"`
 }
 
-func (dl *DeleteLinkRequest) Bind(r *http.Request) error {
-	if dl.LinkID == "" {
+func (dlr *DeleteLinkRequest) Bind(r *http.Request) error {
+	if dlr.LinkID == "" {
 		return e.ErrNoLinkID
 	}
 

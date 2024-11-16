@@ -210,7 +210,6 @@ func UserHasLikedSummary(user_id string, summary_id string) (bool, error) {
 	return summary_like_id.Valid, nil
 }
 
-// Calculate global summary
 func CalculateAndSetGlobalSummary(link_id string) error {
 
 	// Summary with the most upvotes is the global summary

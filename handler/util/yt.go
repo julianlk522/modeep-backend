@@ -21,7 +21,8 @@ func IsYouTubeVideoLink(url string) bool {
 		return false
 	}
 
-	// prevent links containing YouTube URLs
+	// if URL does contain YouTube video link, make sure that
+	// it is actually YouTube and not some other domain
 	match, _ := regexp.MatchString(YT_VID_URL_REGEX, url)
 	return match
 

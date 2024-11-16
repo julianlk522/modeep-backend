@@ -234,7 +234,6 @@ func IsOnlyTag(tag_id string) (bool, error) {
 	return true, nil
 }
 
-// Calculate global cats
 func CalculateAndSetGlobalCats(link_id string) error {
 	tag_rankings_sql := query.NewTagRankings(link_id)
 	if tag_rankings_sql.Error != nil {
@@ -298,9 +297,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 			global_cats += cat + ","
 		}
 	}
-
-	// Remove trailing comma
-	if len(global_cats) > 0 && strings.HasSuffix(global_cats, ",") {
+	if len(global_cats) > 0 {
 		global_cats = global_cats[:len(global_cats)-1]
 	}
 
@@ -319,15 +316,15 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 		return cat_rankings
 	}
 
-	// sort by values
-	sorted_rankings_slice := make([]model.CatRanking, 0, len(cat_rankings))
+	// sort by values before limit
+	sorted_rankings := make([]model.CatRanking, 0, len(cat_rankings))
 	for cat, score := range cat_rankings {
-		sorted_rankings_slice = append(sorted_rankings_slice, model.CatRanking{
+		sorted_rankings = append(sorted_rankings, model.CatRanking{
 			Cat:  cat,
 			Score: score,
 		})
 	}
-	slices.SortFunc(sorted_rankings_slice, func(i, j model.CatRanking) int {
+	slices.SortFunc(sorted_rankings, func(i, j model.CatRanking) int {
 		if i.Score > j.Score {
 			return -1
 		} else if i.Score == j.Score && strings.ToLower(i.Cat) < strings.ToLower(j.Cat) {
@@ -336,12 +333,12 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 		return 1
 	})
 
-	limited_cat_rankings := make(map[string]float32, MAX_TAG_CATS)
+	limited_rankings := make(map[string]float32, MAX_TAG_CATS)
 	for i := 0; i < MAX_TAG_CATS; i++ {
-		limited_cat_rankings[sorted_rankings_slice[i].Cat] = sorted_rankings_slice[i].Score
+		limited_rankings[sorted_rankings[i].Cat] = sorted_rankings[i].Score
 	}
 	
-	return limited_cat_rankings
+	return limited_rankings
 }
 
 func AlphabetizeCatRankings(scores map[string]float32) []string {

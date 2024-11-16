@@ -13,7 +13,7 @@ import (
 )
 
 func SetupTestDB() error {
-	log.Print("setting up test DB client")
+	log.Print("preparing test DB client")
 
 	// create in-memory DB connection
 	TestClient, err := sql.Open("sqlite-spellfix1", "file::memory:?cache=shared")
@@ -34,7 +34,7 @@ func SetupTestDB() error {
 		sql_dump_path = filepath.Join(db_dir, "fitm_test.db.sql")
 	} else {
 		log.Print("using FITM_TEST_DATA_PATH")
-		sql_dump_path = test_data_path + "/fitm_test.db.sql"
+		sql_dump_path = filepath.Join(test_data_path, "fitm_test.db.sql")
 	}
 
 	sql_dump, err := os.ReadFile(sql_dump_path)

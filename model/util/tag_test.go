@@ -32,7 +32,7 @@ func TestTrimExcessAndTrailingSpaces(t *testing.T) {
 		{"     hello mom", "hello mom"},
 
 		{"hello     mom     ", "hello mom"},
-		{"mikey", "mikey"},
+		{"test", "test"},
 		{"test name", "test name"},
 	}
 

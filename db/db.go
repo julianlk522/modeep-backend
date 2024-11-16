@@ -56,7 +56,7 @@ func LoadSpellfix() {
 
 	} else {
 		log.Print("attempting to find spellfix at FITM_TEST_DATA_PATH")
-		spellfix_path = test_data_path + "/spellfix"
+		spellfix_path = filepath.Join(test_data_path, "spellfix")
 	}
 	sql.Register(
 		"sqlite-spellfix1",

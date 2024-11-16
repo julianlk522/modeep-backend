@@ -18,10 +18,7 @@ func HasTooLongCats(cats string) bool {
 }
 
 func HasTooManyCats(cats string) bool {
-	num_cats := strings.Count(cats, ",") + 1
-	// +1 since "a" (no commas) would be one cat
-	// and "a,b" (one comma) would be two
-	return num_cats > NUM_CATS_LIMIT
+	return strings.Count(cats, ",") + 1 > NUM_CATS_LIMIT
 }
 
 func HasDuplicateCats(cats string) bool {
@@ -53,12 +50,7 @@ func CapitalizeNSFWCatIfNotAlready(cats string) string {
 }
 
 func TrimExcessAndTrailingSpaces(cats string) string {
-
-	// remove leading / trailing spaces
-	cats = strings.TrimSpace(cats)
-
-	// replace multiple spaces with single
-	cats = strings.Join(strings.Fields(cats), " ")
+	cats = strings.Join(strings.Fields(strings.TrimSpace(cats)), " ")
 
 	return cats
 }

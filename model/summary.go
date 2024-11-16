@@ -36,23 +36,23 @@ type NewSummaryRequest struct {
 	LastUpdated string
 }
 
-func (s *NewSummaryRequest) Bind(r *http.Request) error {
-	if s.LinkID == "" {
+func (nsr *NewSummaryRequest) Bind(r *http.Request) error {
+	if nsr.LinkID == "" {
 		return e.ErrNoLinkID
 	}
 
-	if s.Text == "" {
+	if nsr.Text == "" {
 		return e.ErrNoSummaryText
-	} else if len(s.Text) > util.SUMMARY_CHAR_LIMIT {
+	} else if len(nsr.Text) > util.SUMMARY_CHAR_LIMIT {
 		return e.SummaryLengthExceedsLimit(util.SUMMARY_CHAR_LIMIT)
 	}
 
-	if strings.Contains(s.Text, "\"") {
-		s.Text = strings.ReplaceAll(s.Text, "\"", "'")
+	if strings.Contains(nsr.Text, "\"") {
+		nsr.Text = strings.ReplaceAll(nsr.Text, "\"", "'")
 	}
 
-	s.ID = uuid.New().String()
-	s.LastUpdated = util.NEW_LONG_TIMESTAMP()
+	nsr.ID = uuid.New().String()
+	nsr.LastUpdated = util.NEW_LONG_TIMESTAMP()
 
 	return nil
 
@@ -63,8 +63,8 @@ type DeleteSummaryRequest struct {
 	SummaryID string `json:"summary_id"`
 }
 
-func (ds *DeleteSummaryRequest) Bind(r *http.Request) error {
-	if ds.SummaryID == "" {
+func (dsr *DeleteSummaryRequest) Bind(r *http.Request) error {
+	if dsr.SummaryID == "" {
 		return e.ErrNoSummaryID
 	}
 	return nil
@@ -76,18 +76,18 @@ type EditSummaryRequest struct {
 	Text      string `json:"text"`
 }
 
-func (es *EditSummaryRequest) Bind(r *http.Request) error {
-	if es.SummaryID == "" {
+func (esr *EditSummaryRequest) Bind(r *http.Request) error {
+	if esr.SummaryID == "" {
 		return e.ErrNoSummaryID
 	}
-	if es.Text == "" {
+	if esr.Text == "" {
 		return e.ErrNoSummaryReplacementText
-	} else if len(es.Text) > util.SUMMARY_CHAR_LIMIT {
+	} else if len(esr.Text) > util.SUMMARY_CHAR_LIMIT {
 		return e.SummaryLengthExceedsLimit(util.SUMMARY_CHAR_LIMIT)
 	}
 
-	if strings.Contains(es.Text, "\"") {
-		es.Text = strings.ReplaceAll(es.Text, "\"", "'")
+	if strings.Contains(esr.Text, "\"") {
+		esr.Text = strings.ReplaceAll(esr.Text, "\"", "'")
 	}
 
 	return nil
