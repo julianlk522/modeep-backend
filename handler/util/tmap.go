@@ -288,19 +288,8 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 
 	slices.SortFunc(counts, model.SortCats)
 
-	// merge counts of capitalization variants e.g. "Music" and "music"
-	for i, count := range counts {
-		for j := i + 1; j < len(counts); j++ {
-			if strings.EqualFold(count.Category, counts[j].Category) {
-
-				// skip if is some capitalization variant of a cat filter
-				if opts != nil && slices.Contains(opts.OmittedCats, strings.ToLower(counts[j].Category)) {
-					continue
-				}
-				counts[i].Count += counts[j].Count
-				counts = append(counts[:j], counts[j+1:]...)
-			}
-		}
+	if opts != nil {
+		MergeCatCountsCapitalizationVariants(&counts,opts.OmittedCats)
 	}
 
 	if len(counts) > TMAP_CATS_PAGE_LIMIT {
@@ -308,4 +297,21 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	}
 	
 	return &counts
+}
+
+// merge counts of capitalization variants e.g. "Music" and "music"
+func MergeCatCountsCapitalizationVariants(counts *[]model.CatCount, omitted_cats []string) {
+	for i, count := range *counts {
+		for j := i + 1; j < len(*counts); j++ {
+			if strings.EqualFold(count.Category, (*counts)[j].Category) {
+
+				// skip if is some capitalization variant of a cat filter
+				if len(omitted_cats) > 0 && slices.Contains(omitted_cats, strings.ToLower((*counts)[j].Category)) {
+					continue
+				}
+				(*counts)[i].Count += (*counts)[j].Count
+				*counts = append((*counts)[:j], (*counts)[j+1:]...)
+			}
+		}
+	}
 }

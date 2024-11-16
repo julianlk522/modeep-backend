@@ -308,3 +308,23 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 		t.Fatalf("unexpected tmap type %T", tmap)
 	}
 }
+
+func TestMergeCatCountsCapitalizationVariants(t *testing.T) {
+	var counts = []model.CatCount{
+		{Category: "Music", Count: 1},
+		{Category: "music", Count: 1},
+		{Category: "musica", Count: 1},
+		{Category: "musics", Count: 1},
+		{Category: "FITM", Count: 5},
+		{Category: "fitm", Count: 5},
+	}
+	MergeCatCountsCapitalizationVariants(&counts, nil)
+	if counts[0].Count != 2 {
+		t.Fatalf("expected count 2, got %d", counts[0].Count)
+	}
+
+	// Music (0), musica (1), musics (2), FITM (3)
+	if counts[3].Count != 10 {
+		t.Fatalf("expected count 10, got %d", counts[3].Count)
+	}
+}
