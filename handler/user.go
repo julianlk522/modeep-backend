@@ -167,15 +167,17 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := os.Stat(pic_dir); err != nil {
+		render.Render(w, r, e.Err500(e.ErrCouldNotCreateProfilePic))
+		return
+	}
+
 	extension := filepath.Ext(handler.Filename)
 	unique_name := uuid.New().String() + extension
 	full_path := pic_dir + "/" + unique_name
 
 	dst, err := os.Create(full_path)
 	if err != nil {
-		// Note: if, for some reason, the directory at pic_dir's path
-		// doesn't exist, this will fail
-		// shouldn't matter but just for posterity
 		render.Render(w, r, e.Err500(e.ErrCouldNotCreateProfilePic))
 		return
 	}
