@@ -80,7 +80,7 @@ func GetCatsOptionalPluralOrSingularForms(cats []string) []string {
 func WithOptionalPluralOrSingularForm(cat string) string {
 	if strings.HasSuffix(cat, "ss") {
 		return fmt.Sprintf("(%s OR %s)", cat, cat+"es")
-	} else if strings.HasSuffix(cat, "es") {
+	} else if strings.HasSuffix(cat, "sses") {
 		return fmt.Sprintf("(%s OR %s)", cat, strings.TrimSuffix(cat, "es"))
 	} else if strings.HasSuffix(cat, "s") {
 		return fmt.Sprintf("(%s OR %s OR %s)", cat, cat+"es", strings.TrimSuffix(cat, "s"))
