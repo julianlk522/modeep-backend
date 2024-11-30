@@ -115,14 +115,22 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 	if err != nil {
 		return nil, err
 	}
+
+	// Get cat counts from links
+	all_links := slices.Concat(*submitted, *copied, *tagged)
+	if len(all_links) == 0 {
+		return model.FilteredTmap[T]{
+			TmapSections:   nil,
+			NSFWLinksCount: 0,
+		}, nil
+	}
+
 	// NSFW links count
 	var nsfw_links_count int
 	if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
 		return nil, err
 	}
 
-	// Get cat counts from links
-	all_links := slices.Concat(*submitted, *copied, *tagged)
 	var cat_counts *[]model.CatCount
 	// cats_to_not_count have unescaped reserved chars
 	// they are lowercased to check against all capitalization variants
