@@ -101,7 +101,7 @@ func TestWithOptionalPluralOrSingularForm(t *testing.T) {
 			"(dress OR dresses)",
 			"(dresses OR dress)",
 			"(iris OR irises OR iri)",
-			"(irises OR iris)",
+			"(irises OR iriseses OR irise)",
 			"(music OR musics)",
 		},
 	}
