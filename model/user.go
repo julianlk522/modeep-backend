@@ -97,6 +97,7 @@ type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
 	Submitted *[]T
 	Tagged    *[]T
 	Copied    *[]T
+	SectionsWithMore []string
 	Cats      *[]CatCount
 }
 

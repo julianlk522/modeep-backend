@@ -174,17 +174,31 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 		copied_sql := query.NewTmapCopied(login_name).FromOptions(links_options)
 		tagged_sql := query.NewTmapTagged(login_name).FromOptions(links_options)
 
+		var limited_sections []string
+
 		submitted, err := ScanTmapLinks[T](submitted_sql.Query)
 		if err != nil {
 			return nil, err
+		}
+		if len(*submitted) > query.LINKS_PAGE_LIMIT {
+			limited_sections = append(limited_sections, "submitted")
+			*submitted = (*submitted)[0:query.LINKS_PAGE_LIMIT]
 		}
 		copied, err := ScanTmapLinks[T](copied_sql.Query)
 		if err != nil {
 			return nil, err
 		}
+		if len(*copied) > query.LINKS_PAGE_LIMIT {
+			limited_sections = append(limited_sections, "copied")
+			*copied = (*copied)[0:query.LINKS_PAGE_LIMIT]
+		}
 		tagged, err := ScanTmapLinks[T](tagged_sql.Query)
 		if err != nil {
 			return nil, err
+		}
+		if len(*tagged) > query.LINKS_PAGE_LIMIT {
+			limited_sections = append(limited_sections, "tagged")
+			*tagged = (*tagged)[0:query.LINKS_PAGE_LIMIT]
 		}
 
 		all_links := slices.Concat(*submitted, *copied, *tagged)
@@ -211,10 +225,11 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 		}
 
 		sections := &model.TmapSections[T]{
-			Cats:      cat_counts,
 			Submitted: submitted,
 			Copied:    copied,
 			Tagged:    tagged,
+			SectionsWithMore: limited_sections,
+			Cats:      cat_counts,
 		}
 
 		if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
