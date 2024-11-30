@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"math"
+	"strconv"
+
 	"github.com/julianlk522/fitm/db"
 
 	"database/sql"
@@ -30,20 +33,13 @@ func UserExists(login_name string) (bool, error) {
 }
 
 func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string, r *http.Request) (interface{}, error) {
-
-	// Queries
-	// links
-	submitted_sql := query.NewTmapSubmitted(login_name)
-	copied_sql := query.NewTmapCopied(login_name)
-	tagged_sql := query.NewTmapTagged(login_name)
-	// NSFW links count
+	var links_options = &model.TmapLinksOptions{}
 	nsfw_links_count_sql := query.NewTmapNSFWLinksCount(login_name)
 
-	// Apply params
-	// cats filter
 	cats_params := r.URL.Query().Get("cats")
 	has_cat_filter := cats_params != ""
 
+	// add profile only if unfiltered
 	var profile *model.Profile
 	if !has_cat_filter {
 		var err error
@@ -52,30 +48,21 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	// tmap queries use escaped reserved chars and both singular/plural
-	// forms for MATCH clauses
-	if has_cat_filter {
+	} else {
 		cats := strings.Split(cats_params, ",")
+		// tmap queries use escaped reserved chars and both singular/plural
+		// forms for MATCH clauses
 		query.EscapeCatsReservedChars(cats)
 		cats = query.GetCatsOptionalPluralOrSingularForms(cats)
-
-		submitted_sql = submitted_sql.FromCats(cats)
-		copied_sql = copied_sql.FromCats(cats)
-		tagged_sql = tagged_sql.FromCats(cats)
 		nsfw_links_count_sql = nsfw_links_count_sql.FromCats(cats)
+		links_options.CatsFilter = cats
 	}
 
-	// auth (add IsLiked, IsCopied)
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	if req_user_id != "" {
-		submitted_sql = submitted_sql.AsSignedInUser(req_user_id)
-		copied_sql = copied_sql.AsSignedInUser(req_user_id)
-		tagged_sql = tagged_sql.AsSignedInUser(req_user_id)
+		links_options.AsSignedInUser = req_user_id
 	}
 
-	// nsfw
 	var nsfw_params string
 	if r.URL.Query().Get("nsfw") != "" {
 		nsfw_params = r.URL.Query().Get("nsfw")
@@ -84,89 +71,170 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 	}
 
 	if nsfw_params == "true" {
-		submitted_sql = submitted_sql.NSFW()
-		copied_sql = copied_sql.NSFW()
-		tagged_sql = tagged_sql.NSFW()
+		links_options.IncludeNSFW = true
 	} else if nsfw_params != "false" && nsfw_params != "" {
 		return nil, e.ErrInvalidNSFWParams
 	}
 
-	// sort by
 	sort_params := r.URL.Query().Get("sort_by")
 	if sort_params == "newest" {
-		submitted_sql = submitted_sql.SortByNewest()
-		copied_sql = copied_sql.SortByNewest()
-		tagged_sql = tagged_sql.SortByNewest()
+		links_options.SortByNewest = true
 	} else if sort_params != "rating" && sort_params != "" {
 		return nil, e.ErrInvalidSortByParams
 	}
-
-	// Scan
-	// links
-	submitted, err := ScanTmapLinks[T](submitted_sql.Query)
-	if err != nil {
-		return nil, err
-	}
-	copied, err := ScanTmapLinks[T](copied_sql.Query)
-	if err != nil {
-		return nil, err
-	}
-	tagged, err := ScanTmapLinks[T](tagged_sql.Query)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get cat counts from links
-	all_links := slices.Concat(*submitted, *copied, *tagged)
-	if len(all_links) == 0 {
-		return model.FilteredTmap[T]{
-			TmapSections:   nil,
-			NSFWLinksCount: 0,
-		}, nil
-	}
-
-	// NSFW links count
+	
 	var nsfw_links_count int
-	if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
-		return nil, err
-	}
 
-	var cat_counts *[]model.CatCount
-	// cats_to_not_count have unescaped reserved chars
-	// they are lowercased to check against all capitalization variants
-	cats_to_not_count := strings.Split(strings.ToLower(cats_params), ",")
-	if has_cat_filter {
-		cat_counts = GetCatCountsFromTmapLinks(
-			&all_links,
-			&model.TmapCatCountsOpts{
-				OmittedCats: cats_to_not_count,
-			},
-		)
-	} else {
-		cat_counts = GetCatCountsFromTmapLinks(&all_links, nil)
-	}
+	section := strings.ToLower(r.URL.Query().Get("section"))
+	// single section
+	if section != "" {
+		var links *[]T
+		var err error
 
-	// Assemble and return tmap
-	sections := &model.TmapSections[T]{
-		Cats:      cat_counts,
-		Submitted: submitted,
-		Copied:    copied,
-		Tagged:    tagged,
-	}
+		switch section {
+		case "submitted":
+			submitted_sql := query.NewTmapSubmitted(login_name).FromOptions(links_options)
+			links, err = ScanTmapLinks[T](submitted_sql.Query)
+			nsfw_links_count_sql = nsfw_links_count_sql.SubmittedOnly()
+		case "copied":
+			copied_sql := query.NewTmapCopied(login_name).FromOptions(links_options)
+			links, err = ScanTmapLinks[T](copied_sql.Query)
+			nsfw_links_count_sql = nsfw_links_count_sql.CopiedOnly()
+		case "tagged":
+			tagged_sql := query.NewTmapTagged(login_name).FromOptions(links_options)
+			links, err = ScanTmapLinks[T](tagged_sql.Query)
+			nsfw_links_count_sql = nsfw_links_count_sql.TaggedOnly()
+		default:
+			return nil, e.ErrInvalidSection
+		}
+		if err != nil {
+			return nil, err
+		}
 
-	if has_cat_filter {
-		return model.FilteredTmap[T]{
-			TmapSections:   sections,
+		if len(*links) == 0 {
+			return model.PaginatedTmapSection[T]{
+				Links: &[]T{},
+				Cats:  &[]model.CatCount{},
+				NSFWLinksCount: 0,
+				NextPage: -1,
+			}, nil
+		}
+
+		var cat_counts *[]model.CatCount
+		if has_cat_filter {
+			// cats_to_not_count have unescaped reserved chars
+			// they are lowercased to check against all capitalization variants
+			cats_to_not_count := strings.Split(strings.ToLower(cats_params), ",")
+			cat_counts = GetCatCountsFromTmapLinks(
+				links,
+				&model.TmapCatCountsOpts{
+					OmittedCats: cats_to_not_count,
+				},
+			)
+		} else {
+			cat_counts = GetCatCountsFromTmapLinks(links, nil)
+		}
+
+		// Paginate section links
+		// due to counting cats manually (i.e., not in SQL) the pagination
+		// must also be done manually after retrieving the full slice of links
+		// and counting cats
+		page, next_page := 1, -1
+		page_params := r.URL.Query().Get("page")
+		if page_params != "" && page_params != "0" {
+			page, err = strconv.Atoi(page_params)
+			if err != nil {
+				return nil, e.ErrInvalidPage
+			}
+		}
+		total_pages := int(math.Ceil(float64(len(*links)) / float64(query.LINKS_PAGE_LIMIT)))
+		if page > total_pages {
+			links = &[]T{}
+		} else if page == total_pages {
+			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1):]
+		} else {
+			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1):query.LINKS_PAGE_LIMIT*page]
+			next_page = page + 1
+		}
+
+		if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
+			return nil, err
+		}
+		
+		return model.PaginatedTmapSection[T]{
+			Links: links,
+			Cats:  cat_counts,
+			NextPage: next_page,
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 
+	// all sections
 	} else {
-		return model.Tmap[T]{
-			Profile:        profile,
-			TmapSections:   sections,
-			NSFWLinksCount: nsfw_links_count,
-		}, nil
-	}
+		submitted_sql := query.NewTmapSubmitted(login_name).FromOptions(links_options)
+		copied_sql := query.NewTmapCopied(login_name).FromOptions(links_options)
+		tagged_sql := query.NewTmapTagged(login_name).FromOptions(links_options)
+
+		submitted, err := ScanTmapLinks[T](submitted_sql.Query)
+		if err != nil {
+			return nil, err
+		}
+		copied, err := ScanTmapLinks[T](copied_sql.Query)
+		if err != nil {
+			return nil, err
+		}
+		tagged, err := ScanTmapLinks[T](tagged_sql.Query)
+		if err != nil {
+			return nil, err
+		}
+
+		all_links := slices.Concat(*submitted, *copied, *tagged)
+		if len(all_links) == 0 {
+			return model.FilteredTmap[T]{
+				TmapSections:   nil,
+				NSFWLinksCount: 0,
+			}, nil
+		}
+
+		var cat_counts *[]model.CatCount
+		if has_cat_filter {
+			// cats_to_not_count have unescaped reserved chars
+			// they are lowercased to check against all capitalization variants
+			cats_to_not_count := strings.Split(strings.ToLower(cats_params), ",")
+			cat_counts = GetCatCountsFromTmapLinks(
+				&all_links,
+				&model.TmapCatCountsOpts{
+					OmittedCats: cats_to_not_count,
+				},
+			)
+		} else {
+			cat_counts = GetCatCountsFromTmapLinks(&all_links, nil)
+		}
+
+		sections := &model.TmapSections[T]{
+			Cats:      cat_counts,
+			Submitted: submitted,
+			Copied:    copied,
+			Tagged:    tagged,
+		}
+
+		if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
+			return nil, err
+		}
+
+		if has_cat_filter {
+			return model.FilteredTmap[T]{
+				TmapSections:   sections,
+				NSFWLinksCount: nsfw_links_count,
+			}, nil
+
+		} else {
+			return model.Tmap[T]{
+				Profile:        profile,
+				TmapSections:   sections,
+				NSFWLinksCount: nsfw_links_count,
+			}, nil
+		}
+	}	
 }
 
 func ScanTmapProfile(sql *query.TmapProfile) (*model.Profile, error) {
