@@ -167,7 +167,7 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 
 	// all sections
 	} else {
-		
+
 		// 20+ links: indicate in response so can be paginated
 		var sections_with_more []string
 

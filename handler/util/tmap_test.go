@@ -40,14 +40,25 @@ func TestGetTmapForUser(t *testing.T) {
 		LoginName               string
 		RequestingUserID        string
 		CatsParams              string
+		NSFWParams              string
+		SortByParams            string
+		SectionParams           string
+		Valid                   bool
+
 	}{
-		{test_login_name, test_user_id, ""},
-		{test_login_name, test_req_user_id, ""},
-		{test_login_name, "", ""},
-		{test_login_name, test_user_id, "umvc3"},
-		{test_login_name, test_req_user_id, "umvc3"},
-		{test_login_name, "", "umvc3"},
-		{test_login_name, test_user_id, "umvc3,flowers"},
+		{test_login_name, test_user_id, "", "", "", "", true},
+		{test_login_name, test_req_user_id, "", "", "", "", true},
+		{test_login_name, "", "", "", "", "", true},
+		{test_login_name, test_user_id, "umvc3", "", "", "", true},
+		{test_login_name, test_req_user_id, "", "true", "", "", true},
+		{test_login_name, "", "", "false", "", "", true},
+		{test_login_name, "", "", "nonsense NSFW params", "", "", false},
+		{test_login_name, test_user_id, "umvc3,flowers", "", "newest", "", true},
+		{test_login_name, "", "umvc3,flowers", "", "rating", "", true},
+		{test_login_name, "", "umvc3,flowers", "", "jellyfish", "", false},
+		{test_login_name, "", "umvc3,flowers", "", "", "submitted", true},
+		{test_login_name, "", "umvc3,flowers", "", "", "copied", true},
+		{test_login_name, "", "umvc3,flowers", "", "", "notasection", false},
 	}
 
 	for _, r := range test_requests {
@@ -55,6 +66,9 @@ func TestGetTmapForUser(t *testing.T) {
 			URL: &url.URL{
 				RawQuery: url.Values{
 					"cats": {r.CatsParams},
+					"nsfw": {r.NSFWParams},
+					"sort_by": {r.SortByParams},
+					"section": {r.SectionParams},
 				}.Encode(),
 			},
 		}
@@ -74,10 +88,17 @@ func TestGetTmapForUser(t *testing.T) {
 		} else {
 			tmap, err = GetTmapForUser[model.TmapLink](r.LoginName, req)
 		}
-		if err != nil {
+
+		// verify valid responses for valid params
+		if r.Valid && err != nil {
 			t.Fatalf(
 				`failed test with error: %s for %+v`,
 				err,
+				r,
+			)
+		} else if !r.Valid && err == nil {
+			t.Fatalf(
+				`expected error for %+v`,
 				r,
 			)
 		}
@@ -93,12 +114,20 @@ func TestGetTmapForUser(t *testing.T) {
 			is_filtered = true
 		case model.FilteredTmap[model.TmapLinkSignedIn]:
 			is_filtered = true
+		case model.PaginatedTmapSection[model.TmapLink]:
+			continue
+		case model.PaginatedTmapSection[model.TmapLinkSignedIn]:
+			continue
+		}
+
+		if !r.Valid {
+			continue
 		}
 
 		if is_filtered && r.CatsParams == "" {
 			t.Fatalf("expected unfiltered treasure map type, got %T", tmap)
 		} else if !is_filtered && r.CatsParams != "" {
-			t.Fatalf("expected filtered treasure map type, got %T", tmap)
+			t.Fatalf("expected filtered treasure map type, got %T (request params: %+v)", tmap, r)
 		}
 	}
 }
