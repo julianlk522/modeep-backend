@@ -87,22 +87,36 @@ type EditProfilePicRequest struct {
 }
 
 // TREASURE MAP
+type TmapLinksOptions struct {
+	CatsFilter []string
+	AsSignedInUser string
+	SortByNewest bool
+	IncludeNSFW bool
+}
 type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
-	Cats      *[]CatCount
 	Submitted *[]T
 	Tagged    *[]T
 	Copied    *[]T
+	SectionsWithMore []string
+	Cats      *[]CatCount
 }
 
 type Tmap[T TmapLink | TmapLinkSignedIn] struct {
-	Profile *Profile
-	NSFWLinksCount int
 	*TmapSections[T]
+	NSFWLinksCount int
+	Profile *Profile
 }
 
 type FilteredTmap[T TmapLink | TmapLinkSignedIn] struct {
-	NSFWLinksCount int
 	*TmapSections[T]
+	NSFWLinksCount int
+}
+
+type PaginatedTmapSection[T TmapLink | TmapLinkSignedIn] struct {
+	Links *[]T
+	Cats  *[]CatCount
+	NSFWLinksCount int
+	NextPage int
 }
 
 type TmapCatCountsOpts struct {

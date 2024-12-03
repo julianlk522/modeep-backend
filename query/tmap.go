@@ -2,6 +2,8 @@ package query
 
 import (
 	"strings"
+
+	"github.com/julianlk522/fitm/model"
 )
 
 // PROFILE
@@ -80,6 +82,71 @@ AND (
 		FROM PossibleUserCats
 		)
 	);`
+
+func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		`(
+	l.submitted_by = ?
+	OR l.id IN UserCopies
+	OR l.id IN 
+		(
+		SELECT link_id
+		FROM PossibleUserCats
+		)
+	)`,
+	"l.submitted_by = ?",
+	1,
+	)
+
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) CopiedOnly() *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		`(
+	l.submitted_by = ?
+	OR l.id IN UserCopies
+	OR l.id IN 
+		(
+		SELECT link_id
+		FROM PossibleUserCats
+		)
+	)`,
+	"l.id IN UserCopies",
+	1,
+	)
+	
+	tnlc.Args = tnlc.Args[:len(tnlc.Args)-1]
+
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) TaggedOnly() *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		`
+	l.submitted_by = ?
+	OR l.id IN UserCopies
+	OR l.id IN 
+		(
+		SELECT link_id
+		FROM PossibleUserCats
+		)
+	`,
+	`l.submitted_by != ?
+	AND l.id IN 
+		(
+		SELECT link_id
+		FROM PossibleUserCats
+		)
+	`,
+	1,
+	)
+
+	return tnlc
+}
 
 func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 	if len(cats) == 0 || cats[0] == "" {
@@ -183,6 +250,23 @@ func (ts *TmapSubmitted) SortByNewest() *TmapSubmitted {
 	return ts
 }
 
+func (ts *TmapSubmitted) FromOptions(opts *model.TmapLinksOptions) *TmapSubmitted {
+	if len(opts.CatsFilter) > 0 {
+		ts.FromCats(opts.CatsFilter)
+	}
+	if opts.AsSignedInUser != "" {
+		ts.AsSignedInUser(opts.AsSignedInUser)
+	}
+	if opts.SortByNewest {
+		ts.SortByNewest()
+	}
+	if opts.IncludeNSFW {
+		ts.NSFW()
+	}
+
+	return ts
+}
+
 // Copied links submitted by other users (global cats replaced with user-assigned if user has tagged)
 type TmapCopied struct {
 	*Query
@@ -266,6 +350,24 @@ func (tc *TmapCopied) SortByNewest() *TmapCopied {
 
 	return tc
 }
+
+func (tc *TmapCopied) FromOptions(opts *model.TmapLinksOptions) *TmapCopied {
+	if len(opts.CatsFilter) > 0 {
+		tc.FromCats(opts.CatsFilter)
+	}
+	if opts.AsSignedInUser != "" {
+		tc.AsSignedInUser(opts.AsSignedInUser)
+	}
+	if opts.SortByNewest {
+		tc.SortByNewest()
+	}
+	if opts.IncludeNSFW {
+		tc.NSFW()
+	}
+
+	return tc
+}
+
 // Tagged links submitted by other users (global cats replaced with user-assigned)
 type TmapTagged struct {
 	*Query
@@ -389,6 +491,23 @@ func (tt *TmapTagged) SortByNewest() *TmapTagged {
 		TMAP_ORDER_BY_NEWEST,
 		1,
 	)
+
+	return tt
+}
+
+func (tt *TmapTagged) FromOptions(opts *model.TmapLinksOptions) *TmapTagged {
+	if len(opts.CatsFilter) > 0 {
+		tt.FromCats(opts.CatsFilter)
+	}
+	if opts.AsSignedInUser != "" {
+		tt.AsSignedInUser(opts.AsSignedInUser)
+	}
+	if opts.SortByNewest {
+		tt.SortByNewest()
+	}
+	if opts.IncludeNSFW {
+		tt.NSFW()
+	}
 
 	return tt
 }
