@@ -167,33 +167,17 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 
 	// all sections
 	} else {
-
-		// 20+ links: indicate in response so can be paginated
-		var sections_with_more []string
-
 		submitted, err := ScanTmapLinks[T](query.NewTmapSubmitted(login_name).FromOptions(links_options).Query)
 		if err != nil {
 			return nil, err
-		}
-		if len(*submitted) > query.LINKS_PAGE_LIMIT {
-			sections_with_more = append(sections_with_more, "submitted")
-			*submitted = (*submitted)[0:query.LINKS_PAGE_LIMIT]
 		}
 		copied, err := ScanTmapLinks[T](query.NewTmapCopied(login_name).FromOptions(links_options).Query)
 		if err != nil {
 			return nil, err
 		}
-		if len(*copied) > query.LINKS_PAGE_LIMIT {
-			sections_with_more = append(sections_with_more, "copied")
-			*copied = (*copied)[0:query.LINKS_PAGE_LIMIT]
-		}
 		tagged, err := ScanTmapLinks[T](query.NewTmapTagged(login_name).FromOptions(links_options).Query)
 		if err != nil {
 			return nil, err
-		}
-		if len(*tagged) > query.LINKS_PAGE_LIMIT {
-			sections_with_more = append(sections_with_more, "tagged")
-			*tagged = (*tagged)[0:query.LINKS_PAGE_LIMIT]
 		}
 
 		all_links := slices.Concat(*submitted, *copied, *tagged)
@@ -217,6 +201,22 @@ func GetTmapForUser[T model.TmapLink | model.TmapLinkSignedIn](login_name string
 			)
 		} else {
 			cat_counts = GetCatCountsFromTmapLinks(&all_links, nil)
+		}
+
+		// limit sections to top 20 links
+		// 20+ links: indicate in response so can be paginated
+		var sections_with_more []string
+		if len(*submitted) > query.LINKS_PAGE_LIMIT {
+			sections_with_more = append(sections_with_more, "submitted")
+			*submitted = (*submitted)[0:query.LINKS_PAGE_LIMIT]
+		}
+		if len(*copied) > query.LINKS_PAGE_LIMIT {
+			sections_with_more = append(sections_with_more, "copied")
+			*copied = (*copied)[0:query.LINKS_PAGE_LIMIT]
+		}
+		if len(*tagged) > query.LINKS_PAGE_LIMIT {
+			sections_with_more = append(sections_with_more, "tagged")
+			*tagged = (*tagged)[0:query.LINKS_PAGE_LIMIT]
 		}
 
 		sections := &model.TmapSections[T]{
