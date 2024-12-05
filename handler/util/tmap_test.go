@@ -258,8 +258,8 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 		// (should never happen, but should behave as if no omitted cats were passed)
 		cat_counts = GetCatCountsFromTmapLinks(
 			&l,
-			&model.TmapCatCountsOpts{
-				OmittedCats: []string{},
+			&model.TmapCatCountsOptions{
+				RawCatsParams: "",
 			},
 		)
 
@@ -284,12 +284,11 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 			{"test", 0},
 			{"flowers", 1},
 		}
-		var omit = []string{"test"}
 
 		cat_counts = GetCatCountsFromTmapLinks(
 			&l,
-			&model.TmapCatCountsOpts{
-				OmittedCats: omit,
+			&model.TmapCatCountsOptions{
+				RawCatsParams: "test",
 			},
 		)
 		for _, count := range *cat_counts {

@@ -87,21 +87,9 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		var cat_counts *[]model.CatCount
 		if has_cat_filter {
-			// Use RawCatsParams here instead of CatsFilter because CatsFilter
-			// has already been modified to escape reserved chars and
-			// include singular/plural spelling variations. To correctly count 
-			// cats and omit ones passed in the request, cats_to_not_count 
-			// must _not_ have these modifications applied.
-			
-			// Use lowercase so that capitalization variants of cats params
-			// are still not counted
-			cats_to_not_count := strings.Split(strings.ToLower(opts.RawCatsParams), ",")
-			cat_counts = GetCatCountsFromTmapLinks(
-				links,
-				&model.TmapCatCountsOpts{
-					OmittedCats: cats_to_not_count,
-				},
-			)
+			cat_counts = GetCatCountsFromTmapLinks(links, &model.TmapCatCountsOptions{
+				RawCatsParams: opts.RawCatsParams,
+			})
 		} else {
 			cat_counts = GetCatCountsFromTmapLinks(links, nil)
 		}
@@ -163,21 +151,9 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		var cat_counts *[]model.CatCount
 		if has_cat_filter {
-			// Use RawCatsParams here instead of CatsFilter because CatsFilter
-			// has already been modified to escape reserved chars and
-			// include singular/plural spelling variations. To correctly count 
-			// cats and omit ones passed in the request, cats_to_not_count 
-			// must _not_ have these modifications applied.
-			
-			// Use lowercase so that capitalization variants of cats params
-			// are still not counted
-			cats_to_not_count := strings.Split(strings.ToLower(opts.RawCatsParams), ",")
-			cat_counts = GetCatCountsFromTmapLinks(
-				&all_links,
-				&model.TmapCatCountsOpts{
-					OmittedCats: cats_to_not_count,
-				},
-			)
+			cat_counts = GetCatCountsFromTmapLinks(&all_links, &model.TmapCatCountsOptions{
+				RawCatsParams: opts.RawCatsParams,
+			})
 		} else {
 			cat_counts = GetCatCountsFromTmapLinks(&all_links, nil)
 		}
@@ -310,7 +286,21 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 	return links.(*[]T), nil
 }
 
-func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOpts) *[]model.CatCount {
+func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOptions) *[]model.CatCount {
+	var omitted_cats []string
+	// Use raw cats params here to determine omitted_cats because CatsFilter
+	// (from BuildTmapFromOpts) is modified to escape reserved chars and
+	// include singular/plural spelling variations. To correctly count cats 
+	// (omitting ones passed in the request), omitted_cats must _not_ have 
+	// these modifications applied.
+
+	// Use lowercase so that capitalization variants of cat filters
+	// are still not counted
+	if opts != nil && opts.RawCatsParams != "" {
+		omitted_cats = strings.Split(strings.ToLower(opts.RawCatsParams), ",")
+	}
+	has_cat_filter := len(omitted_cats) > 0
+
 	counts := []model.CatCount{}
 	found_cats := []string{}
 	var found bool
@@ -325,8 +315,8 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 		}
 
 		for _, cat := range strings.Split(cats, ",") {
-			if strings.TrimSpace(cat) == "" || (opts != nil &&
-				slices.Contains(opts.OmittedCats, strings.ToLower(cat))) {
+			if strings.TrimSpace(cat) == "" || (has_cat_filter &&
+				slices.Contains(omitted_cats, strings.ToLower(cat))) {
 				continue
 			}
 
@@ -353,8 +343,8 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 
 	slices.SortFunc(counts, model.SortCats)
 
-	if opts != nil {
-		MergeCatCountsCapitalizationVariants(&counts,opts.OmittedCats)
+	if has_cat_filter {
+		MergeCatCountsCapitalizationVariants(&counts,omitted_cats)
 	}
 
 	if len(counts) > TMAP_CATS_PAGE_LIMIT {

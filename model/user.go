@@ -101,8 +101,8 @@ type PaginatedTmapSection[T TmapLink | TmapLinkSignedIn] struct {
 	NextPage int
 }
 
-type TmapCatCountsOpts struct {
-	OmittedCats []string
+type TmapCatCountsOptions struct {
+	RawCatsParams string
 }
 
 // Profile
