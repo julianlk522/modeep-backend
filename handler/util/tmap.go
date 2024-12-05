@@ -29,8 +29,13 @@ func UserExists(login_name string) (bool, error) {
 	return true, nil
 }
 
-func GetTmapForUserFromOpts[T model.TmapLink | model.TmapLinkSignedIn](login_name string, opts *model.TmapLinksOptions) (interface{}, error) {
-	nsfw_links_count_sql := query.NewTmapNSFWLinksCount(login_name)
+func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.TmapOptions) (interface{}, error) {
+	if opts.OwnerLoginName == "" {
+		return nil, e.ErrNoTmapOwnerLoginName
+	}
+	tmap_owner := opts.OwnerLoginName
+
+	nsfw_links_count_sql := query.NewTmapNSFWLinksCount(tmap_owner)
 
 	has_cat_filter := len(opts.CatsFilter) > 0
 	var profile *model.Profile
@@ -39,7 +44,7 @@ func GetTmapForUserFromOpts[T model.TmapLink | model.TmapLinkSignedIn](login_nam
 	// add profile only if unfiltered
 	} else {
 		var err error
-		profile_sql := query.NewTmapProfile(login_name)
+		profile_sql := query.NewTmapProfile(tmap_owner)
 		profile, err = ScanTmapProfile(profile_sql)
 		if err != nil {
 			return nil, err
@@ -55,13 +60,13 @@ func GetTmapForUserFromOpts[T model.TmapLink | model.TmapLinkSignedIn](login_nam
 
 		switch opts.Section {
 		case "submitted":
-			links, err = ScanTmapLinks[T](query.NewTmapSubmitted(login_name).FromOptions(opts).Query)
+			links, err = ScanTmapLinks[T](query.NewTmapSubmitted(tmap_owner).FromOptions(opts).Query)
 			nsfw_links_count_sql = nsfw_links_count_sql.SubmittedOnly()
 		case "copied":
-			links, err = ScanTmapLinks[T](query.NewTmapCopied(login_name).FromOptions(opts).Query)
+			links, err = ScanTmapLinks[T](query.NewTmapCopied(tmap_owner).FromOptions(opts).Query)
 			nsfw_links_count_sql = nsfw_links_count_sql.CopiedOnly()
 		case "tagged":
-			links, err = ScanTmapLinks[T](query.NewTmapTagged(login_name).FromOptions(opts).Query)
+			links, err = ScanTmapLinks[T](query.NewTmapTagged(tmap_owner).FromOptions(opts).Query)
 			nsfw_links_count_sql = nsfw_links_count_sql.TaggedOnly()
 		default:
 			return nil, e.ErrInvalidSectionParams
@@ -135,15 +140,15 @@ func GetTmapForUserFromOpts[T model.TmapLink | model.TmapLinkSignedIn](login_nam
 
 	// all sections
 	} else {
-		submitted, err := ScanTmapLinks[T](query.NewTmapSubmitted(login_name).FromOptions(opts).Query)
+		submitted, err := ScanTmapLinks[T](query.NewTmapSubmitted(tmap_owner).FromOptions(opts).Query)
 		if err != nil {
 			return nil, err
 		}
-		copied, err := ScanTmapLinks[T](query.NewTmapCopied(login_name).FromOptions(opts).Query)
+		copied, err := ScanTmapLinks[T](query.NewTmapCopied(tmap_owner).FromOptions(opts).Query)
 		if err != nil {
 			return nil, err
 		}
-		tagged, err := ScanTmapLinks[T](query.NewTmapTagged(login_name).FromOptions(opts).Query)
+		tagged, err := ScanTmapLinks[T](query.NewTmapTagged(tmap_owner).FromOptions(opts).Query)
 		if err != nil {
 			return nil, err
 		}

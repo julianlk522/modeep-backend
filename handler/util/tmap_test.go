@@ -32,7 +32,7 @@ func TestUserExists(t *testing.T) {
 	}
 }
 
-func TestGetTmapForUserFromOpts(t *testing.T) {
+func TestBuildTmapFromOpts(t *testing.T) {
 	var test_data = []struct {
 		LoginName               string
 		RequestingUserID        string
@@ -62,7 +62,8 @@ func TestGetTmapForUserFromOpts(t *testing.T) {
 	}
 
 	for _, td := range test_data {
-		var opts = &model.TmapLinksOptions{
+		var opts = &model.TmapOptions{
+			OwnerLoginName: td.LoginName,
 			RawCatsParams: td.CatsParams,
 			AsSignedInUser: td.RequestingUserID,
 			SortByNewest: td.SortByNewest,
@@ -82,9 +83,9 @@ func TestGetTmapForUserFromOpts(t *testing.T) {
 		var err error
 
 		if td.RequestingUserID != "" {
-			tmap, err = GetTmapForUserFromOpts[model.TmapLinkSignedIn](td.LoginName, opts)
+			tmap, err = BuildTmapFromOpts[model.TmapLinkSignedIn](opts)
 		} else {
-			tmap, err = GetTmapForUserFromOpts[model.TmapLink](td.LoginName, opts)
+			tmap, err = BuildTmapFromOpts[model.TmapLink](opts)
 		}
 
 		if err != nil && td.Valid {
@@ -209,7 +210,9 @@ func TestScanTmapLinks(t *testing.T) {
 
 // Cat counts
 func TestGetCatCountsFromTmapLinks(t *testing.T) {
-	tmap, err := GetTmapForUserFromOpts[model.TmapLink]("xyz", &model.TmapLinksOptions{})
+	tmap, err := BuildTmapFromOpts[model.TmapLink](&model.TmapOptions{
+		OwnerLoginName: "xyz",
+	})
 	if err != nil {
 		t.Fatalf("failed with error %s", err)
 	}

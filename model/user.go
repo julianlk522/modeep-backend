@@ -59,38 +59,13 @@ func (lr *LogInRequest) Bind(r *http.Request) error {
 	return nil
 }
 
-// PROFILE
-type Profile struct {
-	LoginName string
-	About     string
-	PFP       string
-	Created   string
-}
-
-type EditAboutRequest struct {
-	About string `json:"about"`
-}
-
-func (ear *EditAboutRequest) Bind(r *http.Request) error {
-	if len(ear.About) > util.PROFILE_ABOUT_CHAR_LIMIT {
-		return e.ProfileAboutLengthExceedsLimit(util.PROFILE_ABOUT_CHAR_LIMIT)
-	} else if len(ear.About) > 0 && !regexp.MustCompile(`[^\n\r\s\p{C}]`).MatchString(ear.About) {
-		return e.ErrAboutHasInvalidChars
-	}
-
-	return nil
-
-}
-
-type EditProfilePicRequest struct {
-	ProfilePic string `json:"pfp,omitempty"`
-}
-
 // TREASURE MAP
-type TmapLinksOptions struct {
+// Links
+type TmapOptions struct {
+	OwnerLoginName string
 	// RawCatsParams (reserved chars unescaped, plural/singular variations not 
-	// bundled) is stored in addition to CatsFilter
-	// so that GetCatCountsFromTmapLinks can know the exact values passed in 
+	// bundled) is stored in addition to CatsFilter so that
+	// GetCatCountsFromTmapLinks can know the exact values passed in 
 	// the request and not count them
 	RawCatsParams string
 	CatsFilter []string
@@ -128,4 +103,31 @@ type PaginatedTmapSection[T TmapLink | TmapLinkSignedIn] struct {
 
 type TmapCatCountsOpts struct {
 	OmittedCats []string
+}
+
+// Profile
+type Profile struct {
+	LoginName string
+	About     string
+	PFP       string
+	Created   string
+}
+
+type EditAboutRequest struct {
+	About string `json:"about"`
+}
+
+func (ear *EditAboutRequest) Bind(r *http.Request) error {
+	if len(ear.About) > util.PROFILE_ABOUT_CHAR_LIMIT {
+		return e.ProfileAboutLengthExceedsLimit(util.PROFILE_ABOUT_CHAR_LIMIT)
+	} else if len(ear.About) > 0 && !regexp.MustCompile(`[^\n\r\s\p{C}]`).MatchString(ear.About) {
+		return e.ErrAboutHasInvalidChars
+	}
+
+	return nil
+
+}
+
+type EditProfilePicRequest struct {
+	ProfilePic string `json:"pfp,omitempty"`
 }

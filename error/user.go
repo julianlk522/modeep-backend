@@ -25,6 +25,7 @@ var (
 	ErrCouldNotRemoveProfilePic     error = errors.New("could not remove profile pic for user")
 	ErrNoProfilePic                 error = errors.New("no profile pic found for user")
 	// Tmap links
+	ErrNoTmapOwnerLoginName error = errors.New("no login name provided for treasure map owner")
 	ErrInvalidSectionParams error = errors.New("invalid section params provided")
 )
 

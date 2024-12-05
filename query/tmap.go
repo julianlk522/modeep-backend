@@ -250,7 +250,7 @@ func (ts *TmapSubmitted) SortByNewest() *TmapSubmitted {
 	return ts
 }
 
-func (ts *TmapSubmitted) FromOptions(opts *model.TmapLinksOptions) *TmapSubmitted {
+func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 	if len(opts.CatsFilter) > 0 {
 		ts.FromCats(opts.CatsFilter)
 	}
@@ -351,7 +351,7 @@ func (tc *TmapCopied) SortByNewest() *TmapCopied {
 	return tc
 }
 
-func (tc *TmapCopied) FromOptions(opts *model.TmapLinksOptions) *TmapCopied {
+func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 	if len(opts.CatsFilter) > 0 {
 		tc.FromCats(opts.CatsFilter)
 	}
@@ -495,7 +495,7 @@ func (tt *TmapTagged) SortByNewest() *TmapTagged {
 	return tt
 }
 
-func (tt *TmapTagged) FromOptions(opts *model.TmapLinksOptions) *TmapTagged {
+func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 	if len(opts.CatsFilter) > 0 {
 		tt.FromCats(opts.CatsFilter)
 	}

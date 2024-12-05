@@ -264,9 +264,11 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// get opts from params
-	var opts  = &model.TmapLinksOptions{}
+	var opts  = &model.TmapOptions{
+		OwnerLoginName: login_name,
+	}
 
+	// get opts from params
 	cats_params := r.URL.Query().Get("cats")
 	if cats_params != "" {
 
@@ -323,9 +325,9 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	if req_user_id != "" {
 		opts.AsSignedInUser = req_user_id
-		tmap, err = util.GetTmapForUserFromOpts[model.TmapLinkSignedIn](login_name, opts)
+		tmap, err = util.BuildTmapFromOpts[model.TmapLinkSignedIn](opts)
 	} else {
-		tmap, err = util.GetTmapForUserFromOpts[model.TmapLink](login_name, opts)
+		tmap, err = util.BuildTmapFromOpts[model.TmapLink](opts)
 	}
 
 	if err != nil {
