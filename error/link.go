@@ -7,9 +7,9 @@ import (
 
 var (
 	// Query links
-	ErrInvalidPage         error = errors.New("invalid page provided")
 	ErrInvalidLinkID       error = errors.New("invalid link ID provided")
 	ErrInvalidPeriod       error = errors.New("invalid period provided")
+	ErrInvalidPageParams         error = errors.New("invalid page provided")
 	ErrInvalidNSFWParams   error = errors.New("invalid NSFW params provided")
 	ErrInvalidSortByParams error = errors.New("invalid sort_by params provided")
 	ErrNoLinkID            error = errors.New("no link ID provided")

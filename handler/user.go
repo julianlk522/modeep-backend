@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	util "github.com/julianlk522/fitm/handler/util"
+	"github.com/julianlk522/fitm/query"
 
 	_ "golang.org/x/image/webp"
 
@@ -262,13 +264,68 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// get opts from params
+	var opts  = &model.TmapLinksOptions{}
+
+	cats_params := r.URL.Query().Get("cats")
+	if cats_params != "" {
+
+		// For GetCatCountsFromTmapLinks()
+		opts.RawCatsParams = cats_params
+
+		cats := strings.Split(cats_params, ",")
+		query.EscapeCatsReservedChars(cats)
+		cats = query.GetCatsOptionalPluralOrSingularForms(cats)
+		opts.CatsFilter = cats
+	}
+
+	var nsfw_params string
+	if r.URL.Query().Get("nsfw") != "" {
+		nsfw_params = r.URL.Query().Get("nsfw")
+	} else if r.URL.Query().Get("NSFW") != "" {
+		nsfw_params = r.URL.Query().Get("NSFW")
+	}
+	if nsfw_params == "true" {
+		opts.IncludeNSFW = true
+	} else if nsfw_params != "false" && nsfw_params != "" {
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidNSFWParams))
+	}
+
+	sort_params := r.URL.Query().Get("sort_by")
+	if sort_params == "newest" {
+		opts.SortByNewest = true
+	} else if sort_params != "rating" && sort_params != "" {
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidSortByParams))
+	}
+
+	section_params := strings.ToLower(r.URL.Query().Get("section"))
+	if section_params != "" {
+		switch section_params {
+		case "submitted", "copied", "tagged":
+			opts.Section = section_params
+		default:
+			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidSectionParams))
+		}
+	}
+
+	page_params := r.URL.Query().Get("page")
+	if page_params != "" && page_params != "0" {
+		page, err := strconv.Atoi(page_params)
+		if err != nil || page < 1 {
+			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidPageParams))
+		}
+		opts.Page = page
+	}
+
+	// build and return Treasure Map
 	var tmap interface{}
 
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	if req_user_id != "" {
-		tmap, err = util.GetTmapForUser[model.TmapLinkSignedIn](login_name, r)
+		opts.AsSignedInUser = req_user_id
+		tmap, err = util.GetTmapForUserFromOpts[model.TmapLinkSignedIn](login_name, opts)
 	} else {
-		tmap, err = util.GetTmapForUser[model.TmapLink](login_name, r)
+		tmap, err = util.GetTmapForUserFromOpts[model.TmapLink](login_name, opts)
 	}
 
 	if err != nil {

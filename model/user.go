@@ -88,10 +88,17 @@ type EditProfilePicRequest struct {
 
 // TREASURE MAP
 type TmapLinksOptions struct {
+	// RawCatsParams (reserved chars unescaped, plural/singular variations not 
+	// bundled) is stored in addition to CatsFilter
+	// so that GetCatCountsFromTmapLinks can know the exact values passed in 
+	// the request and not count them
+	RawCatsParams string
 	CatsFilter []string
 	AsSignedInUser string
 	SortByNewest bool
 	IncludeNSFW bool
+	Section string
+	Page int
 }
 type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
 	Submitted *[]T

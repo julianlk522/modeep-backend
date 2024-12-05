@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"context"
-	"net/http"
-	"net/url"
 	"slices"
+	"strings"
 	"testing"
 
-	m "github.com/julianlk522/fitm/middleware"
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
 )
@@ -35,99 +32,86 @@ func TestUserExists(t *testing.T) {
 	}
 }
 
-func TestGetTmapForUser(t *testing.T) {
-	var test_requests = []struct {
+func TestGetTmapForUserFromOpts(t *testing.T) {
+	var test_data = []struct {
 		LoginName               string
 		RequestingUserID        string
 		CatsParams              string
-		NSFWParams              string
-		SortByParams            string
+		SortByNewest            bool
+		IncludeNSFW             bool
 		SectionParams           string
+		PageParams              int
 		Valid                   bool
 
 	}{
-		{test_login_name, test_user_id, "", "", "", "", true},
-		{test_login_name, test_req_user_id, "", "", "", "", true},
-		{test_login_name, "", "", "", "", "", true},
-		{test_login_name, test_user_id, "umvc3", "", "", "", true},
-		{test_login_name, test_req_user_id, "", "true", "", "", true},
-		{test_login_name, "", "", "false", "", "", true},
-		{test_login_name, "", "", "nonsense NSFW params", "", "", false},
-		{test_login_name, test_user_id, "umvc3,flowers", "", "newest", "", true},
-		{test_login_name, "", "umvc3,flowers", "", "rating", "", true},
-		{test_login_name, "", "umvc3,flowers", "", "jellyfish", "", false},
-		{test_login_name, "", "umvc3,flowers", "", "", "submitted", true},
-		{test_login_name, "", "umvc3,flowers", "", "", "copied", true},
-		{test_login_name, "", "umvc3,flowers", "", "", "notasection", false},
+		{test_login_name, test_user_id, "", false, false, "", 1, true},
+		{test_login_name, test_req_user_id, "", false, true, "", 1, true},
+		{test_login_name, "", "", false, true, "", 1, true},
+		{test_login_name, test_user_id, "umvc3", true, true, "", 1, true},
+		{test_login_name, test_req_user_id, "", true, false, "", 0, true},
+		{test_login_name, "", "", false, false, "", 10, true},
+		{test_login_name, test_user_id, "umvc3,flowers", true, true, "", 1, true},
+		{test_login_name, "", "umvc3,flowers", true, false, "", 2, true},
+		{test_login_name, "", "umvc3,flowers", false, true, "", 1, true},
+		{test_login_name, "", "umvc3,flowers", false, true, "submitted", 4, true},
+		{test_login_name, "", "umvc3,flowers", false, true, "copied", 0, true},
+		// "notasection" is invalid
+		{test_login_name, "", "umvc3,flowers", false, true, "notasection", 1, false},
+		// negative page is invalid
+		{test_login_name, "", "", false, true, "submitted", -1, false},
 	}
 
-	for _, r := range test_requests {
-		req := &http.Request{
-			URL: &url.URL{
-				RawQuery: url.Values{
-					"cats": {r.CatsParams},
-					"nsfw": {r.NSFWParams},
-					"sort_by": {r.SortByParams},
-					"section": {r.SectionParams},
-				}.Encode(),
-			},
+	for _, td := range test_data {
+		var opts = &model.TmapLinksOptions{
+			RawCatsParams: td.CatsParams,
+			AsSignedInUser: td.RequestingUserID,
+			SortByNewest: td.SortByNewest,
+			IncludeNSFW: td.IncludeNSFW,
+			Section: td.SectionParams,
+			Page: td.PageParams,
 		}
 
-		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
-			"user_id":    r.RequestingUserID,
+		if td.CatsParams != "" {
+			cats := strings.Split(td.CatsParams, ",")
+			query.EscapeCatsReservedChars(cats)
+			cats = query.GetCatsOptionalPluralOrSingularForms(cats)
+			opts.CatsFilter = cats
 		}
-		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
-		req = req.WithContext(ctx)
 
 		var tmap interface{}
 		var err error
 
-		if r.RequestingUserID != "" {
-			tmap, err = GetTmapForUser[model.TmapLinkSignedIn](r.LoginName, req)
+		if td.RequestingUserID != "" {
+			tmap, err = GetTmapForUserFromOpts[model.TmapLinkSignedIn](td.LoginName, opts)
 		} else {
-			tmap, err = GetTmapForUser[model.TmapLink](r.LoginName, req)
+			tmap, err = GetTmapForUserFromOpts[model.TmapLink](td.LoginName, opts)
 		}
 
-		// verify valid responses for valid params
-		if r.Valid && err != nil {
-			t.Fatalf(
-				`failed test with error: %s for %+v`,
-				err,
-				r,
-			)
-		} else if !r.Valid && err == nil {
-			t.Fatalf(
-				`expected error for %+v`,
-				r,
-			)
+		if err != nil && td.Valid {
+			t.Fatalf("error %s for opts %+v", err, opts)
+		} else if err == nil && !td.Valid {
+			t.Fatalf("expected error for opts %+v", opts)
 		}
 
-		// verify type and filter
+		if !td.Valid {
+			continue
+		}
+
+		// verify type and filtered
 		var is_filtered bool
 		switch tmap.(type) {
-		case model.Tmap[model.TmapLink]:
+		case model.Tmap[model.TmapLink], model.Tmap[model.TmapLinkSignedIn]:
 			is_filtered = false
-		case model.Tmap[model.TmapLinkSignedIn]:
-			is_filtered = false
-		case model.FilteredTmap[model.TmapLink]:
+		case model.FilteredTmap[model.TmapLink], model.FilteredTmap[model.TmapLinkSignedIn]:
 			is_filtered = true
-		case model.FilteredTmap[model.TmapLinkSignedIn]:
-			is_filtered = true
-		case model.PaginatedTmapSection[model.TmapLink]:
-			continue
-		case model.PaginatedTmapSection[model.TmapLinkSignedIn]:
+		case model.PaginatedTmapSection[model.TmapLink], model.PaginatedTmapSection[model.TmapLinkSignedIn]:
 			continue
 		}
 
-		if !r.Valid {
-			continue
-		}
-
-		if is_filtered && r.CatsParams == "" {
+		if is_filtered && td.CatsParams == "" {
 			t.Fatalf("expected unfiltered treasure map type, got %T", tmap)
-		} else if !is_filtered && r.CatsParams != "" {
-			t.Fatalf("expected filtered treasure map type, got %T (request params: %+v)", tmap, r)
+		} else if !is_filtered && td.CatsParams != "" {
+			t.Fatalf("expected filtered treasure map type, got %T (request params: %+v)", tmap, td)
 		}
 	}
 }
@@ -225,23 +209,7 @@ func TestScanTmapLinks(t *testing.T) {
 
 // Cat counts
 func TestGetCatCountsFromTmapLinks(t *testing.T) {
-	mock_request := &http.Request{
-		URL: &url.URL{
-			RawQuery: url.Values{
-				"cats": {""},
-			}.Encode(),
-		},
-	}
-
-	ctx := context.Background()
-	jwt_claims := map[string]interface{}{
-		"user_id":    "",
-		"login_name": "",
-	}
-	ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
-	mock_request = mock_request.WithContext(ctx)
-
-	tmap, err := GetTmapForUser[model.TmapLink]("xyz", mock_request)
+	tmap, err := GetTmapForUserFromOpts[model.TmapLink]("xyz", &model.TmapLinksOptions{})
 	if err != nil {
 		t.Fatalf("failed with error %s", err)
 	}

@@ -25,7 +25,7 @@ var (
 	ErrCouldNotRemoveProfilePic     error = errors.New("could not remove profile pic for user")
 	ErrNoProfilePic                 error = errors.New("no profile pic found for user")
 	// Tmap links
-	ErrInvalidSection error = errors.New("invalid section provided")
+	ErrInvalidSectionParams error = errors.New("invalid section params provided")
 )
 
 func LoginNameExceedsLowerLimit(limit int) error {
