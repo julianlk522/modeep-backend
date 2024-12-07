@@ -15,7 +15,6 @@ import (
 func SetupTestDB() error {
 	log.Print("preparing test DB client")
 
-	// create in-memory DB connection
 	TestClient, err := sql.Open("sqlite-spellfix1", "file::memory:?cache=shared")
 	if err != nil {
 		return fmt.Errorf("could not open in-memory DB: %s", err)
@@ -23,8 +22,6 @@ func SetupTestDB() error {
 
 	var sql_dump_path string
 
-	// check for FITM_TEST_DATA_PATH env var,
-	// if not set, use default path
 	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
 	if test_data_path == "" {
 		log.Printf("FITM_TEST_DATA_PATH not set, using default path")
@@ -46,20 +43,19 @@ func SetupTestDB() error {
 		return err
 	}
 
-	// verify that in-memory DB has new test data
+	// verify in-memory DB loaded test data
 	var link_id string
 	err = TestClient.QueryRow("SELECT id FROM Links WHERE id = '1';").Scan(&link_id)
 	if err != nil {
 		return fmt.Errorf("in-memory DB did not receive dump data: %s", err)
 	}
-	log.Printf("verified dump data added to test DB")
+	log.Printf("verified test DB dump data loaded")
 
-	// verify that in-memory DB has spellfix1
+	// verify in-memory DB has spellfix1
 	if _, err = TestClient.Exec(`SELECT word, rank FROM global_cats_spellfix;`); err != nil {
 		return err
 	}
 
-	// switch DB client to TestClient
 	db.Client = TestClient
 	log.Print("switched to test DB client")
 

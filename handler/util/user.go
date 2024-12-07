@@ -57,7 +57,6 @@ func GetJWTFromLoginName(login_name string) (string, error) {
 		"user_id":    id.String,
 		"login_name": login_name,
 	}
-	// TEST
 	jwtauth.SetIssuedNow(claims)
 	jwtauth.SetExpiry(claims, time.Now().Add(4*time.Hour))
 
@@ -82,7 +81,7 @@ func RenderJWT(token string, w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, map[string]string{"token": token})
 }
 
-// Upload profile pic
+// UploadProfilePic
 func HasAcceptableAspectRatio(img image.Image) bool {
 	b := img.Bounds()
 	width, height := b.Max.X, b.Max.Y
@@ -95,7 +94,7 @@ func HasAcceptableAspectRatio(img image.Image) bool {
 	return true
 }
 
-// Delete profile pic
+// DeleteProfilePic
 func UserWithIDHasProfilePic(user_id string) bool {
 	var p sql.NullString
 	if err := db.Client.QueryRow("SELECT pfp FROM Users WHERE id = ?", user_id).Scan(&p); err != nil {

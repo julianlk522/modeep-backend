@@ -16,7 +16,6 @@ const (
 	SPELLFIX_MATCHES_LIMIT  = 3
 )
 
-// Tags Page link
 type TagPageLink struct {
 	*Query
 }
@@ -111,8 +110,6 @@ const TAG_PAGE_LINK_AUTH_JOINS = `
 		)
 	ON copy_link_id = link_id;`
 
-// Tag Rankings (cat overlap scores)
-// ranked from highest lifespan overlap to lowest
 type TagRankings struct {
 	*Query
 }
@@ -154,7 +151,6 @@ const TAG_RANKINGS_PUBLIC_FIELDS = `,
 	Tags.submitted_by, 
 	last_updated`
 
-// Global Cat Counts
 type GlobalCatCounts struct {
 	*Query
 }
@@ -169,7 +165,7 @@ func NewTopGlobalCatCounts() *GlobalCatCounts {
 	})
 }
 
-// id used for .SubcatsOfCats; don't remove
+// id used for .SubcatsOfCats(): don't remove
 const GLOBAL_CATS_BASE = `WITH RECURSIVE GlobalCatsSplit(id, global_cat, str) AS (
     SELECT id, '', global_cats||','
     FROM Links
@@ -188,10 +184,10 @@ ORDER BY count DESC, LOWER(global_cat) ASC
 LIMIT ?`
 
 func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
-	// take lowercase to ensure all case variations are returned
+	// Lowercase to ensure all case variations are returned
 	cats := strings.Split(strings.ToLower(cats_params), ",")
 
-	// build NOT IN clause
+	// Build NOT IN clause
 	not_in_clause := `
 	AND LOWER(global_cat) NOT IN (?`
 
@@ -202,7 +198,7 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	}
 	not_in_clause += ")"
 
-	// build match clause
+	// Build MATCH clause
 	match_clause := `
 	AND id IN (
 		SELECT link_id
@@ -210,9 +206,9 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 		WHERE global_cats MATCH ?
 		)`
 
-	// with MATCH, reserved chars must be surrounded with ""
+	// With MATCH, reserved chars must be surrounded with ""
 	match_arg := 
-		// and singular/plural variants are added after escaping
+		// And singular/plural variants are added after escaping
 		// reserved chars so that "(" and ")" are preserved
 		WithOptionalPluralOrSingularForm(
 			WithDoubleQuotesAroundReservedChars(
@@ -225,7 +221,7 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 				WithDoubleQuotesAroundReservedChars(cats[i]),
 		)
 	}
-	// add optional singular/plural variants
+	// Add optional singular/plural variants
 	// (skip for NOT IN clause otherwise subcats include filters)
 	gcc.Args = append(gcc.Args, match_arg)
 
@@ -237,7 +233,7 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 		match_clause,
 		1)
 
-	// move LIMIT arg to end
+	// Move LIMIT arg to end
 	gcc.Args = append(gcc.Args[1:], GLOBAL_CATS_PAGE_LIMIT)
 
 	return gcc
@@ -268,13 +264,11 @@ func (gcc *GlobalCatCounts) More() *GlobalCatCounts {
 	return gcc
 }
 
-// Global Cats Spellfix Matches For Snippet
 type SpellfixMatches struct {
 	*Query
 }
 
 func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
-
 	// oddly, "WHERE word MATCH "%s OR %s*" doesn't work very well here
 	// hence the UNION
 	return (&SpellfixMatches{
@@ -323,7 +317,7 @@ func (sm *SpellfixMatches) OmitCats(cats []string) error {
 		return e.ErrNoOmittedCats
 	}
 
-	// pop SPELLFIX_MATCHES_LIMIT arg
+	// Pop SPELLFIX_MATCHES_LIMIT arg
 	sm.Args = sm.Args[0 : len(sm.Args)-1]
 
 	not_in_clause := `
@@ -344,7 +338,7 @@ func (sm *SpellfixMatches) OmitCats(cats []string) error {
 		1,
 	)
 
-	// push SPELLFIX_MATCHES_LIMIT arg back to end
+	// Push SPELLFIX_MATCHES_LIMIT arg back to end
 	sm.Args = append(sm.Args, SPELLFIX_MATCHES_LIMIT)
 
 	return nil

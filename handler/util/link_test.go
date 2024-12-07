@@ -223,7 +223,7 @@ func TestGetResolvedURLResponse(t *testing.T) {
 		{"about.google.com", true},
 		{"julianlk.com/notreal", false},
 		{"gobblety gook", false},
-		// TODO: get the user agent headers to actually apply and
+		// TODO: get the user agent headers to correctly apply and
 		// add test case e.g., https://neal.fun/deep-sea
 		// (responds with 403 if no user agent set)
 	}

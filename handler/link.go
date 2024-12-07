@@ -21,32 +21,27 @@ import (
 func GetLinks(w http.ResponseWriter, r *http.Request) {
 	links_sql := query.NewTopLinks()
 
-	// cats
 	cats_params := r.URL.Query().Get("cats")
 	if cats_params != "" {
 		cats := strings.Split(cats_params, ",")
 		links_sql = links_sql.FromCats(cats)
 	}
 
-	// period
 	period_params := r.URL.Query().Get("period")
 	if period_params != "" {
 		links_sql = links_sql.DuringPeriod(period_params)
 	}
 
-	// sort by
 	sort_params := r.URL.Query().Get("sort_by")
 	if sort_params != "" {
 		links_sql = links_sql.SortBy(sort_params)
 	}
 
-	// auth fields
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	if req_user_id != "" {
 		links_sql = links_sql.AsSignedInUser(req_user_id)
 	}
 
-	// nsfw
 	var nsfw_params string
 	if r.URL.Query().Get("nsfw") != "" {
 		nsfw_params = r.URL.Query().Get("nsfw")
@@ -61,7 +56,6 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// pagination
 	page := r.Context().Value(m.PageKey).(int)
 	links_sql = links_sql.Page(page)
 
@@ -70,7 +64,6 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// prepare response
 	var resp interface{}
 	var err error
 	if req_user_id != "" {
@@ -94,7 +87,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
 	
-	// verify user has not already submitted too many links today
 	if user_submitted_max_daily_links, err := util.UserHasSubmittedMaxDailyLinks(req_login_name); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
@@ -105,10 +97,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 
 	if util.IsYouTubeVideoLink(request.NewLink.URL) {
 		if err := util.ObtainYouTubeMetaData(request); err != nil {
-
-			// if unable to get YT metadata, try treating as normal URL
-			// (in case of, e.g., example.com/youtube.com/watch?v=1234
-			// though this should not happen per util.TestIsYouTubeVideoLink cases)
 			if err = util.ObtainURLMetaData(request); err != nil {
 				render.Render(w, r, e.ErrInvalidRequest(err))
 				return
@@ -122,8 +110,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// verify URL is unique
-	// this comes after ResolveURL() because may mutate slightly
 	if is_duplicate, dupe_link_id := util.LinkAlreadyAdded(request.URL); is_duplicate {
 		render.Status(r, http.StatusConflict)
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrDuplicateLink(request.URL, dupe_link_id)))
@@ -134,7 +120,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	request.SubmittedBy = req_login_name
 	request.Cats = util.AlphabetizeCats(request.NewLink.Cats)
 
-	// Start Transaction
 	tx, err := db.Client.Begin()
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -142,9 +127,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// insert summary(ies)
-	// (might have user-submitted, auto, or both)
-	// auto summary
+	// Insert summary
 	if request.AutoSummary != "" {
 		_, err := tx.Exec(
 			"INSERT INTO Summaries VALUES(?,?,?,?,?);",
@@ -155,15 +138,12 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 			request.SubmitDate,
 		)
 		if err != nil {
-			// continue... no auto summary
-			// but log err
 			log.Print("Error adding auto summary: ", err)
 		} else {
 			request.SummaryCount = 1
 		}
 	}
 
-	// user summary
 	if request.NewLink.Summary != "" {
 		req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 		_, err := tx.Exec(
@@ -182,7 +162,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// insert tag
+	// Insert tag
 	_, err = tx.Exec(
 		"INSERT INTO Tags VALUES(?,?,?,?,?);",
 		uuid.New().String(),
@@ -204,7 +184,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		request.Summary = ""
 	}
 
-	// insert link
+	// Insert link
 	_, err = tx.Exec(
 		"INSERT INTO Links VALUES(?,?,?,?,?,?,?);",
 		request.ID,
@@ -220,7 +200,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// increment spellfix ranks
+	// Increment spellfix ranks
 	err = util.IncrementSpellfixRanksForCats(
 		tx,
 		strings.Split(request.Cats, ","),
@@ -230,13 +210,11 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Commit
 	if err = tx.Commit(); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
 
-	// Return new link
 	new_link := model.Link{
 		ID:           request.ID,
 		URL:          request.URL,
@@ -274,7 +252,7 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// fetch global cats before deleting so spellfix ranks can be updated
+	// Fetch global cats before deleting so spellfix ranks can be updated
 	var gc string
 	err = db.Client.QueryRow("SELECT global_cats FROM Links WHERE id = ?;", request.LinkID).Scan(&gc)
 	if err != nil {
@@ -282,7 +260,6 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// start transaction
 	tx, err := db.Client.Begin()
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -290,27 +267,22 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// delete
-	_, err = tx.Exec(
+	if _, err = tx.Exec(
 		"DELETE FROM Links WHERE id = ?;",
 		request.LinkID,
-	)
-	if err != nil {
+	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
 
-	// update spellfix
-	err = util.DecrementSpellfixRanksForCats(
+	if err = util.DecrementSpellfixRanksForCats(
 		tx,
 		strings.Split(gc, ","),
-	)
-	if err != nil {
+	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
 
-	// commit
 	if err = tx.Commit(); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
@@ -427,7 +399,6 @@ func UncopyLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete
 	_, err := db.Client.Exec(
 		`DELETE FROM "Link Copies" WHERE link_id = ? AND user_id = ?;`,
 		link_id,

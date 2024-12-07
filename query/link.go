@@ -84,11 +84,11 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 		tl.Error = fmt.Errorf("no cats provided")
 		return tl
 	}
-	// pop limit arg
+	// Pop limit arg
 	tl.Args = tl.Args[:len(tl.Args)-1]
 
 	
-	// build and add match arg
+	// Build and add match arg
 	EscapeCatsReservedChars(cats)
 	cats = GetCatsOptionalPluralOrSingularForms(cats)
 
@@ -98,7 +98,7 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	}
 	tl.Args = append(tl.Args, match_arg)
 
-	// build CTE from match_clause
+	// Build CTE from match_clause
 	match_clause := `
 	WHERE global_cats MATCH ?`
 	cats_CTE := `,
@@ -107,14 +107,14 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 			FROM global_cats_fts` + match_clause + `
 		)`
 
-	// prepend CTE
+	// Prepend CTE
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_BASE_CTES,
 		LINKS_BASE_CTES+cats_CTE,
 		1)
 
-	// append join
+	// Append join
 	const LINKS_CATS_JOIN = `
 	INNER JOIN CatsFilter f ON l.id = f.link_id`
 	tl.Text = strings.Replace(
@@ -124,7 +124,7 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 		1,
 	)
 
-	// append limit arg
+	// Append limit arg
 	tl.Args = append(tl.Args, LINKS_PAGE_LIMIT)
 
 	return tl
@@ -148,12 +148,7 @@ func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
 }
 
 func (tl *TopLinks) SortBy(order_by string) *TopLinks {
-
-	// acceptable order_by values:
-	// newest
-	// rating (default)
-
-	var updated_order string
+var updated_order string
 	switch order_by {
 	case "newest":
 		updated_order = "submit_date DESC, like_count DESC, summary_count DESC"
@@ -178,20 +173,17 @@ func (tl *TopLinks) SortBy(order_by string) *TopLinks {
 }
 
 func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
-
 	auth_replacer := strings.NewReplacer(
-
-		// append auth CTEs
+		// Append auth CTEs
 		LINKS_BASE_CTES, LINKS_BASE_CTES+LINKS_AUTH_CTES,
-		// append auth fields
+		// Append auth fields
 		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS+LINKS_AUTH_FIELDS,
-		// apend auth joins
+		// Apend auth joins
 		LINKS_BASE_JOINS, LINKS_BASE_JOINS+LINKS_AUTH_JOINS,
 	)
-
 	tl.Text = auth_replacer.Replace(tl.Text)
 
-	// prepend args
+	// Prepend args
 	tl.Args = append([]interface{}{req_user_id, req_user_id}, tl.Args...)
 
 	return tl
@@ -220,8 +212,7 @@ const LINKS_AUTH_JOINS = `
 	LEFT JOIN IsCopied ic ON l.id = ic.link_id`
 
 func (tl *TopLinks) NSFW() *TopLinks {
-
-	// remove NSFW clause
+	// Remove NSFW clause
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_NO_NSFW_CATS_WHERE,
@@ -229,7 +220,7 @@ func (tl *TopLinks) NSFW() *TopLinks {
 		1,
 	)
 
-	// replace .DuringPeriod clause AND with WHERE
+	// Replace .DuringPeriod clause AND with WHERE
 	tl.Text = strings.Replace(
 		tl.Text,
 		"AND submit_date",
@@ -246,7 +237,7 @@ func (tl *TopLinks) Page(page int) *TopLinks {
 	}
 
 	if page >= 1 {
-		// pop limit arg and replace with limit + 1
+		// Pop limit arg and replace with limit + 1
 		tl.Args = append(tl.Args[:len(tl.Args)-1], LINKS_PAGE_LIMIT+1)
 	}
 
@@ -261,7 +252,7 @@ func (tl *TopLinks) Page(page int) *TopLinks {
 		1)
 	
 	
-	// append offset arg
+	// Append offset arg
 	tl.Args = append(tl.Args, (page-1)*LINKS_PAGE_LIMIT)
 
 	return tl

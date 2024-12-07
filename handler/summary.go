@@ -47,7 +47,6 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify links exists
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	link_exists, err := util.LinkExists(summary_data.LinkID)
 	if err != nil {
@@ -58,7 +57,6 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Begin transaction
 	tx, err := db.Client.Begin()
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -103,7 +101,6 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Reset Summary Likes
 		_, err = db.Client.Exec(
 			`DELETE FROM "Summary Likes" WHERE summary_id = ?`,
 			summary_id,
@@ -120,7 +117,6 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Commit
 	if err = tx.Commit(); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
@@ -136,7 +132,6 @@ func DeleteSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify requesting user submitted summary
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	owns_summary, err := util.SummarySubmittedByUser(delete_data.SummaryID, req_user_id)
 	if err != nil {
@@ -153,7 +148,6 @@ func DeleteSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Begin transaction
 	tx, err := db.Client.Begin()
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -176,7 +170,6 @@ func DeleteSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Commit
 	if err = tx.Commit(); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
@@ -192,7 +185,6 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify summary exists
 	var link_id sql.NullString
 	err := db.Client.QueryRow(
 		"SELECT link_id FROM Summaries WHERE id = ?",
@@ -203,7 +195,6 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify requesting user exists
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
 	user_exists, err := util.UserExists(req_login_name)
 	if err != nil {
@@ -213,7 +204,6 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserWithLoginName))
 	}
 
-	// Verify requesting user not attempting to like their own summary
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	owns_summary, err := util.SummarySubmittedByUser(summary_id, req_user_id)
 	if err != nil {
@@ -224,7 +214,6 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify requesting user has not already liked
 	already_liked, err := util.UserHasLikedSummary(req_user_id, summary_id)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -234,7 +223,6 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Begin transaction
 	tx, err := db.Client.Begin()
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -259,7 +247,6 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Commit
 	if err = tx.Commit(); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
@@ -275,8 +262,7 @@ func UnlikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify summary exists
-	// and save link id for later global summary update
+	// save link id for later global summary update
 	var link_id sql.NullString
 	err := db.Client.QueryRow(
 		"SELECT link_id FROM Summaries WHERE id = ?",
@@ -287,7 +273,6 @@ func UnlikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify requesting user has liked summary
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	already_liked, err := util.UserHasLikedSummary(req_user_id, summary_id)
 	if err != nil {
@@ -298,7 +283,6 @@ func UnlikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Begin transaction
 	tx, err := db.Client.Begin()
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -321,7 +305,6 @@ func UnlikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Commit
 	if err = tx.Commit(); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return

@@ -20,7 +20,7 @@ func (er *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// malformed JSON
+// e.g., malformed JSON
 func ErrInvalidRequest(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,

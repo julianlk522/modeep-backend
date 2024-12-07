@@ -52,11 +52,7 @@ func TestAuthenticateUser(t *testing.T) {
 	}
 }
 
-// GetJWTFromLoginName() is just running an 8-word SQL query to get a user ID
-// and using go-chi jwtauth.New()
-// not worth testing
-
-// Upload profile pic
+// UploadProfilePic
 func TestHasAcceptableAspectRatio(t *testing.T) {
 	var test_image_files = []struct {
 		Name                     string
@@ -90,15 +86,15 @@ func TestHasAcceptableAspectRatio(t *testing.T) {
 	}
 }
 
-// Delete profile pic
+// DeleteProfilePic
 func TestUserWithIDHasProfilePic(t *testing.T) {
 	var test_users = []struct {
 		ID            string
 		HasProfilePic bool
 	}{
-		// jlk has profile pic
+		// test user jlk has profile pic
 		{test_user_id, true},
-		// nelson does not have profile pic
+		// test user nelson does not have profile pic
 		{"nelson", false},
 	}
 

@@ -16,17 +16,17 @@ func TestConnect(t *testing.T) {
 }
 
 func TestLoadSpellfix(t *testing.T) {
-	// for some reason using the Client initialized in init() results in
-	// "no such table: global_cats_spellfix"
+	// using the Client initialized in init() results in
+	// "no such table: global_cats_spellfix" for some reason
 	// so a temporary in-memory connection must be used instead
 
-	// create in-memory DB connection
 	TestClient, err := sql.Open("sqlite-spellfix1", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("could not open in-memory DB: %s", err)
 	}
 
 	var sql_dump_path string
+	
 	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
 	if test_data_path == "" {
 		_, dbtest_file, _, _ := runtime.Caller(0)

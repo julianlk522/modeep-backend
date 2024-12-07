@@ -185,13 +185,13 @@ func TestDeleteProfilePic(t *testing.T) {
 		ExpectedStatusCode int
 	}{
 		{
-			// jlk has a profile pic: should be able to delete it
+			// test user jlk has a profile pic: should be able to delete it
 			UserID:             test_user_id,
 			Valid:              true,
 			ExpectedStatusCode: 204,
 		},
 		{
-			// bradley does not have a profile pic: should fail
+			// test user bradley (id 9) does not have a profile pic: should fail
 			UserID:             "9",
 			Valid:              false,
 			ExpectedStatusCode: 400,

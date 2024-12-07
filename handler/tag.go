@@ -176,7 +176,7 @@ func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 	omitted_params := r.URL.Query().Get("omitted")
 	if omitted_params != "" {
 
-		// take lowercase to ensure all case variations are returned
+		// lowercase to ensure all case variations are returned
 		omitted_words := strings.Split(strings.ToLower(omitted_params), ",")
 		err := spfx_sql.OmitCats(omitted_words)
 		if err != nil {
@@ -259,7 +259,6 @@ func AddTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// sort cats
 	tag_data.Cats = util.AlphabetizeCats(tag_data.Cats)
 
 	_, err = db.Client.Exec(
@@ -284,7 +283,6 @@ func AddTag(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, tag_data)
 }
 
-// EDIT TAG
 func EditTag(w http.ResponseWriter, r *http.Request) {
 	edit_tag_data := &model.EditTagRequest{}
 	if err := render.Bind(r, edit_tag_data); err != nil {
@@ -302,7 +300,6 @@ func EditTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// sort cats
 	edit_tag_data.Cats = util.AlphabetizeCats(edit_tag_data.Cats)
 
 	_, err = db.Client.Exec(
@@ -366,14 +363,13 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// get link ID before deleting
+	// must get link_id before deleting
 	link_id, err := util.GetLinkIDFromTagID(delete_tag_data.ID)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
 
-	// delete
 	_, err = db.Client.Exec(
 		"DELETE FROM Tags WHERE id = ?;",
 		delete_tag_data.ID,
@@ -383,7 +379,6 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// set global cats
 	if err = util.CalculateAndSetGlobalCats(link_id); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return

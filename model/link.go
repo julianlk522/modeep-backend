@@ -11,6 +11,23 @@ import (
 	"github.com/google/uuid"
 )
 
+type YTVideoMetaData struct {
+	Items []YTVideoItems `json:"items"`
+}
+
+type YTVideoItems struct {
+	Snippet YTVideoSnippet `json:"snippet"`
+}
+
+type YTVideoSnippet struct {
+	Title      string `json:"title"`
+	Thumbnails struct {
+		Default struct {
+			URL string `json:"url"`
+		} `json:"default"`
+	}
+}
+
 type HasCats interface {
 	Link | LinkSignedIn
 
@@ -32,24 +49,6 @@ type Link struct {
 
 func (l Link) GetCats() string {
 	return l.Cats
-}
-
-// YouTube links
-type YTVideoMetaData struct {
-	Items []VYTVideoItems `json:"items"`
-}
-
-type VYTVideoItems struct {
-	Snippet YTVideoSnippet `json:"snippet"`
-}
-
-type YTVideoSnippet struct {
-	Title      string `json:"title"`
-	Thumbnails struct {
-		Default struct {
-			URL string `json:"url"`
-		} `json:"default"`
-	}
 }
 
 type LinkSignedIn struct {
@@ -105,15 +104,12 @@ type NewLinkRequest struct {
 }
 
 func (nlr *NewLinkRequest) Bind(r *http.Request) error {
-
-	// URL
 	if nlr.NewLink.URL == "" {
 		return e.ErrNoURL
 	} else if len(nlr.NewLink.URL) > util.URL_CHAR_LIMIT {
 		return e.ErrLinkURLCharsExceedLimit(util.URL_CHAR_LIMIT)
 	}
 
-	// Cats
 	switch {
 	case nlr.NewLink.Cats == "":
 		return e.ErrNoTagCats
@@ -125,7 +121,6 @@ func (nlr *NewLinkRequest) Bind(r *http.Request) error {
 		return e.ErrDuplicateCats
 	}
 
-	// Summary
 	if len(nlr.NewLink.Summary) > util.SUMMARY_CHAR_LIMIT {
 		return e.SummaryLengthExceedsLimit(util.SUMMARY_CHAR_LIMIT)
 	}

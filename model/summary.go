@@ -28,7 +28,6 @@ type SummaryPage[S SummarySignedIn | Summary, L LinkSignedIn | Link] struct {
 	Summaries []S
 }
 
-// ADD
 type NewSummaryRequest struct {
 	ID          string
 	LinkID      string `json:"link_id"`
@@ -58,7 +57,6 @@ func (nsr *NewSummaryRequest) Bind(r *http.Request) error {
 
 }
 
-// DELETE
 type DeleteSummaryRequest struct {
 	SummaryID string `json:"summary_id"`
 }
@@ -70,7 +68,6 @@ func (dsr *DeleteSummaryRequest) Bind(r *http.Request) error {
 	return nil
 }
 
-// EDIT
 type EditSummaryRequest struct {
 	SummaryID string `json:"summary_id"`
 	Text      string `json:"text"`

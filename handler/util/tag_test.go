@@ -379,9 +379,6 @@ func TestIsOnlyTag(t *testing.T) {
 	}
 }
 
-// AlphabetizeCats() is simple usage of strings.Split / string.Join / slices.Sort
-// no point in testing
-
 func TestGetLinkIDFromTagID(t *testing.T) {
 	var test_tags = []struct {
 		ID     string
@@ -485,8 +482,8 @@ func TestLimitToTopCatRankings(t *testing.T) {
 		)
 	}
 
-	// test with fewer cats just in case, even though this condition should
-	// be unreachable
+	// test with fewer than MAX_TAG_CATS cats just in case, even though 
+	// this condition should be unreachable
 	test_rankings = map[string]float32{
 		"cat1": 1,
 		"cat2": 2,
@@ -554,7 +551,7 @@ func TestSetGlobalCats(t *testing.T) {
 		t.Fatalf("failed with error: %s", err)
 	}
 
-	// confirm global cats match expected
+	// verify global cats match expected
 	var new_link_gc string
 	err = TestClient.QueryRow(`
 		SELECT global_cats
@@ -569,7 +566,7 @@ func TestSetGlobalCats(t *testing.T) {
 		t.Fatalf("got global cats %s, want %s", new_link_gc, test_cats)
 	}
 
-	// confirm test cats spellfix ranks have been incremented
+	// verify test cats spellfix ranks have been incremented
 	for cat, old_rank := range old_test_cats_ranks {
 		var new_rank int
 		err := TestClient.QueryRow(`
@@ -591,7 +588,7 @@ func TestSetGlobalCats(t *testing.T) {
 		}
 	}
 
-	// confirm old global cats spellfix ranks have been decremented
+	// verify old global cats spellfix ranks have been decremented
 	for cat, old_rank := range old_link_gc_ranks {
 		var new_rank int
 		err := TestClient.QueryRow(`

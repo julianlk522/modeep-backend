@@ -6,7 +6,6 @@ import (
 
 const SUMMARIES_PAGE_LIMIT = 20
 
-// Summaries Page link
 type SummaryPageLink struct {
 	*Query
 }
@@ -104,7 +103,6 @@ const SUMMARY_PAGE_LINK_AUTH_JOINS = `
 		)
 	ON copy_link_id = link_id;`
 
-// Summaries for link
 type Summaries struct {
 	*Query
 }
@@ -172,11 +170,11 @@ func (s *Summaries) AsSignedInUser(user_id string) *Summaries {
 	LEFT JOIN "Summary Likes" as sl`, 
 	1)
 
-	// pop limit arg
+	// Pop limit arg
 	s.Args = s.Args[0 : len(s.Args)-1]
-	// push user_id arg
+	// Push user_id arg
 	s.Args = append(s.Args, user_id)
-	// push limit arg back
+	// Push limit arg back
 	s.Args = append(s.Args, SUMMARIES_PAGE_LIMIT)
 
 	return s

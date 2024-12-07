@@ -8,11 +8,10 @@ import (
 	"github.com/julianlk522/fitm/model"
 )
 
-// Tags Page Link
 func TestNewTagPageLink(t *testing.T) {
 	test_link_id := "1"
 
-	// signed out
+	// Signed out
 	tag_sql := NewTagPageLink(test_link_id)
 	if tag_sql.Error != nil {
 		t.Fatal(tag_sql.Error)
@@ -37,7 +36,7 @@ func TestNewTagPageLink(t *testing.T) {
 		t.Fatalf("got %s, want %s", l.ID, test_link_id)
 	}
 
-	// signed in
+	// Signed in
 	tag_sql = tag_sql.AsSignedInUser(test_req_user_id)
 	if tag_sql.Error != nil {
 		t.Fatal(tag_sql.Error)
@@ -61,7 +60,6 @@ func TestNewTagPageLink(t *testing.T) {
 	}
 }
 
-// Tag Rankings (cat overlap scores)
 func TestNewTagRankings(t *testing.T) {
 	test_link_id := "1"
 	tags_sql := NewTagRankings(test_link_id)
@@ -75,7 +73,7 @@ func TestNewTagRankings(t *testing.T) {
 	}
 	defer rows.Close()
 
-	// verify first row columns only (rest are same)
+	// Verify columns
 	if rows.Next() {
 		var tr model.TagRanking
 		if err := rows.Scan(
@@ -88,8 +86,7 @@ func TestNewTagRankings(t *testing.T) {
 		t.Fatalf("no overlap scores for test link %s", test_link_id)
 	}
 
-	// verify correct link_id (test _FromLink())
-	// reset and modify fields
+	// Verify link_id
 	tags_sql = NewTagRankings(test_link_id)
 
 	tags_sql.Text = strings.Replace(tags_sql.Text,
@@ -132,7 +129,7 @@ func TestNewTagRankings(t *testing.T) {
 	}
 	defer rows.Close()
 
-	// verify columns
+	// Verify columns
 	if rows.Next() {
 		var tr model.TagRankingPublic
 
@@ -149,10 +146,9 @@ func TestNewTagRankings(t *testing.T) {
 	}
 }
 
-// Top Global Cats
 func TestNewTopGlobalCatCounts(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts()
-	// no opportunity for counts_sql.Error to have been set
+	// No opportunity for counts_sql.Error to have been set
 
 	_, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
 	if err != nil {
@@ -171,7 +167,6 @@ func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// scan
 	var counts []model.CatCount
 	for rows.Next() {
 		var c model.CatCount
@@ -181,7 +176,7 @@ func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
 		counts = append(counts, c)
 	}
 
-	// verify counts
+	// Verify counts
 	for _, c := range counts {
 		var count int32
 		if err := TestClient.QueryRow( `SELECT count(id) as count 
@@ -232,7 +227,7 @@ func TestNewTopGlobalCatCountsDuringPeriod(t *testing.T) {
 		}
 	}
 
-	// verify no conflict with .SubcatsOfCats()
+	// Verify no conflict with .SubcatsOfCats()
 	for _, tp := range test_periods {
 		tags_sql := NewTopGlobalCatCounts().
 			SubcatsOfCats(strings.Join(test_cats, ",")).
@@ -255,7 +250,7 @@ func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 	}
 
 	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET)
-	// no chance for sql.Error to have been set so no need to check
+	// No chance for matches_sql.Error to have been set
 
 	rows, err := TestClient.Query(matches_sql.Text, matches_sql.Args...)
 	if err != nil {
@@ -276,7 +271,6 @@ func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 
 func TestOmitCats(t *testing.T) {
 	var expected_rankings = map[string]int{
-		// "test": 11, // filter out TEST_SNIPPET
 		"tech":       2,
 		"technology": 1,
 	}

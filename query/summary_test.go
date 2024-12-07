@@ -7,7 +7,6 @@ import (
 	"github.com/julianlk522/fitm/model"
 )
 
-// Summaries Page Link
 func TestNewSummaryPageLink(t *testing.T) {
 	link_sql := NewSummaryPageLink("1")
 	if link_sql.Error != nil {
@@ -106,7 +105,6 @@ func TestSummaryPageLinkAsSignedInUser(t *testing.T) {
 	}
 }
 
-// Summaries for Link
 func TestNewSummariesForLink(t *testing.T) {
 	var test_link_id = "1"
 	summaries_sql := NewSummariesForLink(test_link_id)
@@ -212,7 +210,6 @@ func TestNewSummariesAsSignedInUser(t *testing.T) {
 		t.Fatalf("wrong column count (got %d, want 6)", len(cols))
 	}
 
-	// only necessary to test first row since they will all be the same
 	if rows.Next() {
 		var s model.SummarySignedIn
 

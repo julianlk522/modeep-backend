@@ -59,10 +59,8 @@ func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// success
 	log.Println("Authenticated webhook: updating FITM backend")
 
-	// run update script
 	fitm_root_path := os.Getenv("FITM_BACKEND_ROOT")
 	cmd := exec.Command("./update_and_restart_backend.sh")
 	cmd.Dir = fitm_root_path

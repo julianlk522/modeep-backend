@@ -26,7 +26,7 @@ func TestBuildSummaryPageForLink(t *testing.T) {
 
 	if summary_page, ok := summary_page.(model.SummaryPage[model.SummarySignedIn, model.LinkSignedIn]); ok {
 
-		// Check that summaries are all for link provided
+		// Verify summaries are all for provided link
 		for _, summary := range summary_page.Summaries {
 			var link_id string
 			err := TestClient.QueryRow(`

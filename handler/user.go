@@ -104,7 +104,7 @@ func LogIn(w http.ResponseWriter, r *http.Request) {
 	util.RenderJWT(token, w, r)
 }
 
-// Treasure map
+// Treasure Map
 func EditAbout(w http.ResponseWriter, r *http.Request) {
 	edit_about_data := &model.EditAboutRequest{}
 	if err := render.Bind(r, edit_about_data); err != nil {
@@ -127,8 +127,6 @@ func EditAbout(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetProfilePic(w http.ResponseWriter, r *http.Request) {
-	// (from backend/db/profile-pics/{file_name})
-
 	var file_name string = chi.URLParam(r, "file_name")
 	path := pic_dir + "/" + file_name
 
@@ -141,7 +139,6 @@ func GetProfilePic(w http.ResponseWriter, r *http.Request) {
 }
 
 func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
-
 	// Get file (up to 10MB, or 10 * 2^20 bytes)
 	r.ParseMultipartForm(10 << 20)
 	file, handler, err := r.FormFile("pic")
@@ -185,10 +182,8 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 	}
 	defer dst.Close()
 
-	// Restore img file cursor to start
 	file.Seek(0, 0)
 
-	// Save to new file
 	if _, err := io.Copy(dst, file); err != nil {
 		render.Render(w, r, e.Err500(e.ErrCouldNotCopyProfilePic))
 		return
@@ -206,7 +201,6 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 
 func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
-	// protected route: JWT middleware verifies bearer token
 
 	if has_pfp := util.UserWithIDHasProfilePic(req_user_id); !has_pfp {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoProfilePic))
@@ -232,10 +226,7 @@ func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Confirm file at path exists
 	if _, err := os.Stat(pfp_path); err == nil {
-
-		// Delete from filesystem
 		err = os.Remove(pfp_path)
 		if err != nil {
 			render.Render(w, r, e.Err500(e.ErrCouldNotRemoveProfilePic))
@@ -268,7 +259,7 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 		OwnerLoginName: login_name,
 	}
 
-	// get opts from params
+	// Get opts from params
 	cats_params := r.URL.Query().Get("cats")
 	if cats_params != "" {
 
@@ -319,7 +310,7 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 		opts.Page = page
 	}
 
-	// build and return Treasure Map
+	// Build and serve Treasure Map
 	var tmap interface{}
 
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)

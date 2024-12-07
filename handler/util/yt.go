@@ -15,14 +15,11 @@ import (
 
 const YT_VID_URL_REGEX = `^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.*`
 
-// helpers for YouTube video links
 func IsYouTubeVideoLink(url string) bool {
 	if !strings.Contains(url, "youtube.com/watch?v=") && !strings.Contains(url, "youtu.be/") {
 		return false
 	}
 
-	// if URL does contain YouTube video link, make sure that
-	// it is actually YouTube and not some other domain
 	match, _ := regexp.MatchString(YT_VID_URL_REGEX, url)
 	return match
 
@@ -63,7 +60,6 @@ func ObtainYouTubeMetaData(request *model.NewLinkRequest) error {
 	request.ImgURL = video_data.Items[0].Snippet.Thumbnails.Default.URL
 	request.URL = "https://www.youtube.com/watch?v=" + id
 
-	// no errors
 	return nil
 }
 

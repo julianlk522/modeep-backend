@@ -9,7 +9,6 @@ import (
 	"github.com/julianlk522/fitm/query"
 )
 
-// Get treausre map
 func TestUserExists(t *testing.T) {
 	var test_login_names = []struct {
 		login_name string
@@ -208,7 +207,6 @@ func TestScanTmapLinks(t *testing.T) {
 	}
 }
 
-// Cat counts
 func TestGetCatCountsFromTmapLinks(t *testing.T) {
 	tmap, err := BuildTmapFromOpts[model.TmapLink](&model.TmapOptions{
 		OwnerLoginName: "xyz",
@@ -231,7 +229,7 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 			t.Fatalf("unexpected type %T", all_links)
 		}
 
-		// test without any omitted cats
+		// no omitted cats
 		var unfiltered_test_cat_counts = []struct {
 			Cat   string
 			Count int32
@@ -254,7 +252,7 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 			}
 		}
 
-		// test with empty omitted cats
+		// empty omitted cats
 		// (should never happen, but should behave as if no omitted cats were passed)
 		cat_counts = GetCatCountsFromTmapLinks(
 			&l,
@@ -276,7 +274,7 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 			}
 		}
 
-		// test with omitted cats
+		// omitted cats
 		var filtered_test_cat_counts = []struct {
 			Cat   string
 			Count int32
@@ -322,8 +320,7 @@ func TestMergeCatCountsCapitalizationVariants(t *testing.T) {
 		t.Fatalf("expected count 2, got %d", counts[0].Count)
 	}
 
-	// Music (0), musica (1), musics (2), FITM (3)
-	if counts[3].Count != 10 {
-		t.Fatalf("expected count 10, got %d", counts[3].Count)
+	if counts[3].Category != "FITM" {
+		t.Fatalf("expected FITM to have moved up to index 3 because Music and music were combined, got %s", counts[3].Category)
 	}
 }

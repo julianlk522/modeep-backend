@@ -11,13 +11,11 @@ import (
 var (
 	test_login_name = "jlk"
 	test_user_id    = "3"
-	test_cats       = []string{"go", "coding"}
-
-	test_req_user_id    = "13"
 	test_req_login_name = "bradley"
+	test_req_user_id    = "13"
+	test_cats       = []string{"go", "coding"}
 )
 
-// Profile
 func TestNewTmapProfile(t *testing.T) {
 	profile_sql := NewTmapProfile(test_login_name)
 
@@ -39,9 +37,10 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// test copied / tagged
-	// jlk copied link 76 with global tag "engine,search,NSFW", 
-	// jlk tagged link 9122ce5a-b8ae-4059-afb4-b9ad602c13c2 with cat "NSFW"
+	// Copied / Tagged
+	// test user jlk copied link 76 with global tag "engine,search,NSFW", 
+	// test user jlk tagged link 9122ce5a-b8ae-4059-afb4-b9ad602c13c2 with 
+	// cat "NSFW" 
 	// (count should be 2)
 
 	expected_count := 2
@@ -49,36 +48,34 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 		t.Fatalf("expected %d, got %d", expected_count, count)
 	}
 
-	// test .FromCats
+	// .FromCats()
 	sql = sql.FromCats([]string{"engine", "search"})
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
-	// only link 76 has cats "engine" and "search" in addition to "NSFW"
+	// Only test link 76 has cats "engine" and "search" in addition to "NSFW"
 	// (count should be 1)
 	expected_count = 1
 	if count != expected_count {
 		t.Fatalf("expected %d, got %d", expected_count, count)
 	}
 
-	// test submitted
+	// Submitted
 	sql = NewTmapNSFWLinksCount(test_req_login_name)
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
-	// only link bradley has submitted with cat "NSFW" is 76
+	// Only link test_req_login_name (bradley) has submitted with cat "NSFW" is 76
 	// (count should be 1)
 	if count != expected_count {
 		t.Fatalf("expected %d, got %d", expected_count, count)
 	}
 }
 
-// Submitted
 func TestNewTmapSubmitted(t *testing.T) {
-
-	// first retrieve all IDs of links submitted by user
+	// Retrieve all IDs of links submitted by user
 	var submitted_ids []string
 	rows, err := TestClient.Query(`SELECT id 
 		FROM Links 
@@ -98,7 +95,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 		submitted_ids = append(submitted_ids, id)
 	}
 
-	// execute query and confirm all submitted links are present
+	// Verify all submitted links are present after executing query
 	submitted_sql := NewTmapSubmitted(test_req_login_name)
 	if submitted_sql.Error != nil {
 		t.Fatal(submitted_sql.Error)
@@ -134,7 +131,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 			t.Fatal("should not contain NSFW in base query")
 		}
 
-		// remove from submitted_ids if returned by query
+		// Remove from submitted_ids if returned by query
 		for i := 0; i < len(submitted_ids); i++ {
 			if l.ID == submitted_ids[i] {
 				submitted_ids = append(submitted_ids[0:i], submitted_ids[i+1:]...)
@@ -143,7 +140,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 		}
 	}
 
-	// if any IDs are left in submitted_ids then they were incorrectly
+	// If any IDs are left in submitted_ids then they were incorrectly
 	// omitted by query
 	if len(submitted_ids) > 0 {
 		t.Fatalf("not all submitted links returned, see missing IDs: %+v", submitted_ids)
@@ -198,7 +195,7 @@ func TestNewTmapSubmittedAsSignedInUser(t *testing.T) {
 	}
 	defer rows.Close()
 
-	// just test first row since column counts will be the same
+	// Verify columns
 	if rows.Next() {
 		var l model.TmapLinkSignedIn
 		if err := rows.Scan(
@@ -228,7 +225,7 @@ func TestNewTmapSubmittedNSFW(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// verify test_login_name's tmap contains link with NSFW tag
+	// Verify test_login_name's tmap contains link with NSFW tag
 	var found_NSFW_link bool
 	for rows.Next() {
 		var l model.TmapLink
@@ -291,7 +288,7 @@ func TestNewTmapCopied(t *testing.T) {
 			t.Fatal("should not contain NSFW in base query")
 		}
 
-		// check that tmap owner has copied
+		// Verify tmap owner has copied
 		var link_id string
 		err := TestClient.QueryRow(`SELECT id
 				FROM "Link Copies"
@@ -340,7 +337,7 @@ func TestNewTmapCopiedFromCats(t *testing.T) {
 			t.Fatal("TagCount == 0")
 		}
 
-		// check that tmap owner has copied
+		// Verify tmap owner has copied
 		var link_id string
 		err := TestClient.QueryRow(`SELECT id
 				FROM "Link Copies"
@@ -367,7 +364,7 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 	}
 	defer rows.Close()
 
-	// test first row only since column counts will be the same
+	// Verify columns
 	if rows.Next() {
 		var l model.TmapLinkSignedIn
 		if err := rows.Scan(
@@ -391,8 +388,7 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 }
 
 func TestNewTmapCopiedNSFW(t *testing.T) {
-	// test_login_name (jlk) should have copied 1 link with NSFW tag
-
+	// test_login_name (jlk) has copied 1 link with NSFW tag
 	copied_sql := NewTmapCopied(test_login_name).NSFW()
 	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
@@ -427,7 +423,6 @@ func TestNewTmapCopiedNSFW(t *testing.T) {
 	}
 }
 
-// Tagged
 func TestNewTmapTagged(t *testing.T) {
 	tagged_sql := NewTmapTagged(test_login_name)
 	if tagged_sql.Error != nil {
@@ -460,7 +455,7 @@ func TestNewTmapTagged(t *testing.T) {
 			t.Fatal("TagCount == 0")
 		}
 
-		// check that tmap owner has tagged
+		// Verify tmap owner has tagged
 		var link_id string
 		err := TestClient.QueryRow(`SELECT id
 				FROM Tags
@@ -509,7 +504,7 @@ func TestNewTmapTaggedFromCats(t *testing.T) {
 			t.Fatal("TagCount == 0")
 		}
 
-		// check that tmap owner has tagged
+		// Verify tmap owner has tagged
 		var link_id string
 		err := TestClient.QueryRow(`SELECT id
 			FROM Tags
@@ -537,7 +532,7 @@ func TestNewTmapTaggedAsSignedInUser(t *testing.T) {
 	}
 	defer rows.Close()
 
-	// test first row only since column counts will be the same
+	// Verify columns
 	if rows.Next() {
 		var l model.TmapLinkSignedIn
 		if err := rows.Scan(
@@ -561,8 +556,7 @@ func TestNewTmapTaggedAsSignedInUser(t *testing.T) {
 }
 
 func TestNewTmapTaggedNSFW(t *testing.T) {
-	// test_login_name (jlk) should have tagged 1 link with NSFW tag
-
+	// test_login_name (jlk) has tagged 1 link with NSFW tag
 	copied_sql := NewTmapTagged(test_login_name).NSFW()
 	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
@@ -598,8 +592,6 @@ func TestNewTmapTaggedNSFW(t *testing.T) {
 }
 
 func TestFromUserOrGlobalCats(t *testing.T) {
-
-	// submitted
 	tmap_submitted := NewTmapSubmitted(test_login_name)
 	_, err := TestClient.Query(tmap_submitted.Text, tmap_submitted.Args...)
 	if err != nil {
@@ -613,7 +605,7 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 	}
 	defer rows.Close()
 
-	// make sure links only have cats from test_cats
+	// Verify links only have cats from test_cats
 	for rows.Next() {
 		var l model.TmapLink
 		if err := rows.Scan(
@@ -635,7 +627,6 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 		}
 	}
 
-	// copied
 	tmap_copied := NewTmapCopied(test_login_name)
 	_, err = TestClient.Query(tmap_copied.Text, tmap_copied.Args...)
 	if err != nil {
@@ -669,4 +660,6 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			t.Fatalf("got %s, should contain %s", l.Cats, test_cats)
 		}
 	}
+
+	// TmapTagged does not use FromUserOrGlobalCats()
 }

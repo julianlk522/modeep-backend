@@ -15,9 +15,8 @@ var claims_defaults = map[string]interface{}{
 	"exp": nil,
 }
 
-// MODIFIED JWT VERIFIER / AUTHENTICATOR
-// (requests with no token are allowed,
-// but getting link isLiked / isCopied requires a token)
+// Requests with no token are allowed, but getting isLiked / isCopied
+// on links requires a token
 func VerifierOptional(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler {
 	return VerifyOptional(ja, jwtauth.TokenFromHeader, jwtauth.TokenFromCookie)
 }
@@ -57,13 +56,10 @@ func AuthenticatorOptional(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler 
 	return func(next http.Handler) http.Handler {
 		hfn := func(w http.ResponseWriter, r *http.Request) {
 			token, _, err := jwtauth.FromContext(r.Context())
-
-			// Error decoding token
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 
-				// Invalid token
 			} else if token != nil && jwt.Validate(token, ja.ValidateOptions()...) != nil {
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
@@ -76,7 +72,6 @@ func AuthenticatorOptional(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler 
 	}
 }
 
-// Retrieve JWT claims if passed in request context or assign empty values
 // claims = {"user_id":"1234","login_name":"johndoe", "exp": 1234567890, "iat": 1234567890}
 func JWTContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

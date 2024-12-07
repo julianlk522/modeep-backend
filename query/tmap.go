@@ -6,7 +6,6 @@ import (
 	"github.com/julianlk522/fitm/model"
 )
 
-// PROFILE
 type TmapProfile struct {
 	*Query
 }
@@ -27,7 +26,6 @@ const TMAP_PROFILE = `SELECT
 FROM Users 
 WHERE login_name = ?;`
 
-// NSFW LINKS COUNT
 type TmapNSFWLinksCount struct {
 	*Query
 }
@@ -155,13 +153,13 @@ func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 
 	tnlc.Text = strings.ReplaceAll(tnlc.Text, "'NSFW'", "?")
 
-	// build MATCH clause
+	// Build MATCH clause
 	match_arg := "NSFW AND " + cats[0]
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " + cats[i]
 	}
 
-	// insert match_arg arg * 2 after first login_name arg and before last 2
+	// Insert match_arg arg * 2 after first login_name arg and before last 2 args
 	trailing_args := make([]interface{}, len(tnlc.Args[1:]))
 	copy(trailing_args, tnlc.Args[1:])
 	tnlc.Args = append(tnlc.Args[:1], match_arg, match_arg)
@@ -170,8 +168,6 @@ func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 	return tnlc
 }
 
-// LINKS
-// Submitted links (global cats replaced with user-assigned if user's tag remains)
 type TmapSubmitted struct {
 	*Query
 }
@@ -213,15 +209,14 @@ func (ts *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
 	)
 	ts.Text = fields_replacer.Replace(ts.Text)
 
-	// prepend req_user_id arg * 2
+	// Prepend req_user_id arg * 2
 	ts.Args = append([]interface{}{req_user_id, req_user_id}, ts.Args...)
 
 	return ts
 }
 
 func (ts *TmapSubmitted) NSFW() *TmapSubmitted {
-
-	// remove NSFW clause
+	// Remove NSFW clause
 	ts.Text = strings.Replace(
 		ts.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
@@ -229,7 +224,7 @@ func (ts *TmapSubmitted) NSFW() *TmapSubmitted {
 		1,
 	)
 
-	// swap AND to WHERE in WHERE clause
+	// Swap AND to WHERE in WHERE clause
 	ts.Text = strings.Replace(
 		ts.Text,
 		"AND l.submitted_by",
@@ -267,7 +262,6 @@ func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 	return ts
 }
 
-// Copied links submitted by other users (global cats replaced with user-assigned if user has tagged)
 type TmapCopied struct {
 	*Query
 }
@@ -314,15 +308,14 @@ func (tc *TmapCopied) AsSignedInUser(req_user_id string) *TmapCopied {
 	)
 	tc.Text = fields_replacer.Replace(tc.Text)
 
-	// prepend req_user_id arg * 2
+	// Prepend req_user_id arg * 2
 	tc.Args = append([]interface{}{req_user_id, req_user_id}, tc.Args...)
 
 	return tc
 }
 
 func (tc *TmapCopied) NSFW() *TmapCopied {
-
-	// remove NSFW clause
+	// Remove NSFW clause
 	tc.Text = strings.Replace(
 		tc.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
@@ -330,7 +323,7 @@ func (tc *TmapCopied) NSFW() *TmapCopied {
 		1,
 	)
 
-	// swap AND to WHERE in WHERE clause
+	// Swap AND to WHERE in WHERE clause
 	tc.Text = strings.Replace(
 		tc.Text,
 		"AND submitted_by !=",
@@ -368,7 +361,6 @@ func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 	return tc
 }
 
-// Tagged links submitted by other users (global cats replaced with user-assigned)
 type TmapTagged struct {
 	*Query
 }
@@ -429,7 +421,7 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 		return tt
 	}
 
-	// append clause
+	// Append MATCH clause
 	match_clause := `
 	AND uct.user_cats MATCH ?`
 
@@ -440,7 +432,7 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 		1,
 	)
 
-	// append arg
+	// Append arg
 	match_arg := cats[0]
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " + cats[i]
@@ -458,15 +450,14 @@ func (tt *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
 	)
 	tt.Text = fields_replacer.Replace(tt.Text)
 
-	// prepend req_user_id arg * 2
+	// Prepend req_user_id arg * 2
 	tt.Args = append([]interface{}{req_user_id, req_user_id}, tt.Args...)
 
 	return tt
 }
 
 func (tt *TmapTagged) NSFW() *TmapTagged {
-
-	// remove NSFW clause
+	// Remove NSFW clause
 	tt.Text = strings.Replace(
 		tt.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
@@ -474,7 +465,7 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 		1,
 	)
 
-	// swap AND to WHERE in WHERE clause
+	// Swap AND to WHERE in WHERE clause
 	tt.Text = strings.Replace(
 		tt.Text,
 		"AND submitted_by !=",
@@ -517,7 +508,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 		return q
 	}
 
-	// append MATCH clause to PossibleUserCats CTE
+	// Append MATCH clause to PossibleUserCats CTE
 	PUC_WHERE := "WHERE submitted_by = ?"
 	q.Text = strings.Replace(
 		q.Text,
@@ -527,7 +518,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 		1,
 	)
 
-	// insert GlobalCatsFTS CTE
+	// Insert GlobalCatsFTS CTE
 	q.Text = strings.Replace(
 		q.Text,
 		TMAP_BASE_FIELDS,
@@ -535,23 +526,23 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 		1,
 	)
 
-	// build MATCH arg
+	// Build MATCH arg
 	match_arg := cats[0]
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " + cats[i]
 	}
 
-	// rebuild args with match_arg * 2 (once for PossibleUserCats CTE, once
+	// Rebuild args with match_arg * 2 (once for PossibleUserCats CTE, once
 	// for GlobalCatsFTS CTE) 
 	// order for TmapSubmitted: login_name, MATCH, login_name, MATCH, login_name 
 	// order for TmapCopied: login_name, login_name, MATCH, login_name, 
 	// MATCH, login_name
 
-	// (only TmapCopied and TmapTagged contain USER_COPIES_CTE, and TmapTagged
+	// (Only TmapCopied and TmapTagged contain USER_COPIES_CTE, and TmapTagged
 	// does not call this method, so can check for presence of USER_COPIES_CTE
 	// to determine whether TmapSubmitted or TmapCopied)
 
-	// get login_name from first arg
+	// First arg is login_name
 	login_name := q.Args[0].(string)
 
 	// TmapCopied
@@ -562,7 +553,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 		q.Args = []interface{}{login_name, match_arg, login_name, match_arg, login_name}
 	}
 
-	// insert GLOBAL_CATS_JOIN
+	// Insert GLOBAL_CATS_JOIN
 	q.Text = strings.Replace(
 		q.Text,
 		TMAP_BASE_JOINS,
@@ -570,7 +561,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 		1,
 	)
 
-	// insert final AND clause
+	// Insert final AND clause
 	and_clause := `
 	AND (
 	gc.global_cats IS NOT NULL

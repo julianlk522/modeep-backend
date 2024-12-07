@@ -11,7 +11,6 @@ import (
 
 func TestNewTopLinks(t *testing.T) {
 	links_sql := NewTopLinks()
-
 	if links_sql.Error != nil {
 		t.Fatal(links_sql.Error)
 	}
@@ -68,8 +67,7 @@ func TestFromCats(t *testing.T) {
 	}
 
 	for _, tc := range test_cats {
-
-		// cats only
+		// Cats only
 		links_sql := NewTopLinks().FromCats(tc.Cats)
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
@@ -83,7 +81,7 @@ func TestFromCats(t *testing.T) {
 		}
 		defer rows.Close()
 
-		// with period
+		// With period
 		links_sql = links_sql.DuringPeriod("month")
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
@@ -91,7 +89,7 @@ func TestFromCats(t *testing.T) {
 			t.Fatalf("expected error for cats %s", tc.Cats)
 		}
 
-		// if any cats provided, args should be cat_match and limit
+		// If any cats provided, args should be cat_match and limit
 		// in that order
 		if len(tc.Cats) == 0 || len(tc.Cats) == 1 && tc.Cats[0] == "" {
 			continue
@@ -123,8 +121,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 	}
 
 	for _, tp := range test_periods {
-
-		// period only
+		// Period only
 		links_sql := NewTopLinks().DuringPeriod(tp.Period)
 		if tp.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
@@ -138,8 +135,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 		}
 		defer rows.Close()
 
-		// with cats
-		// NOT a repeat of TestFromCats; testing order of method calls
+		// With cats
 		links_sql = links_sql.FromCats([]string{"umvc3"})
 		if tp.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
@@ -179,7 +175,7 @@ func TestLinksSortBy(t *testing.T) {
 		}
 		defer rows.Close()
 
-		// scan links
+		// Scan
 		var links []model.Link
 		for rows.Next() {
 			link := model.Link{}
@@ -205,7 +201,7 @@ func TestLinksSortBy(t *testing.T) {
 			continue
 		}
 
-		// verify results correctly sorted
+		// Verify results correctly sorted
 		if ts.Sort == "rating" {
 			var last_like_count int64 = 999 // arbitrary high number
 			for _, link := range links {
@@ -279,7 +275,6 @@ func TestAsSignedInUser(t *testing.T) {
 		}
 	}
 
-	// args should be test_user_id * 2, limit
 	var expected_args = []interface{}{test_user_id, test_user_id, LINKS_PAGE_LIMIT}
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {
@@ -287,13 +282,12 @@ func TestAsSignedInUser(t *testing.T) {
 		}
 	}
 
-	// test does not conflict with .FromCats
+	// Verify no conflict with .FromCats()
 	links_sql = NewTopLinks().FromCats(test_cats).AsSignedInUser(test_user_id)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
 		t.Fatal(err)
 	}
 
-	// args should be test_user_id * 2, "go AND coding", limit
 	// "go AND coding" modified to include plural/singular variations
 	expected_args = []interface{}{test_user_id, test_user_id, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT}
 	for i, arg := range links_sql.Args {
@@ -305,7 +299,7 @@ func TestAsSignedInUser(t *testing.T) {
 
 func TestNSFW(t *testing.T) {
 	links_sql := NewTopLinks().NSFW()
-	// no opportunity for links_sql.Error to have been set
+	// No opportunity for links_sql.Error to have been set
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil {
@@ -313,7 +307,7 @@ func TestNSFW(t *testing.T) {
 	}
 	defer rows.Close()
 
-	// verify does not conflict with other filter methods
+	// Verify no conflict with other filter methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
 		DuringPeriod("year").
@@ -327,8 +321,7 @@ func TestNSFW(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// verify link with ID 76 is present in results
-	// (link with ID 76 is only link in test data with 'NSFW' in cats)
+	id_of_test_link_having_nsfw_cats := "76"
 	var l model.LinkSignedIn
 	for rows.Next() {
 		if err := rows.Scan(
@@ -346,12 +339,12 @@ func TestNSFW(t *testing.T) {
 			&l.IsCopied,
 		); err != nil {
 			t.Fatal(err)
-		} else if l.ID != "76" {
-			t.Fatalf("got %s, want 76", l.ID)
+		} else if l.ID != id_of_test_link_having_nsfw_cats {
+			t.Fatalf("got %s, want %s", l.ID, id_of_test_link_having_nsfw_cats)
 		}
 	}
 
-	// attempt same query without .NSFW() and verify link NOT present
+	// Verify link not present using same query without .NSFW()
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
 		DuringPeriod("year").AsSignedInUser(test_user_id).
@@ -386,8 +379,6 @@ func TestNSFW(t *testing.T) {
 }
 
 func TestPage(t *testing.T) {
-	var links_sql = NewTopLinks()
-
 	var test_cases = []struct {
 		Page int
 		WantLimitArg int
@@ -398,8 +389,9 @@ func TestPage(t *testing.T) {
 		{3, LINKS_PAGE_LIMIT + 1},
 	}
 
-	for _, tc := range test_cases {
+	var links_sql = NewTopLinks()
 
+	for _, tc := range test_cases {
 		links_sql = links_sql.Page(tc.Page)
 		if links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
@@ -423,15 +415,18 @@ func TestPage(t *testing.T) {
 		}
 	}
 
-	// ensure does not conflict with other methods
-	links_sql = NewTopLinks().FromCats(test_cats).DuringPeriod("year").SortBy("newest").AsSignedInUser(test_user_id).NSFW().Page(2)
-
+	// Verify no conflict with other methods
+	links_sql = NewTopLinks().
+		FromCats(test_cats).
+		DuringPeriod("year").
+		SortBy("newest").
+		AsSignedInUser(test_user_id).
+		NSFW().
+		Page(2)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
 		t.Fatal(err)
 	}
 
-	// args should be test_user_id * 2, "go AND coding", limit, offset
-	// in that order
 	// "go AND coding" modified to include plural/singular variations
 	var expected_args = []interface{}{test_user_id, test_user_id, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT + 1, LINKS_PAGE_LIMIT}
 

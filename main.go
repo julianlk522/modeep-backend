@@ -19,7 +19,6 @@ import (
 var (
 	token_auth *jwtauth.JWTAuth
 	api_url = "api.fitm.online:1999"
-	// test_api_url = "localhost:1999"
 )
 
 func init() {
@@ -37,9 +36,6 @@ func main() {
 		); err != nil {
 			log.Fatal(err)
 		}
-		// if err := http.ListenAndServe(test_api_url, r); err != nil {
-		// 	log.Fatal(err)
-		// }
 	}()
 
 	// ROUTER-WIDE MIDDLEWARE
@@ -54,21 +50,17 @@ func main() {
 
 	// RATE LIMIT
 	// per minute (overall)
-	// absolute max before all traffic stopped
 	r.Use(httprate.LimitAll(
 		4000,
 		time.Minute,
 	))
 	// per minute (IP)
-	// needs to cover all concurrent traffic coming from the frontend
-	// shared across all users (hence it being really high)
 	r.Use(httprate.Limit(
 		2400,
 		1*time.Minute,
 		httprate.WithKeyFuncs(httprate.KeyByIP),
 	))
 	// per second (IP)
-	// (stop short bursts quickly)
 	r.Use(httprate.Limit(
 		100,
 		1*time.Second,
@@ -90,7 +82,7 @@ func main() {
 	r.Post("/login", h.LogIn)
 	r.Get("/pic/{file_name}", h.GetProfilePic)
 
-	r.Get("/cats", h.GetTopGlobalCats) // includes subcats
+	r.Get("/cats", h.GetTopGlobalCats)
 	r.Get("/cats/*", h.GetSpellfixMatchesForSnippet)
 	r.Get("/contributors", h.GetTopContributors)
 

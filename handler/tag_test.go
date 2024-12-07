@@ -14,11 +14,6 @@ import (
 	"github.com/julianlk522/fitm/model"
 )
 
-// TODO: finish dat
-// func TestGetTopGlobalCats(t *testing.T) {
-// 	test_requests := []struct
-// }
-
 func TestAddTag(t *testing.T) {
 	test_tag_requests := []struct {
 		Payload map[string]string
@@ -82,7 +77,7 @@ func TestAddTag(t *testing.T) {
 			},
 			Valid: false,
 		},
-		// should fail because user jlk has already tagged link with ID 1
+		// should fail because test user jlk has already tagged link with ID 1
 		{
 			Payload: map[string]string{
 				"link_id": "1",
@@ -90,7 +85,7 @@ func TestAddTag(t *testing.T) {
 			},
 			Valid: false,
 		},
-		// should pass because jlk has _not_ tagged link with ID 10
+		// should pass because test user jlk has not tagged link with ID 10
 		{
 			Payload: map[string]string{
 				"link_id": "10",
@@ -188,7 +183,7 @@ func TestEditTag(t *testing.T) {
 			Valid:              false,
 			ExpectedStatusCode: 400,
 		},
-		// should fail because user jlk _did not_ submit tag with ID 10
+		// should fail because test user jlk did not submit tag with ID 10
 		{
 			Payload: map[string]string{
 				"tag_id": "10",
@@ -197,7 +192,7 @@ func TestEditTag(t *testing.T) {
 			Valid:              false,
 			ExpectedStatusCode: 403,
 		},
-		// should pass because user jlk _has_ submitted tag with ID 32
+		// should pass because test user jlk did submit tag with ID 32
 		{
 			Payload: map[string]string{
 				"tag_id": "32",
@@ -264,7 +259,7 @@ func TestDeleteTag(t *testing.T) {
 		Valid              bool
 		ExpectedStatusCode int
 	}{
-		// jlk did not submit tag 11
+		// test user jlk did not submit tag 11
 		{
 			TagID:              "11",
 			Valid:              false,
@@ -276,7 +271,7 @@ func TestDeleteTag(t *testing.T) {
 			Valid:              false,
 			ExpectedStatusCode: 400,
 		},
-		// jlk _did_ submit tag 34
+		// test user jlk did submit tag 34
 		{
 			TagID:              "34",
 			Valid:              true,
@@ -421,7 +416,7 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 			)
 		}
 
-		// check results if valid request
+		// Verify results if valid
 		if w.Code > 200 {
 			continue
 		}

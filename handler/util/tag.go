@@ -12,7 +12,7 @@ import (
 
 const MAX_TAG_CATS = 15
 
-// Get tags for link
+// GetTagPage
 func ScanTagPageLink[T model.Link | model.LinkSignedIn](link_sql *query.TagPageLink) (*T, error) {
 	var link interface{}
 
@@ -110,7 +110,7 @@ func ScanPublicTagRankings(tag_rankings_sql *query.TagRankings) (*[]model.TagRan
 	return &tag_rankings, nil
 }
 
-// Get top global cats
+// GetTopGlobalCats
 func ScanGlobalCatCounts(global_cats_sql *query.GlobalCatCounts) (*[]model.CatCount, error) {
 	if global_cats_sql.Error != nil {
 		return nil, global_cats_sql.Error
@@ -148,7 +148,7 @@ func CatsAreSingularOrPluralVariationsOfEachOther(a string, b string) bool {
 	return false
 }
 
-// Add tag
+// AddTag
 func UserHasTaggedLink(login_name string, link_id string) (bool, error) {
 	var t sql.NullString
 	err := db.Client.QueryRow("SELECT id FROM Tags WHERE submitted_by = ? AND link_id = ?;", login_name, link_id).Scan(&t)
@@ -175,7 +175,7 @@ func AlphabetizeCats(cats string) string {
 	return strings.Join(split_cats, ",")
 }
 
-// Edit tag
+// EditTag
 func UserSubmittedTagWithID(login_name string, tag_id string) (bool, error) {
 	var t sql.NullString
 	err := db.Client.QueryRow("SELECT id FROM Tags WHERE submitted_by = ? AND id = ?;", login_name, tag_id).Scan(&t)
@@ -200,7 +200,7 @@ func GetLinkIDFromTagID(tag_id string) (string, error) {
 	return link_id.String, nil
 }
 
-// Delete tag
+// DeleteTag
 func TagExists(tag_id string) (bool, error) {
 	var t sql.NullString
 	err := db.Client.QueryRow("SELECT id FROM Tags WHERE id = ?;", tag_id).Scan(&t)
@@ -282,17 +282,14 @@ func CalculateAndSetGlobalCats(link_id string) error {
 		}
 	}
 
-	// limit if more than MAX_TAG_CATS cats
 	if len(cat_rankings) > MAX_TAG_CATS {
 		cat_rankings = LimitToTopCatRankings(cat_rankings)
 	}
-
-	// Alphabetize so global cats are assigned in order
-	alphabetized_cats := AlphabetizeCatRankings(cat_rankings)
-
+	
 	// Assign to global cats if >= 25% of max category score
 	var global_cats string
-	for _, cat := range alphabetized_cats {
+		// Alphabetize so global cats are assigned in order
+	for _, cat := range AlphabetizeCatRankings(cat_rankings) {
 		if cat_rankings[cat] >= max_cat_score*0.25 {
 			global_cats += cat + ","
 		}
@@ -310,13 +307,12 @@ func CalculateAndSetGlobalCats(link_id string) error {
 }
 
 func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
-
 	// should never happen but just in case...
 	if len(cat_rankings) <= MAX_TAG_CATS {
 		return cat_rankings
 	}
 
-	// sort by values before limit
+	// sort (by value) before limit
 	sorted_rankings := make([]model.CatRanking, 0, len(cat_rankings))
 	for cat, score := range cat_rankings {
 		sorted_rankings = append(sorted_rankings, model.CatRanking{
@@ -365,14 +361,12 @@ func SetGlobalCats(link_id string, new_global_cats string) error {
 		return err
 	}
 
-	// start transaction
 	tx, err := db.Client.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// set link new cats
 	_, err = tx.Exec(`
 		UPDATE Links 
 		SET global_cats = ? 
@@ -383,7 +377,6 @@ func SetGlobalCats(link_id string, new_global_cats string) error {
 		return err
 	}
 
-	// update spellfix
 	if err = IncrementSpellfixRanksForCats(tx, cats_diff.Added); err != nil {
 		return err
 	}
@@ -391,7 +384,6 @@ func SetGlobalCats(link_id string, new_global_cats string) error {
 		return err
 	}
 
-	// commit
 	if err = tx.Commit(); err != nil {
 		return err
 	}

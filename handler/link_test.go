@@ -14,7 +14,6 @@ import (
 )
 
 func TestGetLinks(t *testing.T) {
-
 	test_get_links_requests := []struct {
 		Params map[string]string
 		Page   int
@@ -315,7 +314,7 @@ func TestDeleteLink(t *testing.T) {
 		Valid              bool
 		ExpectedStatusCode int
 	}{
-		// jlk did not submit link 0
+		// test user jlk did not submit link 0
 		{
 			LinkID:             "0",
 			Valid:              false,
@@ -327,7 +326,7 @@ func TestDeleteLink(t *testing.T) {
 			Valid:              false,
 			ExpectedStatusCode: 400,
 		},
-		// jlk _did_ submit link 7
+		// test user jlk did submit link 7
 		{
 			LinkID:             "7",
 			Valid:              true,

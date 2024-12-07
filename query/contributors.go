@@ -43,17 +43,17 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 	}
 	c.Args = append(c.Args, match_arg)
 
-	// build CTE
+	// Build CTE
 	cats_CTE := `WITH CatsFilter AS (
 	SELECT link_id
 	FROM global_cats_fts` + match_clause + `
 	)
 	`
 
-	// prepend CTE
+	// Prepend CTE
 	c.Text = cats_CTE + c.Text
-
-	// append join
+	
+	// Append join
 	c.Text = strings.Replace(
 		c.Text,
 		"FROM Links l",
@@ -61,7 +61,7 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 		1,
 	)
 
-	// move page limit arg from first to last
+	// Move page limit arg from first to last
 	c.Args = append(c.Args[1:], c.Args[0])
 
 	return c

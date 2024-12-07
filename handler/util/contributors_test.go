@@ -31,7 +31,7 @@ func TestScanContributors(t *testing.T) {
 		t.Fatal("no contributors")
 	}
 
-	// verify that each contributor submitted the correct number of links
+	// verify each contributor submitted correct number of links
 	var ls int
 	for _, contributor := range *contributors {
 		err := TestClient.QueryRow(`SELECT count(*)
@@ -63,7 +63,7 @@ func TestScanContributors(t *testing.T) {
 		t.Fatal("no contributors")
 	}
 
-	// verify that each contributor submitted the correct number of links
+	// verify each contributor submitted correct number of links
 	for _, contributor := range *contributors {
 		err := TestClient.QueryRow(`SELECT count(*)
 				FROM Links
