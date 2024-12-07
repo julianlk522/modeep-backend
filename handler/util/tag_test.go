@@ -23,34 +23,34 @@ func TestScanTagPageLink(t *testing.T) {
 
 	// signed in
 	link_sql = link_sql.AsSignedInUser(test_req_user_id)
-	link2, err := ScanTagPageLink[model.LinkSignedIn](link_sql)
+	link_signed_in, err := ScanTagPageLink[model.LinkSignedIn](link_sql)
 	if err != nil {
 		t.Fatal(err)
-	} else if link2 == nil {
+	} else if link_signed_in == nil {
 		t.Fatal("no link (signed in)")
 	}
 
 	// Verify link ID
-	if link2.ID != test_link_id {
+	if link_signed_in.ID != test_link_id {
 		t.Fatalf(
 			"got link ID %s, want %s",
-			link2.ID,
+			link_signed_in.ID,
 			test_link_id,
 		)
 	}
 
 	// Verify isLiked / isCopied
 	liked := UserHasLikedLink(test_req_user_id, test_link_id)
-	if liked && !link2.IsLiked {
+	if liked && !link_signed_in.IsLiked {
 		t.Fatalf("expected link with ID %s to be liked by user", test_link_id)
-	} else if !liked && link2.IsLiked {
+	} else if !liked && link_signed_in.IsLiked {
 		t.Fatalf("link with ID %s NOT liked by user, expected error", test_link_id)
 	}
 
 	copied := UserHasCopiedLink(test_req_user_id, test_link_id)
-	if copied && !link2.IsCopied {
+	if copied && !link_signed_in.IsCopied {
 		t.Fatalf("expected link with ID %s to be copied by user", test_link_id)
-	} else if !copied && link2.IsCopied {
+	} else if !copied && link_signed_in.IsCopied {
 		t.Fatalf("link with ID %s NOT copied by user, expected error", test_link_id)
 	}
 }

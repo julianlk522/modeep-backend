@@ -282,10 +282,10 @@ func TestAssignMetadata(t *testing.T) {
 			OGDescription: "",
 			OGImage:       "",
 			OGAuthor:      "",
-			OGSiteName:    "goopis",
+			OGSiteName:    "test",
 			OGPublisher:   "",
 		},
-		// Auto Summary should be goopis
+		// Auto Summary should be test
 		// og:image should be set
 		{
 			Title:         "",
@@ -294,7 +294,7 @@ func TestAssignMetadata(t *testing.T) {
 			OGDescription: "",
 			OGImage:       "https://i.ytimg.com/vi/XdfoXdzGmr0/maxresdefault.jpg",
 			OGAuthor:      "",
-			OGSiteName:    "goopis",
+			OGSiteName:    "test",
 			OGPublisher:   "",
 		},
 	}
@@ -330,7 +330,7 @@ func TestAssignMetadata(t *testing.T) {
 				t.Fatalf("title provided but auto summary set to: %s", mock_request.AutoSummary)
 			}
 		case 4:
-			if mock_request.AutoSummary != "goopis" {
+			if mock_request.AutoSummary != "test" {
 				t.Fatalf("og:sitename provided but auto summary set to: %s", mock_request.AutoSummary)
 			} else if mock_request.ImgURL != "https://i.ytimg.com/vi/XdfoXdzGmr0/maxresdefault.jpg" {
 				t.Fatal("expected og:image to be set")
