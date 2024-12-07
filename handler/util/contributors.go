@@ -2,13 +2,10 @@ package handler
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/julianlk522/fitm/db"
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
-
-	"github.com/go-chi/render"
 )
 
 func ScanContributors(contributors_sql *query.Contributors) *[]model.Contributor {
@@ -32,9 +29,4 @@ func ScanContributors(contributors_sql *query.Contributors) *[]model.Contributor
 	}
 
 	return &contributors
-}
-
-func RenderContributors(contributors *[]model.Contributor, w http.ResponseWriter, r *http.Request) {
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, contributors)
 }

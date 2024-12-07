@@ -210,29 +210,6 @@ func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 	render.Status(r, http.StatusOK)
 }
 
-func GetTopContributors(w http.ResponseWriter, r *http.Request) {
-	contributors_sql := query.NewContributors()
-
-	cats_params := r.URL.Query().Get("cats")
-	if cats_params != "" {
-		cats := strings.Split(cats_params, ",")
-		contributors_sql = contributors_sql.FromCats(cats)
-	}
-
-	period_params := r.URL.Query().Get("period")
-	if period_params != "" {
-		contributors_sql = contributors_sql.DuringPeriod(period_params)
-	}
-
-	if contributors_sql.Error != nil {
-		render.Render(w, r, e.ErrInvalidRequest(contributors_sql.Error))
-		return
-	}
-
-	contributors := util.ScanContributors(contributors_sql)
-	util.RenderContributors(contributors, w, r)
-}
-
 func AddTag(w http.ResponseWriter, r *http.Request) {
 	tag_data := &model.NewTagRequest{}
 	if err := render.Bind(r, tag_data); err != nil {
