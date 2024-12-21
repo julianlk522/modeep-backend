@@ -67,16 +67,6 @@ type PaginatedLinks[T Link | LinkSignedIn] struct {
 	NextPage   int
 }
 
-type TmapLink struct {
-	Link
-	CatsFromUser bool
-}
-
-type TmapLinkSignedIn struct {
-	LinkSignedIn
-	CatsFromUser bool
-}
-
 type Contributor struct {
 	LoginName      string
 	LinksSubmitted int
