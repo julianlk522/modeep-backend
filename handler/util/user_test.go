@@ -7,6 +7,8 @@ import (
 
 	"os"
 	"testing"
+
+	e "github.com/julianlk522/fitm/error"
 )
 
 func TestLoginNameTaken(t *testing.T) {
@@ -33,7 +35,7 @@ func TestAuthenticateUser(t *testing.T) {
 	var test_logins = []struct {
 		LoginName          string
 		Password           string
-		ShouldAuthenticate bool
+		Valid bool
 	}{
 		{"jlk", "password", false},
 		{"monkey", "monkey", true},
@@ -41,12 +43,12 @@ func TestAuthenticateUser(t *testing.T) {
 	}
 
 	for _, l := range test_logins {
-		return_true, err := AuthenticateUser(l.LoginName, l.Password)
-		if l.ShouldAuthenticate && !return_true {
+		is_authenticated, err := AuthenticateUser(l.LoginName, l.Password)
+		if l.Valid && !is_authenticated {
 			t.Fatalf("expected login name %s to be authenticated", l.LoginName)
-		} else if !l.ShouldAuthenticate && return_true {
+		} else if !l.Valid && is_authenticated {
 			t.Fatalf("login name %s NOT authenticated, expected error", l.LoginName)
-		} else if err != nil && err.Error() != "user not found" && err.Error() != "incorrect password" {
+		} else if err != nil && err != e.ErrInvalidLogin && err != e.ErrInvalidPassword {
 			t.Fatalf("user %s failed with error: %s", l.LoginName, err)
 		}
 	}
