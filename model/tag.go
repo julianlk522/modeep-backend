@@ -33,7 +33,7 @@ func SortCats(i, j CatCount) int {
 }
 
 type TagRanking struct {
-	Cats  string
+	Cats            string
 	LifeSpanOverlap float32
 }
 
@@ -44,12 +44,12 @@ type TagRankingPublic struct {
 }
 
 type CatRanking struct {
-	Cat string
+	Cat   string
 	Score float32
 }
 
 type GlobalCatsDiff struct {
-	Added []string
+	Added   []string
 	Removed []string
 }
 

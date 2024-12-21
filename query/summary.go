@@ -13,9 +13,8 @@ type SummaryPageLink struct {
 func NewSummaryPageLink(ID string) *SummaryPageLink {
 	return (&SummaryPageLink{
 		Query: &Query{
-			Text: 
-				SUMMARY_PAGE_LINK_BASE_FIELDS +
-				SUMMARY_PAGE_LINK_BASE_FROM + 
+			Text: SUMMARY_PAGE_LINK_BASE_FIELDS +
+				SUMMARY_PAGE_LINK_BASE_FROM +
 				SUMMARY_PAGE_LINK_BASE_JOINS,
 			Args: []interface{}{ID},
 		},
@@ -66,11 +65,11 @@ ON tlink_id = links_id;`
 
 func (spl *SummaryPageLink) AsSignedInUser(user_id string) *SummaryPageLink {
 	spl.Text = strings.Replace(
-		spl.Text, 
-		SUMMARY_PAGE_LINK_BASE_FIELDS, 
-		SUMMARY_PAGE_LINK_BASE_FIELDS + 
-		SUMMARY_PAGE_LINK_AUTH_FIELDS, 
-	1)
+		spl.Text,
+		SUMMARY_PAGE_LINK_BASE_FIELDS,
+		SUMMARY_PAGE_LINK_BASE_FIELDS+
+			SUMMARY_PAGE_LINK_AUTH_FIELDS,
+		1)
 
 	spl.Text = strings.Replace(
 		spl.Text, ";",
@@ -110,8 +109,7 @@ type Summaries struct {
 func NewSummariesForLink(link_id string) *Summaries {
 	return (&Summaries{
 		Query: &Query{
-			Text: 
-				SUMMARIES_BASE_FIELDS +
+			Text: SUMMARIES_BASE_FIELDS +
 				SUMMARIES_FROM +
 				SUMMARIES_JOIN +
 				SUMMARIES_GROUP_BY_AND_LIMIT,
@@ -151,14 +149,14 @@ LIMIT ?;`
 
 func (s *Summaries) AsSignedInUser(user_id string) *Summaries {
 	s.Text = strings.Replace(
-		s.Text, 
-		SUMMARIES_BASE_FIELDS, 
-		SUMMARIES_BASE_FIELDS+","+SUMMARIES_IS_LIKED_FIELD, 
-	1)
+		s.Text,
+		SUMMARIES_BASE_FIELDS,
+		SUMMARIES_BASE_FIELDS+","+SUMMARIES_IS_LIKED_FIELD,
+		1)
 
 	s.Text = strings.Replace(
-		s.Text, 
-		`LEFT JOIN "Summary Likes" as sl`, 
+		s.Text,
+		`LEFT JOIN "Summary Likes" as sl`,
 		`LEFT JOIN
 		(
 		SELECT id, count(*) as is_liked, user_id, summary_id as slsumid
@@ -167,8 +165,8 @@ func (s *Summaries) AsSignedInUser(user_id string) *Summaries {
 		GROUP BY id
 		)
 	ON slsumid = sumid
-	LEFT JOIN "Summary Likes" as sl`, 
-	1)
+	LEFT JOIN "Summary Likes" as sl`,
+		1)
 
 	// Pop limit arg
 	s.Args = s.Args[0 : len(s.Args)-1]

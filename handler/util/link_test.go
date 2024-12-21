@@ -10,29 +10,29 @@ import (
 )
 
 func TestPrepareLinksResponse(t *testing.T) {
-	var test_requests = []struct{
-		LinksSQL *query.TopLinks
-		Page int
+	var test_requests = []struct {
+		LinksSQL   *query.TopLinks
+		Page       int
 		CatsParams string
-		Valid bool
+		Valid      bool
 	}{
 		{
-			LinksSQL: query.NewTopLinks(),
-			Page: 1,
+			LinksSQL:   query.NewTopLinks(),
+			Page:       1,
 			CatsParams: "",
-			Valid: true,
+			Valid:      true,
 		},
 		{
-			LinksSQL: query.NewTopLinks().FromCats([]string{"umvc3", "flowers"}).Page(1),
-			Page: 1,
+			LinksSQL:   query.NewTopLinks().FromCats([]string{"umvc3", "flowers"}).Page(1),
+			Page:       1,
 			CatsParams: "umvc3,flowers",
-			Valid: true,
+			Valid:      true,
 		},
 		{
-			LinksSQL: query.NewTopLinks().DuringPeriod("batman"),
-			Page: 1,
+			LinksSQL:   query.NewTopLinks().DuringPeriod("batman"),
+			Page:       1,
 			CatsParams: "",
-			Valid: false,
+			Valid:      false,
 		},
 		{
 			LinksSQL: &query.TopLinks{
@@ -40,9 +40,9 @@ func TestPrepareLinksResponse(t *testing.T) {
 					Text: "spiderman",
 				},
 			},
-			Page: 1,
+			Page:       1,
 			CatsParams: "",
-			Valid: false,
+			Valid:      false,
 		},
 	}
 

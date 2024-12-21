@@ -13,10 +13,8 @@ type Contributors struct {
 func NewContributors() *Contributors {
 	return (&Contributors{
 		Query: &Query{
-			Text: 
-				CONTRIBUTORS_BASE,
-			Args: 
-				[]interface{}{CONTRIBUTORS_PAGE_LIMIT},
+			Text: CONTRIBUTORS_BASE,
+			Args: []interface{}{CONTRIBUTORS_PAGE_LIMIT},
 		},
 	})
 }
@@ -30,8 +28,8 @@ LIMIT ?;`
 
 func (c *Contributors) FromCats(cats []string) *Contributors {
 	if len(cats) == 0 {
-        return c
-    }
+		return c
+	}
 
 	EscapeCatsReservedChars(cats)
 	cats = GetCatsOptionalPluralOrSingularForms(cats)
@@ -52,12 +50,12 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 
 	// Prepend CTE
 	c.Text = cats_CTE + c.Text
-	
+
 	// Append join
 	c.Text = strings.Replace(
 		c.Text,
 		"FROM Links l",
-		"FROM Links l" + CONTRIBUTORS_CATS_FROM,
+		"FROM Links l"+CONTRIBUTORS_CATS_FROM,
 		1,
 	)
 

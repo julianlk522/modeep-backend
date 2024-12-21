@@ -94,7 +94,7 @@ func TestFromCats(t *testing.T) {
 		if len(tc.Cats) == 0 || len(tc.Cats) == 1 && tc.Cats[0] == "" {
 			continue
 		}
-		
+
 		if len(links_sql.Args) != 2 && links_sql.Args[0] != strings.Join(tc.Cats, " ") && links_sql.Args[1] != LINKS_PAGE_LIMIT {
 			t.Fatalf("got %v, want %v (should be cat_match and limit in that order)", links_sql.Args, tc.Cats)
 		}
@@ -380,7 +380,7 @@ func TestNSFW(t *testing.T) {
 
 func TestPage(t *testing.T) {
 	var test_cases = []struct {
-		Page int
+		Page         int
 		WantLimitArg int
 	}{
 		{0, LINKS_PAGE_LIMIT},
@@ -410,7 +410,7 @@ func TestPage(t *testing.T) {
 			continue
 		}
 
-		if links_sql.Args[len(links_sql.Args)-1] != tc.WantLimitArg { 
+		if links_sql.Args[len(links_sql.Args)-1] != tc.WantLimitArg {
 			t.Fatalf("got %d, want %d", links_sql.Args[len(links_sql.Args)-1], tc.WantLimitArg)
 		}
 	}

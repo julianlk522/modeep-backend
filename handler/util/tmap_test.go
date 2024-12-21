@@ -33,15 +33,14 @@ func TestUserExists(t *testing.T) {
 
 func TestBuildTmapFromOpts(t *testing.T) {
 	var test_data = []struct {
-		LoginName               string
-		RequestingUserID        string
-		CatsParams              string
-		SortByNewest            bool
-		IncludeNSFW             bool
-		SectionParams           string
-		PageParams              int
-		Valid                   bool
-
+		LoginName        string
+		RequestingUserID string
+		CatsParams       string
+		SortByNewest     bool
+		IncludeNSFW      bool
+		SectionParams    string
+		PageParams       int
+		Valid            bool
 	}{
 		{test_login_name, test_user_id, "", false, false, "", 1, true},
 		{test_login_name, test_req_user_id, "", false, true, "", 1, true},
@@ -63,12 +62,12 @@ func TestBuildTmapFromOpts(t *testing.T) {
 	for _, td := range test_data {
 		var opts = &model.TmapOptions{
 			OwnerLoginName: td.LoginName,
-			RawCatsParams: td.CatsParams,
+			RawCatsParams:  td.CatsParams,
 			AsSignedInUser: td.RequestingUserID,
-			SortByNewest: td.SortByNewest,
-			IncludeNSFW: td.IncludeNSFW,
-			Section: td.SectionParams,
-			Page: td.PageParams,
+			SortByNewest:   td.SortByNewest,
+			IncludeNSFW:    td.IncludeNSFW,
+			Section:        td.SectionParams,
+			Page:           td.PageParams,
 		}
 
 		if td.CatsParams != "" {
@@ -142,8 +141,8 @@ func TestScanTmapProfile(t *testing.T) {
 
 func TestScanTmapLinks(t *testing.T) {
 	var test_requests = []struct {
-		LoginName               string
-		RequestingUserID        string
+		LoginName        string
+		RequestingUserID string
 	}{
 		{test_login_name, test_user_id},
 		{test_login_name, test_req_user_id},

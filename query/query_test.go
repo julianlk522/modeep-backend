@@ -25,8 +25,8 @@ func TestEscapeCatsReservedChars(t *testing.T) {
 		Cats            []string
 		ExpectedResults []string
 	}{
-		Cats:            []string{
-			"c. vi.per", 
+		Cats: []string{
+			"c. vi.per",
 			"hsien-ko",
 			"Ian's House",
 			"#hashtag",
@@ -34,7 +34,7 @@ func TestEscapeCatsReservedChars(t *testing.T) {
 			"per%cent",
 			"A&W",
 			"back\\slash",
-			"slash/slash/slash", 
+			"slash/slash/slash",
 			"func(",
 			"func)",
 			"bra[",
@@ -49,7 +49,7 @@ func TestEscapeCatsReservedChars(t *testing.T) {
 			"goober@mail",
 		},
 		ExpectedResults: []string{
-			`c"." vi"."per`, 
+			`c"." vi"."per`,
 			`hsien"-"ko`,
 			`Ian"'"s House`,
 			`"#"hashtag`,
@@ -57,7 +57,7 @@ func TestEscapeCatsReservedChars(t *testing.T) {
 			`per"%"cent`,
 			`A"&"W`,
 			`back"\"slash`,
-			`slash"/"slash"/"slash`, 
+			`slash"/"slash"/"slash`,
 			`func"("`,
 			`func")"`,
 			`bra"["`,
@@ -70,7 +70,6 @@ func TestEscapeCatsReservedChars(t *testing.T) {
 			`"="3`,
 			`question"?"question`,
 			`goober"@"mail`,
-
 		},
 	}
 	EscapeCatsReservedChars(test_cats.Cats)
@@ -86,7 +85,7 @@ func TestWithOptionalPluralOrSingularForm(t *testing.T) {
 		Cats            []string
 		ExpectedResults []string
 	}{
-		Cats:            []string{
+		Cats: []string{
 			"cat",
 			"cats",
 			"dress",

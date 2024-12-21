@@ -22,7 +22,7 @@ func UserHasSubmittedMaxDailyLinks(login_name string) (bool, error) {
 	err := db.Client.QueryRow(`SELECT count(*)
 		FROM Links
 		WHERE submitted_by = ?
-		AND submit_date >= date('now', '-1 days');`, 
+		AND submit_date >= date('now', '-1 days');`,
 		login_name,
 	).Scan(&count)
 	if err != nil {
@@ -388,8 +388,8 @@ func UserHasCopiedLink(user_id string, link_id string) bool {
 	err := db.Client.QueryRow(`SELECT id 
 		FROM "Link Copies" 
 		WHERE user_id = ? 
-		AND link_id = ?;`, 
-		user_id, 
+		AND link_id = ?;`,
+		user_id,
 		link_id,
 	).Scan(&l)
 

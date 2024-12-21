@@ -148,10 +148,10 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 		}
 
 		counts_and_merges := struct {
-            Counts  []model.CatCount
-            MergedCats []string
-        }{
-			Counts: *counts,
+			Counts     []model.CatCount
+			MergedCats []string
+		}{
+			Counts:     *counts,
 			MergedCats: merged_cats,
 		}
 

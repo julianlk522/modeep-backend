@@ -182,7 +182,7 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var opts  = &model.TmapOptions{
+	var opts = &model.TmapOptions{
 		OwnerLoginName: login_name,
 	}
 

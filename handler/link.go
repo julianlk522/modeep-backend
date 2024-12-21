@@ -86,7 +86,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
-	
+
 	if user_submitted_max_daily_links, err := util.UserHasSubmittedMaxDailyLinks(req_login_name); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return

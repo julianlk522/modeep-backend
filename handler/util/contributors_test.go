@@ -38,8 +38,8 @@ func TestScanContributors(t *testing.T) {
 				FROM Links
 				WHERE submitted_by = ?
 				AND ',' || global_cats || ',' LIKE '%,' || ? || ',%'`,
-				contributor.LoginName,
-				test_cats_str).Scan(&ls)
+			contributor.LoginName,
+			test_cats_str).Scan(&ls)
 		if err != nil {
 			t.Fatal(err)
 		} else if ls != contributor.LinksSubmitted {
@@ -56,7 +56,7 @@ func TestScanContributors(t *testing.T) {
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
-	
+
 	contributors = ScanContributors(contributors_sql)
 
 	if len(*contributors) == 0 {
@@ -70,9 +70,9 @@ func TestScanContributors(t *testing.T) {
 				WHERE submitted_by = ?
 				AND ',' || global_cats || ',' LIKE '%,' || ? || ',%'
 				AND ',' || global_cats || ',' LIKE '%,' || ? || ',%';`,
-				contributor.LoginName,
-				test_multiple_cats[0],
-				test_multiple_cats[1]).Scan(&ls)
+			contributor.LoginName,
+			test_multiple_cats[0],
+			test_multiple_cats[1]).Scan(&ls)
 		if err != nil {
 			t.Fatal(err)
 		} else if ls != contributor.LinksSubmitted {

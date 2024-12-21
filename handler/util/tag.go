@@ -141,7 +141,7 @@ func CatsAreSingularOrPluralVariationsOfEachOther(a string, b string) bool {
 		return false
 	}
 
-	if a + "s" == b || b + "s" == a || a+"es" == b || b+"es" == a {
+	if a+"s" == b || b+"s" == a || a+"es" == b || b+"es" == a {
 		return true
 	}
 
@@ -272,7 +272,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 				}
 			}
 
-		// single cat
+			// single cat
 		} else {
 			cat_rankings[tag.Cats] += tag.LifeSpanOverlap
 
@@ -285,10 +285,10 @@ func CalculateAndSetGlobalCats(link_id string) error {
 	if len(cat_rankings) > MAX_TAG_CATS {
 		cat_rankings = LimitToTopCatRankings(cat_rankings)
 	}
-	
+
 	// Assign to global cats if >= 25% of max category score
 	var global_cats string
-		// Alphabetize so global cats are assigned in order
+	// Alphabetize so global cats are assigned in order
 	for _, cat := range AlphabetizeCatRankings(cat_rankings) {
 		if cat_rankings[cat] >= max_cat_score*0.25 {
 			global_cats += cat + ","
@@ -316,7 +316,7 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 	sorted_rankings := make([]model.CatRanking, 0, len(cat_rankings))
 	for cat, score := range cat_rankings {
 		sorted_rankings = append(sorted_rankings, model.CatRanking{
-			Cat:  cat,
+			Cat:   cat,
 			Score: score,
 		})
 	}
@@ -333,7 +333,7 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 	for i := 0; i < MAX_TAG_CATS; i++ {
 		limited_rankings[sorted_rankings[i].Cat] = sorted_rankings[i].Score
 	}
-	
+
 	return limited_rankings
 }
 
@@ -418,7 +418,7 @@ func GetGlobalCatsDiff(link_id string, new_cats_str string) (*model.GlobalCatsDi
 	}
 
 	return &model.GlobalCatsDiff{
-		Added: added_cats,
+		Added:   added_cats,
 		Removed: removed_cats,
 	}, nil
 }

@@ -26,7 +26,7 @@ func TestLoadSpellfix(t *testing.T) {
 	}
 
 	var sql_dump_path string
-	
+
 	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
 	if test_data_path == "" {
 		_, dbtest_file, _, _ := runtime.Caller(0)

@@ -133,7 +133,7 @@ func TestGetLinks(t *testing.T) {
 			q.Add(k, v)
 		}
 		r.URL.RawQuery = q.Encode()
-				
+
 		w := httptest.NewRecorder()
 		GetLinks(w, r)
 		res := w.Result()

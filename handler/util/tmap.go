@@ -41,7 +41,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	var profile *model.Profile
 	if has_cat_filter {
 		nsfw_links_count_sql = nsfw_links_count_sql.FromCats(opts.CatsFilter)
-	// add profile only if unfiltered
+		// add profile only if unfiltered
 	} else {
 		var err error
 		profile_sql := query.NewTmapProfile(tmap_owner)
@@ -50,7 +50,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return nil, err
 		}
 	}
-	
+
 	var nsfw_links_count int
 
 	// single section
@@ -78,10 +78,10 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		if links == nil || len(*links) == 0 {
 			return model.PaginatedTmapSection[T]{
-				Links: &[]T{},
-				Cats:  &[]model.CatCount{},
+				Links:          &[]T{},
+				Cats:           &[]model.CatCount{},
 				NSFWLinksCount: 0,
-				NextPage: -1,
+				NextPage:       -1,
 			}, nil
 		}
 
@@ -111,22 +111,22 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		} else if page == total_pages {
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1):]
 		} else {
-			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1):query.LINKS_PAGE_LIMIT*page]
+			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : query.LINKS_PAGE_LIMIT*page]
 			next_page = page + 1
 		}
 
 		if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
 			return nil, err
 		}
-		
+
 		return model.PaginatedTmapSection[T]{
-			Links: links,
-			Cats:  cat_counts,
-			NextPage: next_page,
+			Links:          links,
+			Cats:           cat_counts,
+			NextPage:       next_page,
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 
-	// all sections
+		// all sections
 	} else {
 		submitted, err := ScanTmapLinks[T](query.NewTmapSubmitted(tmap_owner).FromOptions(opts).Query)
 		if err != nil {
@@ -175,11 +175,11 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		sections := &model.TmapSections[T]{
-			Submitted: submitted,
-			Copied:    copied,
-			Tagged:    tagged,
+			Submitted:        submitted,
+			Copied:           copied,
+			Tagged:           tagged,
 			SectionsWithMore: sections_with_more,
-			Cats:      cat_counts,
+			Cats:             cat_counts,
 		}
 
 		if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
@@ -199,7 +199,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 				NSFWLinksCount: nsfw_links_count,
 			}, nil
 		}
-	}	
+	}
 }
 
 func ScanTmapProfile(sql *query.TmapProfile) (*model.Profile, error) {
@@ -290,8 +290,8 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	var omitted_cats []string
 	// Use raw cats params here to determine omitted_cats because CatsFilter
 	// (from BuildTmapFromOpts) is modified to escape reserved chars and
-	// include singular/plural spelling variations. To correctly count cats 
-	// (omitting ones passed in the request), omitted_cats must _not_ have 
+	// include singular/plural spelling variations. To correctly count cats
+	// (omitting ones passed in the request), omitted_cats must _not_ have
 	// these modifications applied.
 
 	// Use lowercase so that capitalization variants of cat filters
@@ -344,13 +344,13 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	slices.SortFunc(counts, model.SortCats)
 
 	if has_cat_filter {
-		MergeCatCountsCapitalizationVariants(&counts,omitted_cats)
+		MergeCatCountsCapitalizationVariants(&counts, omitted_cats)
 	}
 
 	if len(counts) > TMAP_CATS_PAGE_LIMIT {
 		counts = (counts)[:TMAP_CATS_PAGE_LIMIT]
 	}
-	
+
 	return &counts
 }
 

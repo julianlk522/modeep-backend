@@ -90,7 +90,7 @@ func (sle *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed t
 			status_text,
 		)
 
-	// save errors
+		// save errors
 	} else if status > 299 {
 		status_text := "Unknown Error"
 		if crw, ok := extra.(*ResponseWriterWithStatusText); ok {

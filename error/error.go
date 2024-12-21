@@ -9,10 +9,10 @@ import (
 var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."}
 
 type ErrResponse struct {
-	Err            error `json:"-"`
-	HTTPStatusCode int   `json:"-"`
-	StatusText string `json:"status"`
-	ErrorText  string `json:"error,omitempty"`
+	Err            error  `json:"-"`
+	HTTPStatusCode int    `json:"-"`
+	StatusText     string `json:"status"`
+	ErrorText      string `json:"error,omitempty"`
 }
 
 func (er *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {

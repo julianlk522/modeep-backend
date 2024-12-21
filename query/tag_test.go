@@ -179,15 +179,15 @@ func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
 	// Verify counts
 	for _, c := range counts {
 		var count int32
-		if err := TestClient.QueryRow( `SELECT count(id) as count 
+		if err := TestClient.QueryRow(`SELECT count(id) as count 
 		FROM LINKS 
 		WHERE global_cats LIKE '%' || ? || '%'
 		AND global_cats LIKE '%' || ? || '%'
 		AND global_cats LIKE '%' || ? || '%'`,
-		test_cats[0],
-		test_cats[1],
-		c.Category,
-	).Scan(&count); err != nil {
+			test_cats[0],
+			test_cats[1],
+			c.Category,
+		).Scan(&count); err != nil {
 			t.Fatal(err)
 		} else if count != c.Count {
 			t.Fatalf(

@@ -62,9 +62,9 @@ func (lsi LinkSignedIn) GetCats() string {
 }
 
 type PaginatedLinks[T Link | LinkSignedIn] struct {
-	Links    *[]T
+	Links      *[]T
 	MergedCats []string
-	NextPage int
+	NextPage   int
 }
 
 type TmapLink struct {

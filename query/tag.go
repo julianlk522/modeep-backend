@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	TAG_RANKINGS_PAGE_LIMIT = 20
-	GLOBAL_CATS_PAGE_LIMIT  = 20
+	TAG_RANKINGS_PAGE_LIMIT     = 20
+	GLOBAL_CATS_PAGE_LIMIT      = 20
 	MORE_GLOBAL_CATS_PAGE_LIMIT = 100
 
 	SPELLFIX_DISTANCE_LIMIT = 100
@@ -21,14 +21,12 @@ type TagPageLink struct {
 }
 
 func NewTagPageLink(link_id string) *TagPageLink {
-	return (&TagPageLink{Query: 
-		&Query{
-			Text: 
-				TAG_PAGE_LINK_BASE_FIELDS + 
-				TAG_PAGE_LINK_BASE_FROM + 
-				TAG_PAGE_LINK_BASE_JOINS,
-			Args: []interface{}{link_id},
-		},
+	return (&TagPageLink{Query: &Query{
+		Text: TAG_PAGE_LINK_BASE_FIELDS +
+			TAG_PAGE_LINK_BASE_FROM +
+			TAG_PAGE_LINK_BASE_JOINS,
+		Args: []interface{}{link_id},
+	},
 	})
 }
 
@@ -115,12 +113,10 @@ type TagRankings struct {
 }
 
 func NewTagRankings(link_id string) *TagRankings {
-	return (&TagRankings{Query: 
-		&Query{
-			Text: 
-				TAG_RANKINGS_BASE,
-			Args: []interface{}{link_id, TAG_RANKINGS_PAGE_LIMIT},
-		},
+	return (&TagRankings{Query: &Query{
+		Text: TAG_RANKINGS_BASE,
+		Args: []interface{}{link_id, TAG_RANKINGS_PAGE_LIMIT},
+	},
 	})
 }
 
@@ -140,7 +136,7 @@ func (tr *TagRankings) Public() *TagRankings {
 	tr.Text = strings.Replace(
 		tr.Text,
 		TAG_RANKINGS_BASE_FIELDS,
-		TAG_RANKINGS_BASE_FIELDS + TAG_RANKINGS_PUBLIC_FIELDS,
+		TAG_RANKINGS_BASE_FIELDS+TAG_RANKINGS_PUBLIC_FIELDS,
 		1,
 	)
 
@@ -158,8 +154,7 @@ type GlobalCatCounts struct {
 func NewTopGlobalCatCounts() *GlobalCatCounts {
 	return (&GlobalCatCounts{
 		Query: &Query{
-			Text: 
-				GLOBAL_CATS_BASE,
+			Text: GLOBAL_CATS_BASE,
 			Args: []interface{}{GLOBAL_CATS_PAGE_LIMIT},
 		},
 	})
@@ -207,7 +202,7 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 		)`
 
 	// With MATCH, reserved chars must be surrounded with ""
-	match_arg := 
+	match_arg :=
 		// And singular/plural variants are added after escaping
 		// reserved chars so that "(" and ")" are preserved
 		WithOptionalPluralOrSingularForm(
@@ -216,10 +211,10 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 			),
 		)
 	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + 
+		match_arg += " AND " +
 			WithOptionalPluralOrSingularForm(
 				WithDoubleQuotesAroundReservedChars(cats[i]),
-		)
+			)
 	}
 	// Add optional singular/plural variants
 	// (skip for NOT IN clause otherwise subcats include filters)
@@ -228,9 +223,9 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"WHERE global_cat != ''",
-		"WHERE global_cat != ''" + 
-		not_in_clause + 
-		match_clause,
+		"WHERE global_cat != ''"+
+			not_in_clause+
+			match_clause,
 		1)
 
 	// Move LIMIT arg to end

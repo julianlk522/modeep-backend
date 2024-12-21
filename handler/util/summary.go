@@ -196,7 +196,7 @@ func UserHasLikedSummary(user_id string, summary_id string) (bool, error) {
 	err := db.Client.QueryRow(`SELECT id 
 		FROM "Summary Likes" 
 		WHERE user_id = ? 
-		AND summary_id = ?`, 
+		AND summary_id = ?`,
 		user_id,
 		summary_id,
 	).Scan(&summary_like_id)

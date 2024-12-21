@@ -14,8 +14,7 @@ type TopLinks struct {
 func NewTopLinks() *TopLinks {
 	return (&TopLinks{
 		Query: Query{
-			Text: 
-				LINKS_BASE_CTES +
+			Text: LINKS_BASE_CTES +
 				LINKS_BASE_FIELDS +
 				LINKS_FROM +
 				LINKS_BASE_JOINS +
@@ -87,7 +86,6 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	// Pop limit arg
 	tl.Args = tl.Args[:len(tl.Args)-1]
 
-	
 	// Build and add match arg
 	EscapeCatsReservedChars(cats)
 	cats = GetCatsOptionalPluralOrSingularForms(cats)
@@ -148,7 +146,7 @@ func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
 }
 
 func (tl *TopLinks) SortBy(order_by string) *TopLinks {
-var updated_order string
+	var updated_order string
 	switch order_by {
 	case "newest":
 		updated_order = "submit_date DESC, like_count DESC, summary_count DESC"
@@ -161,7 +159,7 @@ var updated_order string
 
 	updated_order_by_clause := `
 	ORDER BY ` + updated_order
-	
+
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_ORDER_BY,
@@ -250,8 +248,7 @@ func (tl *TopLinks) Page(page int) *TopLinks {
 		"LIMIT ?",
 		"LIMIT ? OFFSET ?",
 		1)
-	
-	
+
 	// Append offset arg
 	tl.Args = append(tl.Args, (page-1)*LINKS_PAGE_LIMIT)
 

@@ -5,8 +5,8 @@ import "testing"
 func TestContainsInvalidChars(t *testing.T) {
 	var test_login_names = []struct {
 		login_name string
-		valid bool
-	} {
+		valid      bool
+	}{
 		{"alltext", true},
 		{"text4ndNumb3r5", true},
 		{"has_underscore", true},

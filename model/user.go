@@ -63,30 +63,30 @@ func (lr *LogInRequest) Bind(r *http.Request) error {
 // Links
 type TmapOptions struct {
 	OwnerLoginName string
-	// RawCatsParams (reserved chars unescaped, plural/singular variations not 
+	// RawCatsParams (reserved chars unescaped, plural/singular variations not
 	// bundled) is stored in addition to CatsFilter so that
-	// GetCatCountsFromTmapLinks can know the exact values passed in 
+	// GetCatCountsFromTmapLinks can know the exact values passed in
 	// the request and not count them
-	RawCatsParams string
-	CatsFilter []string
+	RawCatsParams  string
+	CatsFilter     []string
 	AsSignedInUser string
-	SortByNewest bool
-	IncludeNSFW bool
-	Section string
-	Page int
+	SortByNewest   bool
+	IncludeNSFW    bool
+	Section        string
+	Page           int
 }
 type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
-	Submitted *[]T
-	Tagged    *[]T
-	Copied    *[]T
+	Submitted        *[]T
+	Tagged           *[]T
+	Copied           *[]T
 	SectionsWithMore []string
-	Cats      *[]CatCount
+	Cats             *[]CatCount
 }
 
 type Tmap[T TmapLink | TmapLinkSignedIn] struct {
 	*TmapSections[T]
 	NSFWLinksCount int
-	Profile *Profile
+	Profile        *Profile
 }
 
 type FilteredTmap[T TmapLink | TmapLinkSignedIn] struct {
@@ -95,10 +95,10 @@ type FilteredTmap[T TmapLink | TmapLinkSignedIn] struct {
 }
 
 type PaginatedTmapSection[T TmapLink | TmapLinkSignedIn] struct {
-	Links *[]T
-	Cats  *[]CatCount
+	Links          *[]T
+	Cats           *[]CatCount
 	NSFWLinksCount int
-	NextPage int
+	NextPage       int
 }
 
 type TmapCatCountsOptions struct {

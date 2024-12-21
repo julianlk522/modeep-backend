@@ -40,7 +40,7 @@ func AuthenticateUser(login_name string, password string) (bool, error) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(p.String), []byte(password)); err != nil {
-		return false, e.ErrIncorrectPassword
+		return false, e.ErrInvalidPassword
 	}
 
 	return true, nil

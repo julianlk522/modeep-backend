@@ -9,6 +9,7 @@ import (
 type TmapProfile struct {
 	*Query
 }
+
 func NewTmapProfile(login_name string) *TmapProfile {
 	return (&TmapProfile{
 		&Query{
@@ -93,8 +94,8 @@ func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
 		FROM PossibleUserCats
 		)
 	)`,
-	"l.submitted_by = ?",
-	1,
+		"l.submitted_by = ?",
+		1,
 	)
 
 	return tnlc
@@ -112,10 +113,10 @@ func (tnlc *TmapNSFWLinksCount) CopiedOnly() *TmapNSFWLinksCount {
 		FROM PossibleUserCats
 		)
 	)`,
-	"l.id IN UserCopies",
-	1,
+		"l.id IN UserCopies",
+		1,
 	)
-	
+
 	tnlc.Args = tnlc.Args[:len(tnlc.Args)-1]
 
 	return tnlc
@@ -133,14 +134,15 @@ func (tnlc *TmapNSFWLinksCount) TaggedOnly() *TmapNSFWLinksCount {
 		FROM PossibleUserCats
 		)
 	`,
-	`l.submitted_by != ?
+		`
+	l.submitted_by != ?
 	AND l.id IN 
 		(
 		SELECT link_id
 		FROM PossibleUserCats
 		)
 	`,
-	1,
+		1,
 	)
 
 	return tnlc
@@ -164,7 +166,7 @@ func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 	copy(trailing_args, tnlc.Args[1:])
 	tnlc.Args = append(tnlc.Args[:1], match_arg, match_arg)
 	tnlc.Args = append(tnlc.Args, trailing_args...)
-	
+
 	return tnlc
 }
 
@@ -175,8 +177,7 @@ type TmapSubmitted struct {
 func NewTmapSubmitted(login_name string) *TmapSubmitted {
 	q := &TmapSubmitted{
 		Query: &Query{
-			Text: 
-				"WITH " + TMAP_BASE_CTES + "," +
+			Text: "WITH " + TMAP_BASE_CTES + "," +
 				POSSIBLE_USER_CATS_CTE + "," +
 				POSSIBLE_USER_SUMMARY_CTE +
 				TMAP_BASE_FIELDS +
@@ -280,7 +281,7 @@ func NewTmapCopied(login_name string) *TmapCopied {
 				TMAP_NO_NSFW_CATS_WHERE +
 				COPIED_WHERE +
 				TMAP_DEFAULT_ORDER_BY,
-			// login_name used in UserCopies, PossibleUserCats, 
+			// login_name used in UserCopies, PossibleUserCats,
 			// PossibleUserSummary, where
 			Args: []interface{}{login_name, login_name, login_name, login_name},
 		},
@@ -533,9 +534,9 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 	}
 
 	// Rebuild args with match_arg * 2 (once for PossibleUserCats CTE, once
-	// for GlobalCatsFTS CTE) 
-	// order for TmapSubmitted: login_name, MATCH, login_name, MATCH, login_name 
-	// order for TmapCopied: login_name, login_name, MATCH, login_name, 
+	// for GlobalCatsFTS CTE)
+	// order for TmapSubmitted: login_name, MATCH, login_name, MATCH, login_name
+	// order for TmapCopied: login_name, login_name, MATCH, login_name,
 	// MATCH, login_name
 
 	// (Only TmapCopied and TmapTagged contain USER_COPIES_CTE, and TmapTagged
@@ -548,7 +549,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 	// TmapCopied
 	if strings.Contains(q.Text, USER_COPIES_CTE) {
 		q.Args = []interface{}{login_name, login_name, match_arg, login_name, match_arg, login_name}
-	// TmapSubmitted
+		// TmapSubmitted
 	} else {
 		q.Args = []interface{}{login_name, match_arg, login_name, match_arg, login_name}
 	}

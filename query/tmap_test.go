@@ -9,11 +9,11 @@ import (
 )
 
 var (
-	test_login_name = "jlk"
-	test_user_id    = "3"
+	test_login_name     = "jlk"
+	test_user_id        = "3"
 	test_req_login_name = "bradley"
 	test_req_user_id    = "13"
-	test_cats       = []string{"go", "coding"}
+	test_cats           = []string{"go", "coding"}
 )
 
 func TestNewTmapProfile(t *testing.T) {
@@ -38,9 +38,9 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 	}
 
 	// Copied / Tagged
-	// test user jlk copied link 76 with global tag "engine,search,NSFW", 
-	// test user jlk tagged link 9122ce5a-b8ae-4059-afb4-b9ad602c13c2 with 
-	// cat "NSFW" 
+	// test user jlk copied link 76 with global tag "engine,search,NSFW",
+	// test user jlk tagged link 9122ce5a-b8ae-4059-afb4-b9ad602c13c2 with
+	// cat "NSFW"
 	// (count should be 2)
 
 	expected_count := 2
@@ -294,8 +294,8 @@ func TestNewTmapCopied(t *testing.T) {
 				FROM "Link Copies"
 				WHERE link_id = ?
 				AND user_id = ?`,
-				l.ID,
-				test_user_id).Scan(&link_id)
+			l.ID,
+			test_user_id).Scan(&link_id)
 
 		if err != nil {
 			t.Fatal(err)
@@ -343,8 +343,8 @@ func TestNewTmapCopiedFromCats(t *testing.T) {
 				FROM "Link Copies"
 				WHERE link_id = ?
 				AND user_id = ?`,
-				l.ID,
-				test_user_id).Scan(&link_id)
+			l.ID,
+			test_user_id).Scan(&link_id)
 
 		if err != nil {
 			t.Fatal(err)
@@ -461,8 +461,8 @@ func TestNewTmapTagged(t *testing.T) {
 				FROM Tags
 				WHERE link_id = ?
 				AND submitted_by = ?;`,
-				l.ID,
-				test_login_name).Scan(&link_id)
+			l.ID,
+			test_login_name).Scan(&link_id)
 
 		if err != nil {
 			t.Fatal(err)

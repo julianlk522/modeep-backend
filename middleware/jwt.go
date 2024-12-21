@@ -9,10 +9,10 @@ import (
 )
 
 var claims_defaults = map[string]interface{}{
-	"user_id": "",
+	"user_id":    "",
 	"login_name": "",
-	"iat": nil,
-	"exp": nil,
+	"iat":        nil,
+	"exp":        nil,
 }
 
 // Requests with no token are allowed, but getting isLiked / isCopied

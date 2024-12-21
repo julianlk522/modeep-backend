@@ -211,7 +211,7 @@ func TestScanGlobalCatCounts(t *testing.T) {
 		err = TestClient.QueryRow(`SELECT count(global_cats)
 				FROM Links
 				WHERE ','||global_cats||',' LIKE '%,' || ? || ',%'`,
-				c.Category).Scan(&result_count)
+			c.Category).Scan(&result_count)
 
 		if err != nil {
 			t.Fatal(err)
@@ -283,9 +283,9 @@ func TestScanGlobalCatCounts(t *testing.T) {
 			err = TestClient.QueryRow(`SELECT count(global_cats)
 					FROM Links
 					WHERE ',' || global_cats || ',' LIKE '%,' || ? || ',%'
-					AND ` + period_clause + ";",
-					c.Category,
-					period_clause).Scan(&result_count)
+					AND `+period_clause+";",
+				c.Category,
+				period_clause).Scan(&result_count)
 
 			if err != nil {
 				t.Fatal(err)
@@ -408,7 +408,7 @@ func TestGetLinkIDFromTagID(t *testing.T) {
 
 func TestCalculateAndSetGlobalCats(t *testing.T) {
 	var test_link_ids = []struct {
-		ID         string
+		ID                 string
 		ExpectedGlobalCats string
 	}{
 		{"0", "flowers"},
@@ -454,15 +454,15 @@ func TestCalculateAndSetGlobalCats(t *testing.T) {
 
 func TestLimitToTopCatRankings(t *testing.T) {
 	test_rankings := map[string]float32{
-		"cat1": 1,
-		"cat2": 2,
-		"cat3": 3,
-		"cat4": 4,
-		"cat5": 5,
-		"cat6": 6,
-		"cat7": 7,
-		"cat8": 8,
-		"cat9": 9,
+		"cat1":  1,
+		"cat2":  2,
+		"cat3":  3,
+		"cat4":  4,
+		"cat5":  5,
+		"cat6":  6,
+		"cat7":  7,
+		"cat8":  8,
+		"cat9":  9,
 		"cat10": 10,
 		"cat11": 11,
 		"cat12": 12,
@@ -482,7 +482,7 @@ func TestLimitToTopCatRankings(t *testing.T) {
 		)
 	}
 
-	// test with fewer than MAX_TAG_CATS cats just in case, even though 
+	// test with fewer than MAX_TAG_CATS cats just in case, even though
 	// this condition should be unreachable
 	test_rankings = map[string]float32{
 		"cat1": 1,

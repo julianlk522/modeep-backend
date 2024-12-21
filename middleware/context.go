@@ -6,5 +6,5 @@ type (
 
 const (
 	PageKey      CustomKey = "page"
-	JWTClaimsKey       CustomKey = "jwtclaims"
+	JWTClaimsKey CustomKey = "jwtclaims"
 )
