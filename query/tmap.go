@@ -309,8 +309,12 @@ func (tc *TmapCopied) AsSignedInUser(req_user_id string) *TmapCopied {
 	)
 	tc.Text = fields_replacer.Replace(tc.Text)
 
-	// Prepend req_user_id arg * 2
-	tc.Args = append([]interface{}{req_user_id, req_user_id}, tc.Args...)
+	// Insert req_user_id * 2 between args 0 and 1
+	new_args := make([]interface{}, 0, len(tc.Args)+2)
+	new_args = append(new_args, tc.Args[0])
+	new_args = append(new_args, req_user_id, req_user_id)
+	new_args = append(new_args, tc.Args[1:]...)
+	tc.Args = new_args
 
 	return tc
 }
