@@ -501,8 +501,8 @@ func TestUserHasCopiedLink(t *testing.T) {
 		ID               string
 		CopiedByTestUser bool
 	}{
-		// user jlk copied links with ID 19, 31, 32
-		// (not 0, 1, or 99)
+		// test user jlk copied links with ID 19, 31, 32
+		// (not 0, 1, or 104)
 		{"19", true},
 		{"31", true},
 		{"32", true},

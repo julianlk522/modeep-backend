@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"slices"
+
 	"github.com/julianlk522/fitm/model"
 )
 
@@ -364,8 +366,9 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 	}
 	defer rows.Close()
 
-	// Verify columns
-	if rows.Next() {
+	// Scan links, verifying columns
+	links := []model.TmapLinkSignedIn{}
+	for rows.Next() {
 		var l model.TmapLinkSignedIn
 		if err := rows.Scan(
 			&l.ID,
@@ -383,6 +386,104 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.IsCopied,
 		); err != nil {
 			t.Fatal(err)
+		}
+
+		links = append(links, l)
+	}
+
+	// Manually search Link Copies table to verify that all copied links,
+	// EXCEPT those with NSFW cats, are returned
+	var all_copied_link_ids []string
+	rows, err = TestClient.Query(`SELECT link_id
+		FROM "Link Copies"
+		WHERE user_id = ?`, test_user_id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var link_id string
+		if err := rows.Scan(&link_id); err != nil {
+			t.Fatal(err)
+		}
+		all_copied_link_ids = append(all_copied_link_ids, link_id)
+	}
+
+	for _, lid := range all_copied_link_ids {
+		var found_copied_link_in_returned_links bool
+		for _, l := range links {
+			if l.ID == lid {
+				found_copied_link_in_returned_links = true
+			}
+		}
+
+		// Verify that all non-returned copied links have NSFW cats
+		if !found_copied_link_in_returned_links {
+			var cats string
+			if err := TestClient.QueryRow(`SELECT cats
+				FROM user_cats_fts
+				WHERE link_id = ?`, lid).Scan(&cats); err != nil {
+
+				if err == sql.ErrNoRows {
+					// Try global cats if no user cats found
+					if err := TestClient.QueryRow(`SELECT global_cats
+						FROM Links
+						WHERE id = ?`, lid).Scan(&cats); err != nil {
+							t.Fatal(err)
+						}
+				}
+				t.Fatal(err)
+			}
+
+			if !slices.Contains(strings.Split(cats, ","), "NSFW") {
+				t.Fatalf("non-returned link should have NSFW cats, got %s", cats)
+			}
+		}
+	}
+
+	// Retry with .NSFW() and verify that _all_ links from all_copied_link_ids
+	// are returned
+	copied_sql = NewTmapCopied(test_login_name).AsSignedInUser(test_req_user_id).NSFW()
+	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	links = []model.TmapLinkSignedIn{}
+	for rows.Next() {
+		var l model.TmapLinkSignedIn
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TagCount,
+			&l.LikeCount,
+			&l.ImgURL,
+			&l.IsLiked,
+			&l.IsCopied,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		links = append(links, l)
+	}
+
+	for _, lid := range all_copied_link_ids {
+		var found_copied_link_in_returned_links bool
+		for _, l := range links {
+			if l.ID == lid {
+				found_copied_link_in_returned_links = true
+			}
+		}
+		if !found_copied_link_in_returned_links {
+			t.Fatalf("non-returned link found despite enabled NSFW flag: %s", lid)
 		}
 	}
 }
