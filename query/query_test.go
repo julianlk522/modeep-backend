@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestEscapeCatsReservedChars(t *testing.T) {
+func TestGetCatsWithEscapedReservedChars(t *testing.T) {
 	var test_cats = struct {
 		Cats            []string
 		ExpectedResults []string
@@ -72,8 +72,8 @@ func TestEscapeCatsReservedChars(t *testing.T) {
 			`goober"@"mail`,
 		},
 	}
-	EscapeCatsReservedChars(test_cats.Cats)
-	for i, res := range test_cats.Cats {
+	escaped_cats := GetCatsWithEscapedReservedChars(test_cats.Cats)
+	for i, res := range escaped_cats {
 		if res != test_cats.ExpectedResults[i] {
 			t.Fatalf("got %s, want %s", test_cats.Cats[i], test_cats.ExpectedResults[i])
 		}

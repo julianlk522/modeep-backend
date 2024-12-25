@@ -118,7 +118,7 @@ func TestScanTagRankings(t *testing.T) {
 		SubmittedBy string
 	}{
 		{
-			Cats:        "flowers",
+			Cats:        "flowers,Flowers",
 			SubmittedBy: "xyz",
 		},
 		{

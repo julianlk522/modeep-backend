@@ -71,9 +71,11 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		}
 
 		if td.CatsParams != "" {
-			cats := strings.Split(td.CatsParams, ",")
-			query.EscapeCatsReservedChars(cats)
-			cats = query.GetCatsOptionalPluralOrSingularForms(cats)
+			cats := query.GetCatsWithEscapedReservedChars(
+				query.GetCatsOptionalPluralOrSingularForms(
+					strings.Split(td.CatsParams, ","),
+				),
+			)
 			opts.CatsFilter = cats
 		}
 

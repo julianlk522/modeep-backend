@@ -31,10 +31,13 @@ func GetPeriodClause(period string) (clause string, err error) {
 	return fmt.Sprintf("submit_date >= date('now', '-%d days')", days), nil
 }
 
-func EscapeCatsReservedChars(cats []string) {
+func GetCatsWithEscapedReservedChars(cats []string) []string {
+	modified_cats := make([]string, len(cats))
 	for i := 0; i < len(cats); i++ {
-		cats[i] = WithDoubleQuotesAroundReservedChars(cats[i])
+		modified_cats[i] = WithDoubleQuotesAroundReservedChars(cats[i])
 	}
+
+	return modified_cats
 }
 
 func WithDoubleQuotesAroundReservedChars(cat string) string {

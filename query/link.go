@@ -87,8 +87,9 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	tl.Args = tl.Args[:len(tl.Args)-1]
 
 	// Build and add match arg
-	EscapeCatsReservedChars(cats)
-	cats = GetCatsOptionalPluralOrSingularForms(cats)
+	cats = GetCatsOptionalPluralOrSingularForms(
+		GetCatsWithEscapedReservedChars(cats),
+	)
 
 	var match_arg = cats[0]
 	for i := 1; i < len(cats); i++ {

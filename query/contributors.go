@@ -31,8 +31,9 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 		return c
 	}
 
-	EscapeCatsReservedChars(cats)
-	cats = GetCatsOptionalPluralOrSingularForms(cats)
+	cats = GetCatsOptionalPluralOrSingularForms(
+		GetCatsWithEscapedReservedChars(cats),
+	)
 
 	match_clause := " WHERE global_cats MATCH ?"
 	match_arg := cats[0]
