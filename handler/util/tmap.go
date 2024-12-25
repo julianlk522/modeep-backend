@@ -302,7 +302,7 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	has_cat_filter := len(omitted_cats) > 0
 
 	counts := []model.CatCount{}
-	found_cats := []string{}
+	all_found_cats := []string{}
 	var found bool
 
 	for _, link := range *links {
@@ -314,14 +314,20 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 			cats = l.Cats
 		}
 
+		link_found_cats := []string{}
+
 		for _, cat := range strings.Split(cats, ",") {
-			if strings.TrimSpace(cat) == "" || (has_cat_filter &&
-				slices.Contains(omitted_cats, strings.ToLower(cat))) {
+			lc_cat := strings.ToLower(cat)
+
+			if strings.TrimSpace(cat) == "" || slices.ContainsFunc(link_found_cats, func(c string) bool { return strings.ToLower(c) == lc_cat }) || (has_cat_filter &&
+				slices.Contains(omitted_cats, lc_cat)) {
 				continue
 			}
 
+			link_found_cats = append(link_found_cats, cat)
+
 			found = false
-			for _, found_cat := range found_cats {
+			for _, found_cat := range all_found_cats {
 				if found_cat == cat {
 					found = true
 
@@ -336,7 +342,7 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 
 			if !found {
 				counts = append(counts, model.CatCount{Category: cat, Count: 1})
-				found_cats = append(found_cats, cat)
+				all_found_cats = append(all_found_cats, cat)
 			}
 		}
 	}

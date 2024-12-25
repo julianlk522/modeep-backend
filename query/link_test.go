@@ -347,7 +347,8 @@ func TestNSFW(t *testing.T) {
 	// Verify link not present using same query without .NSFW()
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
-		DuringPeriod("year").AsSignedInUser(test_user_id).
+		DuringPeriod("year").
+		AsSignedInUser(test_user_id).
 		SortBy("newest").
 		Page(1)
 

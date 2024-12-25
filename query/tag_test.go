@@ -150,9 +150,29 @@ func TestNewTopGlobalCatCounts(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts()
 	// No opportunity for counts_sql.Error to have been set
 
-	_, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var counts []model.CatCount
+	for rows.Next() {
+		var c model.CatCount
+		if err := rows.Scan(&c.Category, &c.Count); err != nil {
+			t.Fatal(err)
+		}
+		counts = append(counts, c)
+	}
+
+	// Verify capitalization variants in same tag are not double counted
+	//  cat "infosec" appears in 2 tags, 1 of which also includes "Infosec"
+	// so count should be 2 not 3
+
+	for _, c := range counts {
+		if c.Category == "infosec" && c.Count != 2 {
+			t.Fatalf("Capitalization variants Infosec and infosec in same tag were double counted")
+		}
 	}
 }
 

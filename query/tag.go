@@ -171,7 +171,7 @@ const GLOBAL_CATS_BASE = `WITH RECURSIVE GlobalCatsSplit(id, global_cat, str) AS
     FROM GlobalCatsSplit
     WHERE str != ''
 )
-SELECT global_cat, count(global_cat) as count
+SELECT global_cat, count(DISTINCT id) as count
 FROM GlobalCatsSplit
 WHERE global_cat != ''
 GROUP BY LOWER(global_cat)

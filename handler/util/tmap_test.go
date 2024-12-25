@@ -234,6 +234,8 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 			Count int32
 		}{
 			{"test", 2},
+			// tag has cats "flowers" and "Flowers": tests that tags with
+			// capitalization variant duplicates are only counted once still
 			{"flowers", 1},
 		}
 
