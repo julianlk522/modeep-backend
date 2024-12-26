@@ -49,22 +49,19 @@ func main() {
 	r.Use(m.SplitRequestLogger(m.FileLogFormatter))
 
 	// RATE LIMIT
-	// per minute (overall)
+	// overall
 	r.Use(httprate.LimitAll(
 		4000,
 		time.Minute,
 	))
-	// per minute (IP)
-	r.Use(httprate.Limit(
+	// by IP
+	r.Use(httprate.LimitByIP(
 		2400,
-		1*time.Minute,
-		httprate.WithKeyFuncs(httprate.KeyByIP),
+		time.Minute,
 	))
-	// per second (IP)
-	r.Use(httprate.Limit(
+	r.Use(httprate.LimitByIP(
 		100,
-		1*time.Second,
-		httprate.WithKeyFuncs(httprate.KeyByIP),
+		time.Second,
 	))
 
 	// CORS
@@ -90,20 +87,35 @@ func main() {
 	r.Post("/ghwh", h.HandleGitHubWebhook)
 
 	// OPTIONAL AUTHENTICATION
-	// (bearer token used optionally to get IsLiked / IsCopied for links)
+	// (bearer token used optionally to get IsLiked / IsCopied for links
+	// or to authenticate a link click)
 	r.Group(func(r chi.Router) {
 		r.Use(m.VerifierOptional(token_auth))
 		r.Use(m.AuthenticatorOptional(token_auth))
 		r.Use(m.JWTContext)
 
 		r.Get("/map/{login_name}", h.GetTreasureMap)
+		r.Get("/summaries/{link_id}", h.GetSummaryPage)
+		r.Get("/tags/{link_id}", h.GetTagPage)
 
 		r.
 			With(m.Pagination).
 			Get("/links", h.GetLinks)
-
-		r.Get("/summaries/{link_id}", h.GetSummaryPage)
-		r.Get("/tags/{link_id}", h.GetTagPage)
+		
+		r.
+			With(httprate.Limit(
+				2,
+				time.Second,
+				httprate.WithKeyFuncs(func(r *http.Request) (string, error) {
+					user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+					if user_id != "" {
+						return user_id, nil
+					}
+					
+					return httprate.KeyByIP(r)
+				}),
+			)).
+			Post("/click", h.ClickLink)
 	})
 
 	// PROTECTED
