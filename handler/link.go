@@ -410,3 +410,59 @@ func UncopyLink(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func ClickLink(w http.ResponseWriter, r *http.Request) {
+	request := &model.NewClickRequest{}
+	if err := render.Bind(r, request); err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
+
+	link_exists, err := util.LinkExists(request.LinkID)
+	if err != nil {
+		render.Render(w, r, e.Err500(err))
+		return
+	} else if !link_exists {
+		render.Render(w, r, e.ErrUnprocessable(e.ErrNoLinkWithID))
+		return
+	}
+
+	// Get user ID, or IP address if not signed in
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	
+	if req_user_id == "" {
+		ip_addr := r.RemoteAddr
+		if ip_addr == "" {
+			render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserOrIP))
+			return
+		}
+
+		request.IPAddr = ip_addr
+
+		_, err = db.Client.Exec(
+			`INSERT INTO "Clicks" VALUES(?,?,?,?,?);`,
+			uuid.New().String(),
+			request.LinkID,
+			nil,
+			request.IPAddr,
+			request.Timestamp,
+		)
+	} else {
+		_, err = db.Client.Exec(
+			`INSERT INTO "Clicks" VALUES(?,?,?,?,?);`,
+			uuid.New().String(),
+			request.LinkID,
+			req_user_id,
+			nil,
+			request.Timestamp,
+		)
+	}
+
+	if err != nil {
+		render.Render(w, r, e.Err500(err))
+		return
+	}
+
+	render.Status(r, http.StatusCreated)
+	render.JSON(w, r, request)
+}

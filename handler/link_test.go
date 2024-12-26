@@ -134,9 +134,9 @@ func TestGetLinks(t *testing.T) {
 		}
 		r.URL.RawQuery = q.Encode()
 
-		w := httptest.NewRecorder()
-		GetLinks(w, r)
-		res := w.Result()
+		rr := httptest.NewRecorder()
+		GetLinks(rr, r)
+		res := rr.Result()
 		defer res.Body.Close()
 
 		if tglr.Valid && res.StatusCode != http.StatusOK {
@@ -282,9 +282,9 @@ func TestAddLink(t *testing.T) {
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)
 
-		w := httptest.NewRecorder()
-		AddLink(w, r)
-		res := w.Result()
+		rr := httptest.NewRecorder()
+		AddLink(rr, r)
+		res := rr.Result()
 		defer res.Body.Close()
 
 		if tr.Valid && res.StatusCode != 201 {
@@ -356,9 +356,9 @@ func TestDeleteLink(t *testing.T) {
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)
 
-		w := httptest.NewRecorder()
-		DeleteLink(w, r)
-		res := w.Result()
+		rr := httptest.NewRecorder()
+		DeleteLink(rr, r)
+		res := rr.Result()
 		defer res.Body.Close()
 
 		if tr.Valid && res.StatusCode != tr.ExpectedStatusCode {
@@ -373,6 +373,78 @@ func TestDeleteLink(t *testing.T) {
 				"expected status code %d, got %d (test request %+v)",
 				tr.ExpectedStatusCode,
 				res.StatusCode,
+				tr,
+			)
+		}
+	}
+}
+
+func TestClickLink(t *testing.T) {
+	var test_requests = []struct {
+		LinkID             string
+		UserID             string
+		Valid              bool
+	}{
+		{
+			LinkID:             "0",
+			UserID:             test_user_id,
+			Valid:              true,
+		},
+		// not a real link
+		{
+			LinkID:             "-1",
+			UserID:             test_user_id,
+			Valid:              false,
+		},
+		// not a real user
+		{
+			LinkID:             "7",
+			UserID:             "-1",
+			Valid:              true,
+		},
+	}
+
+	for _, tr := range test_requests {
+		pl, b := map[string]string{
+			"link_id": tr.LinkID,
+		}, new(bytes.Buffer)
+		err := json.NewEncoder(b).Encode(pl)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := httptest.NewRequest(
+			http.MethodPost,
+			"/click",
+			b,
+		)
+		r.Header.Set("Content-Type", "application/json")
+
+		ctx := context.Background()
+		jwt_claims := map[string]interface{}{
+			"user_id": tr.UserID,
+		}
+		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
+		r = r.WithContext(ctx)
+
+		rr := httptest.NewRecorder()
+		ClickLink(rr, r)
+		res := rr.Result()
+		defer res.Body.Close()
+
+		if tr.Valid && res.StatusCode != 201 {
+			text, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal("failed but unable to read request body bytes")
+			}
+			t.Fatalf(
+				"expected status code 201, got %d (test request %+v), body: %s",
+				res.StatusCode,
+				tr,
+				text,
+			)
+		} else if !tr.Valid && res.StatusCode == 201 {
+			t.Fatalf(
+				"expected request failure, got success (test request %+v)",
 				tr,
 			)
 		}

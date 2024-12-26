@@ -29,6 +29,8 @@ var (
 	ErrLinkNotCopied         error = errors.New("link not already copied")
 	// Delete link
 	ErrDoesntOwnLink error = errors.New("not your link; cannot delete")
+	// Click link
+	ErrNoUserOrIP error = errors.New("click cannot be recorded without either authorized user ID or IP (neither found)")
 )
 
 func ErrMaxDailyLinkSubmissionsReached(limit int) error {

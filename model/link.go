@@ -137,3 +137,19 @@ func (dlr *DeleteLinkRequest) Bind(r *http.Request) error {
 
 	return nil
 }
+
+type NewClickRequest struct {
+	LinkID string `json:"link_id"`
+	IPAddr string
+	Timestamp string
+}
+
+func (ncr *NewClickRequest) Bind(r *http.Request) error {
+	if ncr.LinkID == "" {
+		return e.ErrNoLinkID
+	}
+
+	ncr.Timestamp = util.NEW_LONG_TIMESTAMP()
+	
+	return nil
+}
