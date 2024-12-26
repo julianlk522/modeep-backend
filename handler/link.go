@@ -427,42 +427,45 @@ func ClickLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	result := struct {
+		ID string `json:"id"`
+		LinkID string `json:"link_id"`
+		UserID string `json:"user_id"`
+		IPAddr string `json:"ip_addr"`
+		Timestamp string `json:"timestamp"`
+	}{
+		LinkID: request.LinkID,
+		Timestamp: request.Timestamp,
+	}
+
 	// Get user ID, or IP address if not signed in
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
-	
 	if req_user_id == "" {
-		ip_addr := r.RemoteAddr
-		if ip_addr == "" {
+		if r.RemoteAddr == "" {
 			render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserOrIP))
 			return
 		}
 
-		request.IPAddr = ip_addr
-
-		_, err = db.Client.Exec(
-			`INSERT INTO "Clicks" VALUES(?,?,?,?,?);`,
-			uuid.New().String(),
-			request.LinkID,
-			nil,
-			request.IPAddr,
-			request.Timestamp,
-		)
+		result.UserID = "anonymous"
+		result.IPAddr = r.RemoteAddr
 	} else {
-		_, err = db.Client.Exec(
-			`INSERT INTO "Clicks" VALUES(?,?,?,?,?);`,
-			uuid.New().String(),
-			request.LinkID,
-			req_user_id,
-			nil,
-			request.Timestamp,
-		)
+		result.UserID = req_user_id
 	}
 
-	if err != nil {
+	result.ID = uuid.New().String()
+
+	if _, err = db.Client.Exec(
+		`INSERT INTO "Clicks" VALUES(?,?,?,?,?);`,
+		result.ID,
+		result.LinkID,
+		result.UserID,
+		result.IPAddr,
+		result.Timestamp,
+	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
 
 	render.Status(r, http.StatusCreated)
-	render.JSON(w, r, request)
+	render.JSON(w, r, result)
 }

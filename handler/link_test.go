@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 
 	"testing"
 
@@ -402,6 +403,12 @@ func TestClickLink(t *testing.T) {
 			UserID:             "-1",
 			Valid:              true,
 		},
+		// no user ID: should be attributed to "anonymous"
+		{
+			LinkID:             "7",
+			UserID:             "",
+			Valid:              true,
+		},
 	}
 
 	for _, tr := range test_requests {
@@ -431,11 +438,12 @@ func TestClickLink(t *testing.T) {
 		res := rr.Result()
 		defer res.Body.Close()
 
+		text, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Fatal("failed but unable to read request body bytes")
+		}
+
 		if tr.Valid && res.StatusCode != 201 {
-			text, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal("failed but unable to read request body bytes")
-			}
 			t.Fatalf(
 				"expected status code 201, got %d (test request %+v), body: %s",
 				res.StatusCode,
@@ -444,9 +452,17 @@ func TestClickLink(t *testing.T) {
 			)
 		} else if !tr.Valid && res.StatusCode == 201 {
 			t.Fatalf(
-				"expected request failure, got success (test request %+v)",
+				"expected request failure, got success (test request %+v), body: %s",
 				tr,
+				text,
 			)
+		}
+
+		if tr.UserID == "" && !strings.Contains(string(text), `"user_id":"anonymous"`) {
+			t.Fatalf(
+				"expected anonymous user ID (test request %+v), body: %s",
+				tr,
+				text,)
 		}
 	}
 }
