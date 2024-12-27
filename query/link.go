@@ -40,6 +40,11 @@ TagCount AS (
     SELECT link_id, COUNT(*) AS tag_count
     FROM Tags
     GROUP BY link_id
+),
+ClickCount AS (
+	SELECT link_id, count(*) AS click_count
+	FROM Clicks
+	GROUP BY link_id
 )`
 
 const LINKS_BASE_FIELDS = ` 
@@ -50,9 +55,10 @@ SELECT
     l.submit_date AS sd, 
     COALESCE(l.global_cats, '') AS cats, 
     COALESCE(l.global_summary, '') AS summary, 
-    COALESCE(s.summary_count, 0) AS summary_count,
-    COALESCE(t.tag_count, 0) AS tag_count,
-    COALESCE(ll.like_count, 0) AS like_count, 
+    COALESCE(sc.summary_count, 0) AS summary_count,
+    COALESCE(tc.tag_count, 0) AS tag_count,
+    COALESCE(lc.like_count, 0) AS like_count,
+	COALESCE(cc.click_count, 0) AS click_count, 
     COALESCE(l.img_url, '') AS img_url`
 
 const LINKS_FROM = `
@@ -60,9 +66,10 @@ FROM
 	Links l`
 
 const LINKS_BASE_JOINS = `
-LEFT JOIN LikeCount ll ON l.id = ll.link_id
-LEFT JOIN SummaryCount s ON l.id = s.link_id
-LEFT JOIN TagCount t ON l.id = t.link_id`
+LEFT JOIN LikeCount lc ON l.id = lc.link_id
+LEFT JOIN SummaryCount sc ON l.id = sc.link_id
+LEFT JOIN TagCount tc ON l.id = tc.link_id
+LEFT JOIN ClickCount cc ON l.id = cc.link_id`
 
 const LINKS_NO_NSFW_CATS_WHERE = `
 WHERE l.id NOT IN (

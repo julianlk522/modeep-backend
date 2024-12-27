@@ -44,6 +44,7 @@ type Link struct {
 	SummaryCount int
 	TagCount     int
 	LikeCount    int64
+	ClickCount   int64
 	ImgURL       string
 }
 

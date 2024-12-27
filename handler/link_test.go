@@ -399,13 +399,13 @@ func TestClickLink(t *testing.T) {
 		},
 		// not a real user
 		{
-			LinkID:             "7",
+			LinkID:             "99",
 			UserID:             "-1",
 			Valid:              true,
 		},
 		// no user ID: should be attributed to "anonymous"
 		{
-			LinkID:             "7",
+			LinkID:             "99",
 			UserID:             "",
 			Valid:              true,
 		},

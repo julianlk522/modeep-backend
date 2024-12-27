@@ -66,23 +66,24 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 		var signed_out_links = []model.Link{}
 
 		for rows.Next() {
-			i := model.Link{}
+			l := model.Link{}
 			err := rows.Scan(
-				&i.ID,
-				&i.URL,
-				&i.SubmittedBy,
-				&i.SubmitDate,
-				&i.Cats,
-				&i.Summary,
-				&i.SummaryCount,
-				&i.TagCount,
-				&i.LikeCount,
-				&i.ImgURL,
+				&l.ID,
+				&l.URL,
+				&l.SubmittedBy,
+				&l.SubmitDate,
+				&l.Cats,
+				&l.Summary,
+				&l.SummaryCount,
+				&l.TagCount,
+				&l.LikeCount,
+				&l.ClickCount,
+				&l.ImgURL,
 			)
 			if err != nil {
 				return nil, err
 			}
-			signed_out_links = append(signed_out_links, i)
+			signed_out_links = append(signed_out_links, l)
 		}
 
 		links = &signed_out_links
@@ -91,25 +92,26 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 		var signed_in_links = []model.LinkSignedIn{}
 
 		for rows.Next() {
-			i := model.LinkSignedIn{}
+			l := model.LinkSignedIn{}
 			if err := rows.Scan(
-				&i.ID,
-				&i.URL,
-				&i.SubmittedBy,
-				&i.SubmitDate,
-				&i.Cats,
-				&i.Summary,
-				&i.SummaryCount,
-				&i.TagCount,
-				&i.LikeCount,
-				&i.ImgURL,
-				&i.IsLiked,
-				&i.IsCopied,
+				&l.ID,
+				&l.URL,
+				&l.SubmittedBy,
+				&l.SubmitDate,
+				&l.Cats,
+				&l.Summary,
+				&l.SummaryCount,
+				&l.TagCount,
+				&l.LikeCount,
+				&l.ClickCount,
+				&l.ImgURL,
+				&l.IsLiked,
+				&l.IsCopied,
 			); err != nil {
 				return nil, err
 			}
 
-			signed_in_links = append(signed_in_links, i)
+			signed_in_links = append(signed_in_links, l)
 		}
 
 		links = &signed_in_links

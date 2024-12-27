@@ -616,6 +616,11 @@ TagCount AS (
     SELECT link_id, COUNT(*) AS tag_count
     FROM Tags
     GROUP BY link_id
+),
+ClickCount AS (
+	SELECT link_id, count(*) AS click_count
+	FROM Clicks
+	GROUP BY link_id
 )`
 
 const POSSIBLE_USER_CATS_CTE = `
@@ -657,6 +662,7 @@ SELECT
     COALESCE(sc.summary_count, 0) AS summary_count,
     COALESCE(lc.like_count, 0) AS like_count,
     COALESCE(tc.tag_count, 0) AS tag_count,
+	COALESCE(cc.click_count, 0) AS click_count,
     COALESCE(l.img_url, '') AS img_url`
 
 const TMAP_FROM = LINKS_FROM
@@ -666,7 +672,8 @@ LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id
 LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
 LEFT JOIN LikeCount lc ON l.id = lc.link_id
-LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
+LEFT JOIN SummaryCount sc ON l.id = sc.link_id
+LEFT JOIN ClickCount cc ON l.id = cc.link_id`
 
 const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
 
