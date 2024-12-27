@@ -42,9 +42,10 @@ type Link struct {
 	Cats         string
 	Summary      string
 	SummaryCount int
-	TagCount     int
 	LikeCount    int64
+	CopyCount    int
 	ClickCount   int64
+	TagCount     int
 	ImgURL       string
 }
 

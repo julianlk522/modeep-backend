@@ -121,8 +121,9 @@ func TestNewTmapSubmitted(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -174,8 +175,9 @@ func TestNewTmapSubmittedFromCats(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -211,9 +213,10 @@ func TestNewTmapSubmittedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.TagCount,
-			&l.ClickCount,
 			&l.LikeCount,
+			&l.CopyCount,
+			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 			&l.IsLiked,
 			&l.IsCopied,
@@ -244,8 +247,9 @@ func TestNewTmapSubmittedNSFW(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -284,8 +288,9 @@ func TestNewTmapCopied(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -334,8 +339,9 @@ func TestNewTmapCopiedFromCats(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -385,9 +391,10 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.TagCount,
-			&l.ClickCount,
 			&l.LikeCount,
+			&l.CopyCount,
+			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 			&l.IsLiked,
 			&l.IsCopied,
@@ -470,9 +477,10 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.TagCount,
-			&l.ClickCount,
 			&l.LikeCount,
+			&l.CopyCount,
+			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 			&l.IsLiked,
 			&l.IsCopied,
@@ -518,8 +526,9 @@ func TestNewTmapCopiedNSFW(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -557,8 +566,9 @@ func TestNewTmapTagged(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -605,8 +615,9 @@ func TestNewTmapTaggedFromCats(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -657,8 +668,9 @@ func TestNewTmapTaggedAsSignedInUser(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 			&l.IsLiked,
 			&l.IsCopied,
@@ -690,8 +702,9 @@ func TestNewTmapTaggedNSFW(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -732,8 +745,9 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)
@@ -767,8 +781,9 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
-			&l.TagCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 		); err != nil {
 			t.Fatal(err)

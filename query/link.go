@@ -31,21 +31,27 @@ const LINKS_BASE_CTES = `WITH LikeCount AS (
     FROM "Link Likes"
     GROUP BY link_id
 ),
-SummaryCount AS (
-    SELECT link_id, COUNT(*) AS summary_count
-    FROM Summaries
-    GROUP BY link_id
+CopyCount AS (
+	SELECT link_id, COUNT(*) AS copy_count
+	FROM "Link Copies"
+	GROUP BY link_id
+),
+ClickCount AS (
+	SELECT link_id, count(*) AS click_count
+	FROM Clicks
+	GROUP BY link_id
 ),
 TagCount AS (
     SELECT link_id, COUNT(*) AS tag_count
     FROM Tags
     GROUP BY link_id
 ),
-ClickCount AS (
-	SELECT link_id, count(*) AS click_count
-	FROM Clicks
-	GROUP BY link_id
-)`
+SummaryCount AS (
+    SELECT link_id, COUNT(*) AS summary_count
+    FROM Summaries
+    GROUP BY link_id
+)
+`
 
 const LINKS_BASE_FIELDS = ` 
 SELECT 
@@ -56,9 +62,10 @@ SELECT
     COALESCE(l.global_cats, '') AS cats, 
     COALESCE(l.global_summary, '') AS summary, 
     COALESCE(sc.summary_count, 0) AS summary_count,
-    COALESCE(tc.tag_count, 0) AS tag_count,
     COALESCE(lc.like_count, 0) AS like_count,
-	COALESCE(cc.click_count, 0) AS click_count, 
+	COALESCE(cpc.copy_count, 0) AS copy_count,
+	COALESCE(clc.click_count, 0) AS click_count, 
+    COALESCE(tc.tag_count, 0) AS tag_count,
     COALESCE(l.img_url, '') AS img_url`
 
 const LINKS_FROM = `
@@ -67,9 +74,11 @@ FROM
 
 const LINKS_BASE_JOINS = `
 LEFT JOIN LikeCount lc ON l.id = lc.link_id
-LEFT JOIN SummaryCount sc ON l.id = sc.link_id
+LEFT JOIN CopyCount cpc ON l.id = cpc.link_id
+LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
-LEFT JOIN ClickCount cc ON l.id = cc.link_id`
+LEFT JOIN SummaryCount sc ON l.id = sc.link_id
+`
 
 const LINKS_NO_NSFW_CATS_WHERE = `
 WHERE l.id NOT IN (
@@ -79,6 +88,7 @@ WHERE l.id NOT IN (
 const LINKS_ORDER_BY = ` 
 ORDER BY 
     like_count DESC, 
+	copy_count DESC,
 	click_count DESC,
 	tag_count DESC,
     summary_count DESC, 
@@ -89,6 +99,7 @@ const LINKS_ORDER_BY_NEWEST = `
 ORDER BY 
 	submit_date DESC, 
 	like_count DESC, 
+	copy_count DESC,
 	click_count DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
@@ -191,11 +202,11 @@ func (tl *TopLinks) SortBy(order_by string) *TopLinks {
 
 func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
 	auth_replacer := strings.NewReplacer(
-		// Append auth CTEs
+		// Add auth CTEs
 		LINKS_BASE_CTES, LINKS_BASE_CTES+LINKS_AUTH_CTES,
-		// Append auth fields
+		// Add auth fields
 		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS+LINKS_AUTH_FIELDS,
-		// Apend auth joins
+		// Add auth joins
 		LINKS_BASE_JOINS, LINKS_BASE_JOINS+LINKS_AUTH_JOINS,
 	)
 	tl.Text = auth_replacer.Replace(tl.Text)

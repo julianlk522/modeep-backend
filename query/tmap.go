@@ -612,15 +612,20 @@ LikeCount AS (
     FROM "Link Likes"
     GROUP BY link_id
 ),
-TagCount AS (
-    SELECT link_id, COUNT(*) AS tag_count
-    FROM Tags
-    GROUP BY link_id
+CopyCount AS (
+	SELECT link_id, COUNT(*) AS copy_count
+	FROM "Link Copies"
+	GROUP BY link_id
 ),
 ClickCount AS (
 	SELECT link_id, count(*) AS click_count
 	FROM Clicks
 	GROUP BY link_id
+),
+TagCount AS (
+    SELECT link_id, COUNT(*) AS tag_count
+    FROM Tags
+    GROUP BY link_id
 )`
 
 const POSSIBLE_USER_CATS_CTE = `
@@ -661,8 +666,9 @@ SELECT
     COALESCE(pus.user_summary, l.global_summary, '') AS summary,
     COALESCE(sc.summary_count, 0) AS summary_count,
     COALESCE(lc.like_count, 0) AS like_count,
+	COALESCE(cpc.copy_count, 0) AS copy_count,
+	COALESCE(clc.click_count, 0) AS click_count,
     COALESCE(tc.tag_count, 0) AS tag_count,
-	COALESCE(cc.click_count, 0) AS click_count,
     COALESCE(l.img_url, '') AS img_url`
 
 const TMAP_FROM = LINKS_FROM
@@ -670,17 +676,19 @@ const TMAP_FROM = LINKS_FROM
 const TMAP_BASE_JOINS = `
 LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id
 LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
-LEFT JOIN TagCount tc ON l.id = tc.link_id
 LEFT JOIN LikeCount lc ON l.id = lc.link_id
-LEFT JOIN SummaryCount sc ON l.id = sc.link_id
-LEFT JOIN ClickCount cc ON l.id = cc.link_id`
+LEFT JOIN CopyCount cpc ON l.id = cpc.link_id
+LEFT JOIN ClickCount clc ON l.id = clc.link_id
+LEFT JOIN TagCount tc ON l.id = tc.link_id
+LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
 
 const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
 
 const TMAP_DEFAULT_ORDER_BY = `
 ORDER BY 
 	lc.like_count DESC, 
-	cc.click_count DESC,
+	cpc.copy_count DESC,
+	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, l.id DESC,
 	l.submit_date DESC,
@@ -690,7 +698,8 @@ const TMAP_ORDER_BY_NEWEST = `
 ORDER BY 
 	l.submit_date DESC, 
 	lc.like_count DESC, 
-	cc.click_count DESC,
+	cpc.copy_count DESC,
+	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
 	l.id DESC;`

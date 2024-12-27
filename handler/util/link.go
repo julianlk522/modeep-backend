@@ -75,9 +75,10 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 				&l.Cats,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.TagCount,
 				&l.LikeCount,
+				&l.CopyCount,
 				&l.ClickCount,
+				&l.TagCount,
 				&l.ImgURL,
 			)
 			if err != nil {
@@ -101,9 +102,10 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 				&l.Cats,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.TagCount,
 				&l.LikeCount,
+				&l.CopyCount,
 				&l.ClickCount,
+				&l.TagCount,
 				&l.ImgURL,
 				&l.IsLiked,
 				&l.IsCopied,

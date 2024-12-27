@@ -28,7 +28,7 @@ func TestNewTopLinks(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 11 {
+	} else if len(cols) != 12 {
 		t.Fatal("too few columns")
 	}
 
@@ -42,9 +42,10 @@ func TestNewTopLinks(t *testing.T) {
 		{"cats"},
 		{"summary"},
 		{"summary_count"},
-		{"tag_count"},
 		{"like_count"},
+		{"copy_count"},
 		{"click_count"},
+		{"tag_count"},
 		{"img_url"},
 	}
 
@@ -188,9 +189,10 @@ func TestLinksSortBy(t *testing.T) {
 				&link.Cats,
 				&link.Summary,
 				&link.SummaryCount,
-				&link.TagCount,
 				&link.LikeCount,
+				&link.CopyCount,
 				&link.ClickCount,
+				&link.TagCount,
 				&link.ImgURL,
 			)
 			if err != nil {
@@ -250,7 +252,7 @@ func TestAsSignedInUser(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 13 {
+	} else if len(cols) != 14 {
 		t.Fatal("incorrect col count")
 	}
 
@@ -264,9 +266,10 @@ func TestAsSignedInUser(t *testing.T) {
 		{"cats"},
 		{"summary"},
 		{"summary_count"},
-		{"tag_count"},
 		{"like_count"},
+		{"copy_count"},
 		{"click_count"},
+		{"tag_count"},
 		{"img_url"},
 		{"is_liked"},
 		{"is_copied"},
@@ -335,9 +338,10 @@ func TestNSFW(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.TagCount,
 			&l.LikeCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 			&l.IsLiked,
 			&l.IsCopied,
@@ -370,9 +374,10 @@ func TestNSFW(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.TagCount,
 			&l.LikeCount,
+			&l.CopyCount,
 			&l.ClickCount,
+			&l.TagCount,
 			&l.ImgURL,
 			&l.IsLiked,
 			&l.IsCopied,
