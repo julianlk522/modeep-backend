@@ -79,8 +79,20 @@ WHERE l.id NOT IN (
 const LINKS_ORDER_BY = ` 
 ORDER BY 
     like_count DESC, 
+	click_count DESC,
+	tag_count DESC,
     summary_count DESC, 
+	submit_date DESC,
     l.id DESC`
+
+const LINKS_ORDER_BY_NEWEST = `
+ORDER BY 
+	submit_date DESC, 
+	like_count DESC, 
+	click_count DESC, 
+	tag_count DESC, 
+	summary_count DESC, 
+	l.id DESC`
 
 const LINKS_LIMIT = `
 LIMIT ?;`
@@ -154,26 +166,25 @@ func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
 }
 
 func (tl *TopLinks) SortBy(order_by string) *TopLinks {
-	var updated_order string
 	switch order_by {
-	case "newest":
-		updated_order = "submit_date DESC, like_count DESC, summary_count DESC"
 	case "rating":
-		updated_order = "like_count DESC, summary_count DESC, submit_date DESC"
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_ORDER_BY_NEWEST,
+			LINKS_ORDER_BY,
+			1,
+		)
+	case "newest":
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_ORDER_BY,
+			LINKS_ORDER_BY_NEWEST,
+			1,
+		)
 	default:
 		tl.Error = fmt.Errorf("invalid order_by value")
 		return tl
 	}
-
-	updated_order_by_clause := `
-	ORDER BY ` + updated_order
-
-	tl.Text = strings.Replace(
-		tl.Text,
-		LINKS_ORDER_BY,
-		updated_order_by_clause,
-		1,
-	)
 
 	return tl
 }

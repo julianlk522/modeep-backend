@@ -678,10 +678,22 @@ LEFT JOIN ClickCount cc ON l.id = cc.link_id`
 const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
 
 const TMAP_DEFAULT_ORDER_BY = `
-ORDER BY lc.like_count DESC, sc.summary_count DESC, l.id DESC;`
+ORDER BY 
+	lc.like_count DESC, 
+	cc.click_count DESC,
+	tc.tag_count DESC,
+	sc.summary_count DESC, l.id DESC,
+	l.submit_date DESC,
+	l.id DESC;`
 
 const TMAP_ORDER_BY_NEWEST = `
-ORDER BY l.submit_date DESC, lc.like_count DESC, sc.summary_count DESC, l.id DESC;`
+ORDER BY 
+	l.submit_date DESC, 
+	lc.like_count DESC, 
+	cc.click_count DESC,
+	tc.tag_count DESC,
+	sc.summary_count DESC, 
+	l.id DESC;`
 
 // Authenticated
 const TMAP_AUTH_CTES = `
