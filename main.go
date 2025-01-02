@@ -82,6 +82,7 @@ func main() {
 	r.Get("/cats", h.GetTopGlobalCats)
 	r.Get("/cats/*", h.GetSpellfixMatchesForSnippet)
 	r.Get("/contributors", h.GetTopContributors)
+	r.Get("/totals", h.GetTotals)
 
 	// CD webhook: application update and refresh
 	r.Post("/ghwh", h.HandleGitHubWebhook)
