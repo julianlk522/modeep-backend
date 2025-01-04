@@ -13,6 +13,7 @@ func NewTotals() *Query {
 		ContributorsTotal AS (
 			SELECT COUNT(*) AS user_count
 			FROM Users
+			WHERE login_name != 'Auto Summary'
 		),
 		LikesTotal AS (
 			SELECT COUNT(*) AS like_count
