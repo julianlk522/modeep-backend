@@ -193,8 +193,8 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 		// For GetCatCountsFromTmapLinks()
 		opts.RawCatsParams = cats_params
 
-		cats := query.GetCatsWithEscapedReservedChars(
-			query.GetCatsOptionalPluralOrSingularForms(
+		cats := query.GetCatsOptionalPluralOrSingularForms(
+			query.GetCatsWithEscapedReservedChars(
 				strings.Split(cats_params, ","),
 			),
 		)
