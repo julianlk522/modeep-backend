@@ -130,6 +130,7 @@ func main() {
 		r.Put("/about", h.EditAbout)
 		r.Post("/pic", h.UploadProfilePic)
 		r.Delete("/pic", h.DeleteProfilePic)
+		r.Put("/email", h.UpdateEmail)
 
 		// Links
 		r.Post("/links", h.AddLink)

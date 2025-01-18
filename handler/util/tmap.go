@@ -5,7 +5,6 @@ import (
 
 	"github.com/julianlk522/fitm/db"
 
-	"database/sql"
 	"slices"
 	"strings"
 
@@ -17,18 +16,6 @@ import (
 const TMAP_CATS_PAGE_LIMIT int = 12
 
 // GetTreasureMap
-func UserExists(login_name string) (bool, error) {
-	var u sql.NullString
-	err := db.Client.QueryRow("SELECT id FROM Users WHERE login_name = ?;", login_name).Scan(&u)
-	if err == sql.ErrNoRows {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
 func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.TmapOptions) (interface{}, error) {
 	if opts.OwnerLoginName == "" {
 		return nil, e.ErrNoTmapOwnerLoginName

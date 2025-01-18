@@ -22,6 +22,18 @@ import (
 )
 
 // Auth
+func UserExists(login_name string) (bool, error) {
+	var u sql.NullString
+	err := db.Client.QueryRow("SELECT id FROM Users WHERE login_name = ?;", login_name).Scan(&u)
+	if err == sql.ErrNoRows {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 func LoginNameTaken(login_name string) bool {
 	var s sql.NullString
 	if err := db.Client.QueryRow("SELECT login_name FROM Users WHERE login_name = ?", login_name).Scan(&s); err == nil {

@@ -57,3 +57,14 @@ func (lr *LogInRequest) Bind(r *http.Request) error {
 
 	return nil
 }
+
+type UpdateEmailRequest struct {
+	Email string `json:"email"`
+}
+
+func (ue *UpdateEmailRequest) Bind(r *http.Request) error {
+	if ue.Email == "" {
+		return e.ErrNoEmail
+	}
+	return nil
+}

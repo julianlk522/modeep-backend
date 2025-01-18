@@ -12,6 +12,7 @@ import (
 
 	"github.com/julianlk522/fitm/db"
 	e "github.com/julianlk522/fitm/error"
+	m "github.com/julianlk522/fitm/middleware"
 	"github.com/julianlk522/fitm/model"
 )
 
@@ -83,4 +84,35 @@ func LogIn(w http.ResponseWriter, r *http.Request) {
 
 	render.Status(r, http.StatusOK)
 	util.RenderJWT(token, w, r)
+}
+
+func UpdateEmail(w http.ResponseWriter, r *http.Request) {
+	email_data := &model.UpdateEmailRequest{}
+	if err := render.Bind(r, email_data); err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
+
+	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
+	user_exists, err := util.UserExists(req_login_name)
+	if err != nil {
+		render.Render(w, r, e.Err500(err))
+		return
+	} else if !user_exists {
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserWithLoginName))
+		return
+	}
+
+	if _, err = db.Client.Exec(
+		`UPDATE users 
+		SET email = ? 
+		WHERE login_name = ?;`,
+		email_data.Email,
+		req_login_name,
+	); err != nil {
+		render.Render(w, r, e.Err500(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

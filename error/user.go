@@ -8,6 +8,7 @@ import (
 var (
 	ErrNoLoginName                   error = errors.New("no name provided")
 	ErrNoPassword                    error = errors.New("no password provided")
+	ErrNoEmail                       error = errors.New("no email provided")
 	ErrInvalidLogin                  error = errors.New("invalid login provided")
 	ErrInvalidPassword                     = errors.New("invalid password provided")
 	ErrLoginNameTaken                error = errors.New("login name taken")
