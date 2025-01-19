@@ -11,8 +11,9 @@ import (
 // Profile
 type Profile struct {
 	LoginName string
-	About     string
 	PFP       string
+	About     string
+	Email     string
 	Created   string
 }
 

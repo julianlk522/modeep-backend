@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"math"
 
 	"github.com/julianlk522/fitm/db"
@@ -189,18 +190,23 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	}
 }
 
-func ScanTmapProfile(sql *query.TmapProfile) (*model.Profile, error) {
+func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 	var u model.Profile
 	err := db.Client.
-		QueryRow(sql.Text, sql.Args...).
+		QueryRow(profile_sql.Text, profile_sql.Args...).
 		Scan(
 			&u.LoginName,
-			&u.About,
 			&u.PFP,
+			&u.About,
+			&u.Email,
 			&u.Created,
 		)
 	if err != nil {
-		return nil, e.ErrNoUserWithLoginName
+		if err == sql.ErrNoRows {
+			return nil, e.ErrNoUserWithLoginName
+		} else {
+			return nil, err
+		}
 	}
 
 	return &u, nil

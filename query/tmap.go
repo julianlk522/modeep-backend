@@ -21,8 +21,9 @@ func NewTmapProfile(login_name string) *TmapProfile {
 
 const TMAP_PROFILE = `SELECT 
 	login_name, 
-	COALESCE(about,'') as about, 
 	COALESCE(pfp,'') as pfp, 
+	COALESCE(about,'') as about,
+	COALESCE(email,'') as email,
 	created
 FROM Users 
 WHERE login_name = ?;`
