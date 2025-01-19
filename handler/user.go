@@ -37,7 +37,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	_, err = db.Client.Exec(
+	if _, err = db.Client.Exec(
 		`INSERT INTO users VALUES (?,?,?,?,?,?)`,
 		signup_data.ID,
 		signup_data.Auth.LoginName,
@@ -45,8 +45,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		nil,
 		nil,
 		signup_data.CreatedAt,
-	)
-	if err != nil {
+	); err != nil {
 		log.Fatal(err)
 	}
 
