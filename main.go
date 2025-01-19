@@ -78,6 +78,8 @@ func main() {
 	r.Post("/signup", h.SignUp)
 	r.Post("/login", h.LogIn)
 	r.Get("/pic/{file_name}", h.GetProfilePic)
+	r.Post("/email-password-reset-link", h.AttemptPasswordReset)
+	r.Post("/reset-password", h.ResetPassword)
 
 	r.Get("/cats", h.GetTopGlobalCats)
 	r.Get("/cats/*", h.GetSpellfixMatchesForSnippet)
