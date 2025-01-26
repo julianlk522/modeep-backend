@@ -24,8 +24,9 @@ func TestNewTmapProfile(t *testing.T) {
 	var profile model.Profile
 	if err := TestClient.QueryRow(profile_sql.Text, profile_sql.Args...).Scan(
 		&profile.LoginName,
-		&profile.About,
 		&profile.PFP,
+		&profile.About,
+		&profile.Email,
 		&profile.Created,
 	); err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
