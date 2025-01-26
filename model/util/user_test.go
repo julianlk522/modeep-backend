@@ -4,8 +4,8 @@ import "testing"
 
 func TestContainsInvalidChars(t *testing.T) {
 	var test_login_names = []struct {
-		login_name string
-		valid      bool
+		LoginName string
+		Valid      bool
 	}{
 		{"alltext", true},
 		{"text4ndNumb3r5", true},
@@ -27,11 +27,8 @@ func TestContainsInvalidChars(t *testing.T) {
 	}
 
 	for _, l := range test_login_names {
-		return_true := ContainsInvalidChars(l.login_name)
-		if l.valid && return_true {
-			t.Fatalf("expected login name %s to be valid", l.login_name)
-		} else if !l.valid && !return_true {
-			t.Fatalf("login name %s NOT valid, expected error", l.login_name)
+		if got := ContainsInvalidChars(l.LoginName); l.Valid == got {
+			t.Fatalf("expected %t for %s, got %t", l.Valid, l.LoginName, got)
 		}
 	}
 }

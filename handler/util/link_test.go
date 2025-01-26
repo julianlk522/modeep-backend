@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
@@ -189,25 +190,32 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 }
 
 // Add link
-func TestObtainURLMetaData(t *testing.T) {
-	var test_requests = []struct {
-		request *model.NewLinkRequest
+func TestGetLinkExtraMetadataFromResponse(t *testing.T) {
+	var test_links = []struct {
+		new_link *model.NewLink
 		Valid   bool
 	}{
-		{&model.NewLinkRequest{NewLink: &model.NewLink{URL: "abc.com"}}, true},
-		{&model.NewLinkRequest{NewLink: &model.NewLink{URL: "www.abc.com"}}, true},
-		{&model.NewLinkRequest{NewLink: &model.NewLink{URL: "https://www.abc.com"}}, true},
-		{&model.NewLinkRequest{NewLink: &model.NewLink{URL: "about.google.com"}}, true},
-		{&model.NewLinkRequest{NewLink: &model.NewLink{URL: "julianlk.com/notreal"}}, false},
-		{&model.NewLinkRequest{NewLink: &model.NewLink{URL: "gobblety gook"}}, false},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "abc.com"}}, true},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "www.abc.com"}}, true},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "https://www.abc.com"}}, true},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "about.google.com"}}, true},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "julianlk.com/notreal"}}, false},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "gobblety gook"}}, false},
 	}
 
-	for _, tr := range test_requests {
-		err := ObtainURLMetaData(tr.request)
-		if tr.Valid && err != nil {
+	for _, tl := range test_links {
+		req, err := http.NewRequest("GET", tl.new_link.URL, nil)
+		if tl.Valid && err != nil {
 			t.Fatal(err)
-		} else if !tr.Valid && err == nil {
-			t.Fatalf("expected error for url %s", tr.request.NewLink.URL)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if !tl.Valid && err == nil {
+			t.Fatalf("expected error for url %s", tl.new_link.URL)
+		}
+
+		x_md := GetLinkExtraMetadataFromResponse(resp)
+		if x_md == nil && err == nil {
+			t.Fatalf("expected metadata for url %s", tl.new_link.URL)
 		}
 	}
 }
@@ -238,8 +246,8 @@ func TestGetResolvedURLResponse(t *testing.T) {
 	}
 }
 
-func TestAssignMetadata(t *testing.T) {
-	mock_metas := []HTMLMeta{
+func TestGetLinkExtraMetadataFromHTML(t *testing.T) {
+	mock_metas := []HTMLMetadata{
 		// Auto Summary should be og:description,
 		// og:image should be set
 		{
@@ -300,39 +308,31 @@ func TestAssignMetadata(t *testing.T) {
 	}
 
 	for i, meta := range mock_metas {
-		mock_request := &model.NewLinkRequest{
-			NewLink: &model.NewLink{
-				URL:     "",
-				Cats:    "",
-				Summary: "",
-			},
-		}
-
-		AssignMetadata(meta, mock_request)
+		x_md := GetLinkExtraMetadataFromHTML(meta)
 
 		switch i {
 		case 0:
-			if mock_request.AutoSummary != "og:description" {
-				t.Fatalf("og:description provided but auto summary set to: %s", mock_request.AutoSummary)
-			} else if mock_request.ImgURL != "https://i.ytimg.com/vi/L4gaqVH0QHU/maxresdefault.jpg" {
+			if x_md.AutoSummary != "og:description" {
+				t.Fatalf("og:description provided but auto summary set to: %s", x_md.AutoSummary)
+			} else if x_md.PreviewImgURL != "https://i.ytimg.com/vi/L4gaqVH0QHU/maxresdefault.jpg" {
 				t.Fatal("expected og:image to be set")
 			}
 		case 1:
-			if mock_request.AutoSummary != "description" {
-				t.Fatalf("description provided but auto summary set to: %s", mock_request.AutoSummary)
+			if x_md.AutoSummary != "description" {
+				t.Fatalf("description provided but auto summary set to: %s", x_md.AutoSummary)
 			}
 		case 2:
-			if mock_request.AutoSummary != "og:title" {
-				t.Fatalf("og:title provided but auto summary set to: %s", mock_request.AutoSummary)
+			if x_md.AutoSummary != "og:title" {
+				t.Fatalf("og:title provided but auto summary set to: %s", x_md.AutoSummary)
 			}
 		case 3:
-			if mock_request.AutoSummary != "title" {
-				t.Fatalf("title provided but auto summary set to: %s", mock_request.AutoSummary)
+			if x_md.AutoSummary != "title" {
+				t.Fatalf("title provided but auto summary set to: %s", x_md.AutoSummary)
 			}
 		case 4:
-			if mock_request.AutoSummary != "test" {
-				t.Fatalf("og:sitename provided but auto summary set to: %s", mock_request.AutoSummary)
-			} else if mock_request.ImgURL != "https://i.ytimg.com/vi/XdfoXdzGmr0/maxresdefault.jpg" {
+			if x_md.AutoSummary != "test" {
+				t.Fatalf("og:sitename provided but auto summary set to: %s", x_md.AutoSummary)
+			} else if x_md.PreviewImgURL != "https://i.ytimg.com/vi/XdfoXdzGmr0/maxresdefault.jpg" {
 				t.Fatal("expected og:image to be set")
 			}
 		default:
@@ -461,11 +461,8 @@ func TestUserSubmittedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		return_true := UserSubmittedLink(test_login_name, l.ID)
-		if l.SubmittedByTestUser && !return_true {
-			t.Fatalf("expected link %s to be submitted by user", l.ID)
-		} else if !l.SubmittedByTestUser && return_true {
-			t.Fatalf("%s NOT submitted by user, expected error", l.ID)
+		if got := UserSubmittedLink(test_login_name, l.ID); got != l.SubmittedByTestUser {
+			t.Fatalf("expected %t, got %t", l.SubmittedByTestUser, got)
 		}
 	}
 }
@@ -486,11 +483,8 @@ func TestUserHasLikedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		return_true := UserHasLikedLink(test_user_id, l.ID)
-		if l.LikedByTestUser && !return_true {
-			t.Fatalf("expected link %s to be liked by user", l.ID)
-		} else if !l.LikedByTestUser && return_true {
-			t.Fatalf("%s NOT liked by user, expected error", l.ID)
+		if got := UserHasLikedLink(test_user_id, l.ID); got != l.LikedByTestUser {
+			t.Fatalf("expected %t, got %t", l.LikedByTestUser, got)
 		}
 	}
 }
@@ -512,11 +506,8 @@ func TestUserHasCopiedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		return_true := UserHasCopiedLink(test_user_id, l.ID)
-		if l.CopiedByTestUser && !return_true {
-			t.Fatalf("expected link %s to be copied by user", l.ID)
-		} else if !l.CopiedByTestUser && return_true {
-			t.Fatalf("%s NOT copied by user, expected error", l.ID)
+		if got := UserHasCopiedLink(test_user_id, l.ID); got != l.CopiedByTestUser {
+			t.Fatalf("expected %t, got %t", l.CopiedByTestUser, got)
 		}
 	}
 }

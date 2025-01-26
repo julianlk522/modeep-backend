@@ -15,26 +15,22 @@ import (
 
 const YT_VID_URL_REGEX = `^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.*`
 
-func IsYouTubeVideoLink(url string) bool {
-	if !strings.Contains(url, "youtube.com/watch?v=") && !strings.Contains(url, "youtu.be/") {
-		return false
-	}
-
+func IsYTVideo(url string) bool {
 	match, _ := regexp.MatchString(YT_VID_URL_REGEX, url)
 	return match
 
 }
 
-func ObtainYouTubeMetaData(request *model.NewLinkRequest) error {
-	id := ExtractYouTubeVideoID(request.NewLink.URL)
+func GetYTVideoMetadata(url string) (*model.YTVideoMetadata, error) {
+	id := ExtractYTVideoID(url)
 	if id == "" {
-		return e.ErrInvalidURL
+		return nil, e.ErrInvalidURL
 	}
 
 	API_KEY := os.Getenv("FITM_GOOGLE_API_KEY")
 	if API_KEY == "" {
 		log.Printf("Could not find API_KEY")
-		return e.ErrGoogleAPIsKeyNotFound
+		return nil, e.ErrGoogleAPIsKeyNotFound
 	}
 
 	gAPIs_url := "https://www.googleapis.com/youtube/v3/videos?id=" + id + "&key=" + API_KEY + "&part=snippet"
@@ -42,28 +38,26 @@ func ObtainYouTubeMetaData(request *model.NewLinkRequest) error {
 	resp, err := http.Get(gAPIs_url)
 	if err != nil {
 		log.Print(e.ErrGoogleAPIsRequestFail(err))
-		return e.ErrGoogleAPIsRequestFail(err)
+		return nil, e.ErrGoogleAPIsRequestFail(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		err = e.ErrInvalidGoogleAPIsResponse(resp.Status)
 		log.Print(err.Error())
-		return err
+		return nil, err
 	}
 
-	video_data, err := ExtractMetaDataFromGoogleAPIsResponse(resp.Body)
+	yt_md, err := ExtractGoogleAPIsResponseMetadata(resp.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	request.AutoSummary = video_data.Items[0].Snippet.Title
-	request.ImgURL = video_data.Items[0].Snippet.Thumbnails.Default.URL
-	request.URL = "https://www.youtube.com/watch?v=" + id
+	yt_md.ID = id
 
-	return nil
+	return yt_md, nil
 }
 
-func ExtractYouTubeVideoID(url string) string {
+func ExtractYTVideoID(url string) string {
 	if strings.Contains(url, "youtube.com/watch?v=") {
 		return strings.Split(strings.Split(url, "&")[0], "?v=")[1]
 	} else if strings.Contains(url, "youtu.be/") {
@@ -73,13 +67,13 @@ func ExtractYouTubeVideoID(url string) string {
 	return ""
 }
 
-func ExtractMetaDataFromGoogleAPIsResponse(body io.Reader) (model.YTVideoMetaData, error) {
-	var meta model.YTVideoMetaData
+func ExtractGoogleAPIsResponseMetadata(body io.Reader) (*model.YTVideoMetadata, error) {
+	var yt_md model.YTVideoMetadata
 
-	err := json.NewDecoder(body).Decode(&meta)
+	err := json.NewDecoder(body).Decode(&yt_md)
 	if err != nil {
 		err = e.ErrGoogleAPIsResponseExtractionFail(err)
 		log.Print(err)
 	}
-	return meta, err
+	return &yt_md, err
 }

@@ -91,35 +91,53 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.Err500(err))
 		return
 	} else if user_submitted_max_daily_links {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrMaxDailyLinkSubmissionsReached(util.MAX_DAILY_LINKS)))
+		render.Render(w, r, e.ErrTooManyRequests(e.ErrMaxDailyLinkSubmissionsReached(util.MAX_DAILY_LINKS)))
 		return
 	}
 
-	if util.IsYouTubeVideoLink(request.NewLink.URL) {
-		if err := util.ObtainYouTubeMetaData(request); err != nil {
-			if err = util.ObtainURLMetaData(request); err != nil {
-				render.Render(w, r, e.ErrInvalidRequest(err))
-				return
-			}
-		}
-
-	} else {
-		if err := util.ObtainURLMetaData(request); err != nil {
-			render.Render(w, r, e.ErrInvalidRequest(err))
-			return
-		}
+	// test URL response
+	var resp *http.Response
+	resp, err := util.GetResolvedURLResponse(request.URL)
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
 	}
+	defer resp.Body.Close()
 
-	if is_duplicate, dupe_link_id := util.LinkAlreadyAdded(request.URL); is_duplicate {
+	// save adjusted URL (after any redirects e.g., to wwww.)
+	url_after_redirects := resp.Request.URL.String()
+	// remove trailing slash
+	final_url := strings.TrimSuffix(url_after_redirects, "/")
+
+	if is_duplicate, link_id := util.LinkAlreadyAdded(final_url); is_duplicate {
 		render.Status(r, http.StatusConflict)
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrDuplicateLink(request.URL, dupe_link_id)))
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrDuplicateLink(final_url, link_id)))
 		return
+	}
+
+	var new_link = &model.NewLink{
+		NewLinkRequest: &model.NewLinkRequest{},
+		LinkExtraMetadata: &model.LinkExtraMetadata{},
+	}
+	var x_md *model.LinkExtraMetadata
+
+	if util.IsYTVideo(final_url) {
+		if yt_md, err := util.GetYTVideoMetadata(final_url); err == nil {
+			new_link.URL = "https://www.youtube.com/watch?v=" + yt_md.ID
+			new_link.AutoSummary = yt_md.Items[0].Snippet.Title
+			new_link.PreviewImgURL = yt_md.Items[0].Snippet.Thumbnails.Default.URL
+		} else {
+			x_md = util.GetLinkExtraMetadataFromResponse(resp)
+		}
+	} else {
+		x_md = util.GetLinkExtraMetadataFromResponse(resp)
+	}
+	if x_md != nil {
+		new_link.AutoSummary = x_md.AutoSummary
+		new_link.PreviewImgURL = x_md.PreviewImgURL
 	}
 
 	// Verified: add link
-	request.SubmittedBy = req_login_name
-	request.Cats = util.AlphabetizeCats(request.NewLink.Cats)
-
 	tx, err := db.Client.Begin()
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -127,85 +145,82 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// Insert summary
-	if request.AutoSummary != "" {
-		_, err := tx.Exec(
+	new_link.LinkID = request.LinkID
+	new_link.SubmitDate = request.SubmitDate
+
+	// Insert auto summary
+	if new_link.AutoSummary != "" {
+		if _, err := tx.Exec(
 			"INSERT INTO Summaries VALUES(?,?,?,?,?);",
 			uuid.New().String(),
-			request.AutoSummary,
-			request.ID,
+			new_link.AutoSummary,
+			new_link.LinkID,
 			db.AUTO_SUMMARY_USER_ID,
-			request.SubmitDate,
-		)
-		if err != nil {
+			new_link.SubmitDate,
+		); err != nil {
 			log.Print("Error adding auto summary: ", err)
-		} else {
-			request.SummaryCount = 1
+			} else {
+				new_link.SummaryCount = 1
 		}
 	}
-
-	if request.NewLink.Summary != "" {
+		
+	// Insert summary
+	new_link.Summary = request.Summary
+	if new_link.Summary != "" {
 		req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
-		_, err := tx.Exec(
+		if _, err := tx.Exec(
 			"INSERT INTO Summaries VALUES(?,?,?,?,?);",
 			uuid.New().String(),
-			request.NewLink.Summary,
-			request.ID,
+			new_link.Summary,
+			new_link.LinkID,
 			req_user_id,
-			request.SubmitDate,
-		)
-		if err != nil {
+			new_link.SubmitDate,
+		); err != nil {
 			render.Render(w, r, e.Err500(err))
 			return
 		} else {
-			request.SummaryCount += 1
+			new_link.SummaryCount += 1
 		}
 	}
 
 	// Insert tag
-	_, err = tx.Exec(
+	new_link.Cats = util.AlphabetizeCats(request.Cats)
+	if _, err = tx.Exec(
 		"INSERT INTO Tags VALUES(?,?,?,?,?);",
 		uuid.New().String(),
-		request.ID,
-		request.Cats,
-		request.SubmittedBy,
-		request.SubmitDate,
-	)
-	if err != nil {
+		new_link.LinkID,
+		new_link.Cats,
+		new_link.SubmittedBy,
+		new_link.SubmitDate,
+	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
 
-	if request.NewLink.Summary != "" {
-		request.Summary = request.NewLink.Summary
-	} else if request.AutoSummary != "" {
-		request.Summary = request.AutoSummary
-	} else {
-		request.Summary = ""
-	}
-
 	// Insert link
-	_, err = tx.Exec(
+	new_link.URL = final_url
+	if new_link.Summary == "" && new_link.AutoSummary != "" {
+		new_link.Summary = new_link.AutoSummary
+	}
+	if _, err = tx.Exec(
 		"INSERT INTO Links VALUES(?,?,?,?,?,?,?);",
-		request.ID,
-		request.URL,
-		request.SubmittedBy,
-		request.SubmitDate,
-		request.Cats,
-		request.Summary,
-		request.ImgURL,
-	)
-	if err != nil {
+		new_link.LinkID,
+		new_link.URL,
+		new_link.SubmittedBy,
+		new_link.SubmitDate,
+		new_link.Cats,
+		new_link.Summary,
+		new_link.PreviewImgURL,
+	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
 
 	// Increment spellfix ranks
-	err = util.IncrementSpellfixRanksForCats(
+	if err = util.IncrementSpellfixRanksForCats(
 		tx,
 		strings.Split(request.Cats, ","),
-	)
-	if err != nil {
+	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
@@ -215,16 +230,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	new_link := model.Link{
-		ID:           request.ID,
-		URL:          request.URL,
-		SubmittedBy:  request.SubmittedBy,
-		SubmitDate:   request.SubmitDate,
-		Cats:         request.Cats,
-		Summary:      request.Summary,
-		SummaryCount: request.SummaryCount,
-		ImgURL:       request.ImgURL,
-	}
+	new_link.LikeCount = request.LikeCount
 
 	render.Status(r, http.StatusCreated)
 	render.JSON(w, r, new_link)

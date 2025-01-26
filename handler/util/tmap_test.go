@@ -20,13 +20,11 @@ func TestUserExists(t *testing.T) {
 	}
 
 	for _, l := range test_login_names {
-		return_true, err := UserExists(l.login_name)
+		got, err := UserExists(l.login_name)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
-		} else if l.Exists && !return_true {
-			t.Fatalf("expected user %s to exist", l.login_name)
-		} else if !l.Exists && return_true {
-			t.Fatalf("user %s does not exist", l.login_name)
+		} else if l.Exists != got {
+			t.Fatalf("expected %t, got %t", l.Exists, got)
 		}
 	}
 }
@@ -88,10 +86,8 @@ func TestBuildTmapFromOpts(t *testing.T) {
 			tmap, err = BuildTmapFromOpts[model.TmapLink](opts)
 		}
 
-		if err != nil && td.Valid {
-			t.Fatalf("error %s for opts %+v", err, opts)
-		} else if err == nil && !td.Valid {
-			t.Fatalf("expected error for opts %+v", opts)
+		if (err == nil) != td.Valid {
+			t.Fatalf("expected %t, got error %s", td.Valid, err)
 		}
 
 		if !td.Valid {

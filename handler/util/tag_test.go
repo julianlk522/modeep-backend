@@ -316,13 +316,11 @@ func TestUserHasTaggedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		return_true, err := UserHasTaggedLink(test_login_name, l.ID)
+		got, err := UserHasTaggedLink(test_login_name, l.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
-		} else if l.TaggedByTestUser && !return_true {
-			t.Fatalf("expected tag with ID %s to be tagged by user", l.ID)
-		} else if !l.TaggedByTestUser && return_true {
-			t.Fatalf("tag with ID %s NOT submitted by user, expected error", l.ID)
+		} else if l.TaggedByTestUser != got {
+			t.Fatalf("expected %t, got %t", l.TaggedByTestUser, got)
 		}
 	}
 }
@@ -342,13 +340,11 @@ func TestUserSubmittedTagWithID(t *testing.T) {
 	}
 
 	for _, tag := range test_tags {
-		return_true, err := UserSubmittedTagWithID(test_login_name, tag.ID)
+		got, err := UserSubmittedTagWithID(test_login_name, tag.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
-		} else if tag.SubmittedByTestUser && !return_true {
-			t.Fatalf("expected tag with ID %s to be submitted by user", tag.ID)
-		} else if !tag.SubmittedByTestUser && return_true {
-			t.Fatalf("tag with ID %s NOT submitted by user, expected error", tag.ID)
+		} else if tag.SubmittedByTestUser != got {
+			t.Fatalf("expected %t, got %t", tag.SubmittedByTestUser, got)
 		}
 	}
 }
@@ -370,11 +366,11 @@ func TestIsOnlyTag(t *testing.T) {
 	}
 
 	for _, tag := range test_tags {
-		return_true, err := IsOnlyTag(tag.ID)
+		got, err := IsOnlyTag(tag.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
-		} else if tag.IsOnly != return_true {
-			t.Fatalf("expected tag with ID %s to be only tag", tag.ID)
+		} else if tag.IsOnly != got {
+			t.Fatalf("expected %t, got %t", tag.IsOnly, got)
 		}
 	}
 }

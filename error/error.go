@@ -77,6 +77,15 @@ func ErrUnprocessable(err error) render.Renderer {
 	}
 }
 
+func ErrTooManyRequests(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 429,
+		StatusText:     "Too many requests.",
+		ErrorText:      err.Error(),
+	}
+}
+
 func Err500(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,

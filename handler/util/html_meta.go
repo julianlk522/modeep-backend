@@ -6,7 +6,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-type HTMLMeta struct {
+type HTMLMetadata struct {
 	Title         string
 	Description   string
 	OGTitle       string
@@ -17,7 +17,7 @@ type HTMLMeta struct {
 	OGSiteName    string
 }
 
-func ExtractMetaFromHTMLTokens(resp io.Reader) (hm HTMLMeta) {
+func ExtractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
 	z := html.NewTokenizer(resp)
 
 	title_tag := false
@@ -33,12 +33,12 @@ func ExtractMetaFromHTMLTokens(resp io.Reader) (hm HTMLMeta) {
 			if t.Data == "title" && !title_found {
 				title_tag = true
 			} else if t.Data == "meta" {
-				AssignTokenPropertyToHTMLMeta(t, &hm)
+				AssignTokenPropertyToHTMLMeta(t, &html_md)
 			}
 		case html.TextToken:
 			if title_tag {
 				t := z.Token()
-				hm.Title = t.Data
+				html_md.Title = t.Data
 
 				title_tag = false
 				title_found = true
@@ -57,25 +57,25 @@ var meta_properties = []string{
 	"og:site_name",
 }
 
-func AssignTokenPropertyToHTMLMeta(token html.Token, hm *HTMLMeta) {
+func AssignTokenPropertyToHTMLMeta(token html.Token, html_md *HTMLMetadata) {
 	for _, mp := range meta_properties {
 		prop, ok := ExtractMetaPropertyFromToken(mp, token)
 		if ok {
 			switch mp {
 			case "description":
-				hm.Description = prop
+				html_md.Description = prop
 			case "og:title":
-				hm.OGTitle = prop
+				html_md.OGTitle = prop
 			case "og:description":
-				hm.OGDescription = prop
+				html_md.OGDescription = prop
 			case "og:image":
-				hm.OGImage = prop
+				html_md.OGImage = prop
 			case "og:author":
-				hm.OGAuthor = prop
+				html_md.OGAuthor = prop
 			case "og:publisher":
-				hm.OGPublisher = prop
+				html_md.OGPublisher = prop
 			case "og:site_name":
-				hm.OGSiteName = prop
+				html_md.OGSiteName = prop
 			}
 		}
 	}

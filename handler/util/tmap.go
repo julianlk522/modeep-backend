@@ -192,7 +192,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 	var u model.Profile
-	err := db.Client.
+	if err := db.Client.
 		QueryRow(profile_sql.Text, profile_sql.Args...).
 		Scan(
 			&u.LoginName,
@@ -200,14 +200,13 @@ func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 			&u.About,
 			&u.Email,
 			&u.Created,
-		)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, e.ErrNoUserWithLoginName
-		} else {
-			return nil, err
+		); err != nil {
+			if err == sql.ErrNoRows {
+				return nil, e.ErrNoUserWithLoginName
+			} else {
+				return nil, err
+			}
 		}
-	}
 
 	return &u, nil
 }

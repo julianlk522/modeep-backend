@@ -11,23 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type YTVideoMetaData struct {
-	Items []YTVideoItems `json:"items"`
-}
-
-type YTVideoItems struct {
-	Snippet YTVideoSnippet `json:"snippet"`
-}
-
-type YTVideoSnippet struct {
-	Title      string `json:"title"`
-	Thumbnails struct {
-		Default struct {
-			URL string `json:"url"`
-		} `json:"default"`
-	}
-}
-
 type HasCats interface {
 	Link | LinkSignedIn
 
@@ -74,58 +57,76 @@ type Contributor struct {
 	LinksSubmitted int
 }
 
-type NewLink struct {
+type NewLinkRequest struct {
 	URL     string `json:"url"`
 	Cats    string `json:"cats"`
 	Summary string `json:"summary,omitempty"`
-}
-
-type NewLinkRequest struct {
-	*NewLink
-	ID         string
+	LinkID         string
 	SubmitDate string
 	LikeCount  int64
-
-	// to be assigned by handler
-	URL          string // potentially modified after test request(s)
-	SubmittedBy  string
-	Cats         string // potentially modified after sort
-	AutoSummary  string
-	SummaryCount int
-	ImgURL       string
 }
 
 func (nlr *NewLinkRequest) Bind(r *http.Request) error {
-	if nlr.NewLink.URL == "" {
+	if nlr.URL == "" {
 		return e.ErrNoURL
-	} else if len(nlr.NewLink.URL) > util.URL_CHAR_LIMIT {
+	} else if len(nlr.URL) > util.URL_CHAR_LIMIT {
 		return e.ErrLinkURLCharsExceedLimit(util.URL_CHAR_LIMIT)
 	}
 
 	switch {
-	case nlr.NewLink.Cats == "":
+	case nlr.Cats == "":
 		return e.ErrNoTagCats
-	case util.HasTooLongCats(nlr.NewLink.Cats):
+	case util.HasTooLongCats(nlr.Cats):
 		return e.CatCharsExceedLimit(util.CAT_CHAR_LIMIT)
-	case util.HasTooManyCats(nlr.NewLink.Cats):
+	case util.HasTooManyCats(nlr.Cats):
 		return e.NumCatsExceedsLimit(util.NUM_CATS_LIMIT)
-	case util.HasDuplicateCats(nlr.NewLink.Cats):
+	case util.HasDuplicateCats(nlr.Cats):
 		return e.ErrDuplicateCats
 	}
 
-	if len(nlr.NewLink.Summary) > util.SUMMARY_CHAR_LIMIT {
+	if len(nlr.Summary) > util.SUMMARY_CHAR_LIMIT {
 		return e.SummaryLengthExceedsLimit(util.SUMMARY_CHAR_LIMIT)
 	}
 
-	if strings.Contains(nlr.NewLink.Summary, "\"") {
-		nlr.NewLink.Summary = strings.ReplaceAll(nlr.NewLink.Summary, "\"", "'")
+	if strings.Contains(nlr.Summary, "\"") {
+		nlr.Summary = strings.ReplaceAll(nlr.Summary, "\"", "'")
 	}
 
-	nlr.ID = uuid.New().String()
+	nlr.LinkID = uuid.New().String()
 	nlr.SubmitDate = util.NEW_LONG_TIMESTAMP()
 	nlr.LikeCount = 0
 
 	return nil
+}
+
+type LinkExtraMetadata struct {
+	AutoSummary string
+	PreviewImgURL string
+}
+
+type NewLink struct {
+	*NewLinkRequest
+	*LinkExtraMetadata
+	SubmittedBy  string
+	SummaryCount int
+}
+
+type YTVideoMetadata struct {
+	ID string
+	Items []YTVideoItems `json:"items"`
+}
+
+type YTVideoItems struct {
+	Snippet YTVideoSnippet `json:"snippet"`
+}
+
+type YTVideoSnippet struct {
+	Title      string `json:"title"`
+	Thumbnails struct {
+		Default struct {
+			URL string `json:"url"`
+		} `json:"default"`
+	}
 }
 
 type DeleteLinkRequest struct {

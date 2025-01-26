@@ -174,33 +174,22 @@ func CountMergedCatSpellingVariants[T model.HasCats](pl *model.PaginatedLinks[T]
 }
 
 // Add link (non-YT)
-func ObtainURLMetaData(request *model.NewLinkRequest) error {
-	resp, err := GetResolvedURLResponse(request.NewLink.URL)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// save updated URL (after any redirects e.g., to wwww.)
-	request.URL = resp.Request.URL.String()
-
-	// remove trailing slash
-	request.URL = strings.TrimSuffix(request.URL, "/")
-
-	if resp.StatusCode != http.StatusForbidden {
-		meta := ExtractMetaFromHTMLTokens(resp.Body)
-		AssignMetadata(meta, request)
+func GetLinkExtraMetadataFromResponse(resp *http.Response) (*model.LinkExtraMetadata) {
+	if resp == nil {
+		return nil
+	} else if resp.StatusCode != http.StatusForbidden {
+		html_md := ExtractHTMLMetadata(resp.Body)
+		return GetLinkExtraMetadataFromHTML(html_md)
 	}
 
 	return nil
 }
+
 func GetResolvedURLResponse(url string) (*http.Response, error) {
 	protocols := []string{"", "https://", "http://"}
 
-	for _, prefix := range protocols {
-		full_url := prefix + url
-
-		// set FITM user agent
+	for _, p := range protocols {
+		full_url := p + url
 		req, err := http.NewRequest("GET", full_url, nil)
 		if err != nil {
 			continue
@@ -214,7 +203,7 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 			return nil, e.ErrRedirect
 		}
 
-		// URL is valid: return
+		// URL is valid
 		return resp, nil
 	}
 
@@ -225,26 +214,30 @@ func InvalidURLError(url string) error {
 	return fmt.Errorf("invalid URL: %s", url)
 }
 
-func AssignMetadata(meta HTMLMeta, request *model.NewLinkRequest) {
+func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata {
+	x_md := &model.LinkExtraMetadata{}
+
 	switch {
-	case meta.OGDescription != "":
-		request.AutoSummary = meta.OGDescription
-	case meta.Description != "":
-		request.AutoSummary = meta.Description
-	case meta.OGTitle != "":
-		request.AutoSummary = meta.OGTitle
-	case meta.Title != "":
-		request.AutoSummary = meta.Title
-	case meta.OGSiteName != "":
-		request.AutoSummary = meta.OGSiteName
+	case html_md.OGDescription != "":
+		x_md.AutoSummary = html_md.OGDescription
+	case html_md.Description != "":
+		x_md.AutoSummary = html_md.Description
+	case html_md.OGTitle != "":
+		x_md.AutoSummary = html_md.OGTitle
+	case html_md.Title != "":
+		x_md.AutoSummary = html_md.Title
+	case html_md.OGSiteName != "":
+		x_md.AutoSummary = html_md.OGSiteName
 	}
 
-	if meta.OGImage != "" {
-		resp, err := http.Get(meta.OGImage)
+	if html_md.OGImage != "" {
+		resp, err := http.Get(html_md.OGImage)
 		if err == nil && resp.StatusCode != 404 && !IsRedirect(resp.StatusCode) {
-			request.ImgURL = meta.OGImage
+			x_md.PreviewImgURL = html_md.OGImage
 		}
 	}
+
+	return x_md
 }
 
 func IsRedirect(status_code int) bool {

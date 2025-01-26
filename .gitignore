@@ -1,7 +1,7 @@
 db/profile-pics
 db/backup
 !db/backup/backup_now.sh
-db/fitm.db
+db/fitm*.db
 db/fitm.db-shm
 db/fitm.db-wal
 db/fitm_test*

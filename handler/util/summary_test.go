@@ -110,13 +110,11 @@ func TestLinkExists(t *testing.T) {
 	}
 
 	for _, l := range test_link_ids {
-		return_true, err := LinkExists(l.ID)
+		got, err := LinkExists(l.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
-		} else if l.Exists && !return_true {
-			t.Fatalf("expected link with ID %s to exist", l.ID)
-		} else if !l.Exists && return_true {
-			t.Fatalf("link with ID %s does not exist", l.ID)
+		} else if l.Exists != got {
+			t.Fatalf("expected %t, got %t", l.Exists, got)
 		}
 	}
 }
@@ -159,13 +157,11 @@ func TestLinkHasOneSummaryLeft(t *testing.T) {
 	}
 
 	for _, l := range test_link_ids {
-		return_true, err := LinkHasOneSummaryLeft(l.ID)
+		got, err := LinkHasOneSummaryLeft(l.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
-		} else if l.SingleSummary && !return_true {
-			t.Fatalf("expected link with ID %s to have one summary left", l.ID)
-		} else if !l.SingleSummary && return_true {
-			t.Fatalf("link with ID %s does NOT have one summary left", l.ID)
+		} else if l.SingleSummary != got {
+			t.Fatalf("expected %t, got %t", l.SingleSummary, got)
 		}
 	}
 }
@@ -185,13 +181,11 @@ func TestSummarySubmittedByUser(t *testing.T) {
 	}
 
 	for _, l := range test_summary_ids {
-		return_true, err := SummarySubmittedByUser(l.ID, test_user_id)
+		got, err := SummarySubmittedByUser(l.ID, test_user_id)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
-		} else if l.SubmittedByTestUser && !return_true {
-			t.Fatalf("expected summary with ID %s to be submitted by user", l.ID)
-		} else if !l.SubmittedByTestUser && return_true {
-			t.Fatalf("summary with ID %s NOT submitted by user, expected error", l.ID)
+		} else if l.SubmittedByTestUser != got {
+			t.Fatalf("expected %t, got %t", l.SubmittedByTestUser, got)
 		}
 	}
 }
@@ -210,13 +204,11 @@ func TestUserHasLikedSummary(t *testing.T) {
 	}
 
 	for _, l := range test_summary_ids {
-		return_true, err := UserHasLikedSummary(test_user_id, l.ID)
+		got, err := UserHasLikedSummary(test_user_id, l.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
-		} else if l.LikedByTestUser && !return_true {
-			t.Fatalf("expected summary with ID %s to be liked by user", l.ID)
-		} else if !l.LikedByTestUser && return_true {
-			t.Fatalf("summary with ID %s NOT liked by user, expected error", l.ID)
+		} else if l.LikedByTestUser != got {
+			t.Fatalf("expected %t, got %t", l.LikedByTestUser, got)
 		}
 	}
 }

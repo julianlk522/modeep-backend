@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestIsYouTubeVideoLink(t *testing.T) {
+func TestIsYTVideo(t *testing.T) {
 	var test_urls = []struct {
 		URL   string
 		Valid bool
@@ -21,20 +21,17 @@ func TestIsYouTubeVideoLink(t *testing.T) {
 	}
 
 	for _, u := range test_urls {
-		return_true := IsYouTubeVideoLink(u.URL)
-		if u.Valid && !return_true {
-			t.Fatalf("expected url %s to be valid", u.URL)
-		} else if !u.Valid && return_true {
-			t.Fatalf("url %s NOT valid, expected error", u.URL)
+		if got := IsYTVideo(u.URL); got != u.Valid {
+			t.Fatalf("expected %t, got %t", u.Valid, got)
 		}
 	}
 }
 
-func TestObtainYouTubeMetaData(t *testing.T) {
+func TestObtainYTMetadata(t *testing.T) {
 	// TODO
 }
 
-func TestExtractYouTubeVideoID(t *testing.T) {
+func TestExtractYTVideoID(t *testing.T) {
 	var test_urls = []struct {
 		URL string
 		ID  string
@@ -47,13 +44,13 @@ func TestExtractYouTubeVideoID(t *testing.T) {
 	}
 
 	for _, u := range test_urls {
-		id := ExtractYouTubeVideoID(u.URL)
+		id := ExtractYTVideoID(u.URL)
 		if id != u.ID {
 			t.Fatalf("expected %s, got %s", u.ID, id)
 		}
 	}
 }
 
-func TestExtractMetaDataFromGoogleAPIsResponse(t *testing.T) {
+func TestExtractGoogleAPIsResponseMetadata(t *testing.T) {
 	// TODO
 }

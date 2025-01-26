@@ -22,11 +22,8 @@ func TestLoginNameTaken(t *testing.T) {
 	}
 
 	for _, l := range test_login_names {
-		return_true := LoginNameTaken(l.login_name)
-		if l.Taken && !return_true {
-			t.Fatalf("expected login name %s to be taken", l.login_name)
-		} else if !l.Taken && return_true {
-			t.Fatalf("login name %s NOT taken, expected error", l.login_name)
+		if got := LoginNameTaken(l.login_name); l.Taken != got {
+			t.Fatalf("expected %t, got %t", l.Taken, got)
 		}
 	}
 }
@@ -101,11 +98,8 @@ func TestUserWithIDHasProfilePic(t *testing.T) {
 	}
 
 	for _, u := range test_users {
-		return_true := UserWithIDHasProfilePic(u.ID)
-		if u.HasProfilePic && !return_true {
-			t.Fatalf("expected user %s to have profile pic", u.ID)
-		} else if !u.HasProfilePic && return_true {
-			t.Fatalf("user %s NOT have profile pic, expected error", u.ID)
+		if got := UserWithIDHasProfilePic(u.ID); u.HasProfilePic != got {
+			t.Fatalf("expected %t, got %t", u.HasProfilePic, got)
 		}
 	}
 }
