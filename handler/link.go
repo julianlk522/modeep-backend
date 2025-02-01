@@ -116,6 +116,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var new_link = &model.NewLink{
+		SubmittedBy:    req_login_name,
 		NewLinkRequest: &model.NewLinkRequest{},
 		LinkExtraMetadata: &model.LinkExtraMetadata{},
 	}

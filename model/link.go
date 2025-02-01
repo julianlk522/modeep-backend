@@ -58,9 +58,9 @@ type Contributor struct {
 }
 
 type NewLinkRequest struct {
-	URL     string `json:"url"`
-	Cats    string `json:"cats"`
-	Summary string `json:"summary,omitempty"`
+	URL     string
+	Cats    string
+	Summary string
 	LinkID         string
 	SubmitDate string
 	LikeCount  int64
