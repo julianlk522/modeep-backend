@@ -195,7 +195,7 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 			continue
 		}
 
-		req.Header.Set("User-Agent", "FITM-Bot (https://fitm.online/about#retrieving-metadata)")
+		req.Header.Set("User-Agent", "FITM-Bot (https://fitm.online/about/how#retrieving-metadata)")
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil || resp.StatusCode == http.StatusNotFound {
 			continue
