@@ -69,7 +69,32 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 const CONTRIBUTORS_CATS_FROM = `
 INNER JOIN CatsFilter f ON l.id = f.link_id`
 
+func (c *Contributors) WithURLContaining(snippet string) *Contributors {
+	c.Text = strings.Replace(
+		c.Text,
+		"GROUP BY l.submitted_by",
+		"WHERE url LIKE ?\nGROUP BY l.submitted_by",
+		1,
+	)
+
+	// insert into args in 2nd-to-last position
+	last_arg := c.Args[len(c.Args)-1]
+	c.Args = c.Args[:len(c.Args)-1]
+	c.Args = append(c.Args, "%"+snippet+"%")
+	c.Args = append(c.Args, last_arg)
+
+	return c
+}
+
 func (c *Contributors) DuringPeriod(period string) *Contributors {
+	var clause_keyword string
+	// adapt keyword if .WithURLContaining was called first
+	if strings.Contains(c.Text, "WHERE url LIKE") {
+		clause_keyword = "AND"
+	} else {
+		clause_keyword = "WHERE"
+	}
+
 	period_clause, err := GetPeriodClause(period)
 	if err != nil {
 		c.Error = err
@@ -86,7 +111,7 @@ func (c *Contributors) DuringPeriod(period string) *Contributors {
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		"WHERE "+period_clause+"\n"+"GROUP BY l.submitted_by",
+		clause_keyword+" "+period_clause+"\n"+"GROUP BY l.submitted_by",
 		1)
 
 	return c

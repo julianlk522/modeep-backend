@@ -19,6 +19,11 @@ func GetTopContributors(w http.ResponseWriter, r *http.Request) {
 		contributors_sql = contributors_sql.FromCats(cats)
 	}
 
+	url_contains_params := r.URL.Query().Get("url_contains")
+	if url_contains_params != "" {
+		contributors_sql = contributors_sql.WithURLContaining(url_contains_params)
+	}
+
 	period_params := r.URL.Query().Get("period")
 	if period_params != "" {
 		contributors_sql = contributors_sql.DuringPeriod(period_params)

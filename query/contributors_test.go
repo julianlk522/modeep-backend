@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"strings"
 	"testing"
+
+	"github.com/julianlk522/fitm/model"
 )
 
 func TestNewContributors(t *testing.T) {
@@ -73,6 +75,49 @@ FROM Links l`,
 			t.Fatal(err)
 		} else if !strings.Contains(strings.ToLower(cat), "umvc3") {
 			t.Fatalf("got %s, should contain %s", cat, "umvc3")
+		}
+	}
+}
+
+func TestContributorsWithURLContaining(t *testing.T) {
+	contributors_sql := NewContributors().WithURLContaining("google")
+	if contributors_sql.Error != nil {
+		t.Fatal(contributors_sql.Error)
+	}
+
+	rows, err := TestClient.Query(contributors_sql.Text, contributors_sql.Args...)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	
+	var contributors []model.Contributor
+	for rows.Next() {
+		var c model.Contributor
+		if err := rows.Scan(&c.LinksSubmitted, &c.LoginName); err != nil {
+			t.Fatal(err)
+		}
+		contributors = append(contributors, c)
+	}
+
+	if len(contributors) == 0 {
+		t.Fatal("no contributors")
+	}
+
+	// verify counts
+	for _, c := range contributors {
+		var count int
+		if err := TestClient.QueryRow(`SELECT count(id) as count 
+		FROM LINKS 
+		WHERE url LIKE ?
+		AND submitted_by = ?`,
+			"%google%",
+			c.LoginName,
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if c.LinksSubmitted != count {
+			t.Fatalf("expected %d, got %d", c.LinksSubmitted, count)
 		}
 	}
 }
