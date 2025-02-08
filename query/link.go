@@ -159,6 +159,32 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	return tl
 }
 
+func (tl *TopLinks) WithURLContaining(snippet string) *TopLinks {
+	var clause_keyword string
+	if strings.Count(tl.Text, "WHERE") > 1 {
+		clause_keyword = "AND"
+	} else {
+		clause_keyword = "WHERE"
+	}
+
+	and_clause := `
+	url LIKE ?`
+	
+	tl.Text = strings.Replace(
+		tl.Text,
+		LINKS_ORDER_BY,
+		"\n"+clause_keyword+" "+and_clause+LINKS_ORDER_BY,
+		1,
+	)
+
+	// insert into args in 2nd-to-last position
+	last_arg := tl.Args[len(tl.Args)-1]
+	tl.Args = tl.Args[:len(tl.Args)-1]
+	tl.Args = append(tl.Args, "%"+snippet+"%")
+	tl.Args = append(tl.Args, last_arg)
+	return tl
+}
+
 func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
 	period_clause, err := GetPeriodClause(period)
 	if err != nil {
@@ -166,10 +192,17 @@ func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
 		return tl
 	}
 
+	var clause_keyword string
+	if strings.Count(tl.Text, "WHERE") > 1 {
+		clause_keyword = "AND"
+	} else {
+		clause_keyword = "WHERE"
+	}
+
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_ORDER_BY,
-		"\n"+"AND "+period_clause+LINKS_ORDER_BY,
+		"\n"+clause_keyword+" "+period_clause+LINKS_ORDER_BY,
 		1,
 	)
 
@@ -240,19 +273,10 @@ const LINKS_AUTH_JOINS = `
 	LEFT JOIN IsCopied ic ON l.id = ic.link_id`
 
 func (tl *TopLinks) NSFW() *TopLinks {
-	// Remove NSFW clause
 	tl.Text = strings.Replace(
 		tl.Text,
-		LINKS_NO_NSFW_CATS_WHERE,
-		"",
-		1,
-	)
-
-	// Replace .DuringPeriod clause AND with WHERE
-	tl.Text = strings.Replace(
-		tl.Text,
-		"AND submit_date",
-		"WHERE submit_date",
+		LINKS_NO_NSFW_CATS_WHERE+"\nAND",
+		"\nWHERE",
 		1,
 	)
 

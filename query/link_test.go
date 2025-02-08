@@ -109,6 +109,92 @@ func TestFromCats(t *testing.T) {
 	}
 }
 
+func TestLinksWithURLContaining(t *testing.T) {
+	links_sql := NewTopLinks().WithURLContaining("google")
+
+	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links []model.Link
+	for rows.Next() {
+		link := model.Link{}
+		err := rows.Scan(
+			&link.ID,
+			&link.URL,
+			&link.SubmittedBy,
+			&link.SubmitDate,
+			&link.Cats,
+			&link.Summary,
+			&link.SummaryCount,
+			&link.LikeCount,
+			&link.CopyCount,
+			&link.ClickCount,
+			&link.TagCount,
+			&link.ImgURL,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		links = append(links, link)
+	}
+
+	if len(links) == 0 {
+		t.Fatal("no links")
+	}
+
+	for _, l := range links {
+		if !strings.Contains(l.URL, "google") {
+			t.Fatalf("got %s, want containing google", l.URL)
+		}
+	}
+
+	// combined with other methods
+	links_sql = NewTopLinks().
+		FromCats([]string{"umvc3"}).
+		WithURLContaining("google").
+		AsSignedInUser(test_user_id).
+		SortBy("newest")
+	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		link := model.Link{}
+		err := rows.Scan(
+			&link.ID,
+			&link.URL,
+			&link.SubmittedBy,
+			&link.SubmitDate,
+			&link.Cats,
+			&link.Summary,
+			&link.SummaryCount,
+			&link.LikeCount,
+			&link.CopyCount,
+			&link.ClickCount,
+			&link.TagCount,
+			&link.ImgURL,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if len(links) == 0 {
+		t.Fatal("no links")
+	}
+
+	for _, l := range links {
+		if !strings.Contains(l.URL, "google") {
+			t.Fatalf("got %s, want containing google", l.URL)
+		}
+	}
+}
+
 func TestLinksDuringPeriod(t *testing.T) {
 	var test_periods = []struct {
 		Period string
@@ -135,7 +221,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 		if err != nil && err != sql.ErrNoRows {
 			t.Fatal(err)
 		}
-		defer rows.Close()
+		rows.Close()
 
 		// With cats
 		links_sql = links_sql.FromCats([]string{"umvc3"})
@@ -149,7 +235,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 		if err != nil && err != sql.ErrNoRows {
 			t.Fatal(err)
 		}
-		defer rows.Close()
+		rows.Close()
 	}
 }
 
