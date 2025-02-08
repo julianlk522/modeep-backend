@@ -41,7 +41,15 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 	var nsfw_links_count int
 
-	// single section
+	var cat_counts *[]model.CatCount
+	var cat_counts_opts *model.TmapCatCountsOptions
+	if has_cat_filter {
+		cat_counts_opts = &model.TmapCatCountsOptions{
+			RawCatsParams: opts.RawCatsParams,
+		}
+	}
+
+	// Single section
 	if opts.Section != "" {
 		var links *[]T
 		var err error
@@ -73,19 +81,14 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			}, nil
 		}
 
-		var cat_counts *[]model.CatCount
-		if has_cat_filter {
-			cat_counts = GetCatCountsFromTmapLinks(links, &model.TmapCatCountsOptions{
-				RawCatsParams: opts.RawCatsParams,
-			})
-		} else {
-			cat_counts = GetCatCountsFromTmapLinks(links, nil)
-		}
+		// counting cats and pagination are both done in Go
+		// because merging all the links SQLs together is a headache
+		// and doesn't make perf thattt much better since tmap contains <= 60
+		// links at a time (single section contains <= 20 links)
+		// and looping over <= 60 links is trivial
+		cat_counts = GetCatCountsFromTmapLinks(links, cat_counts_opts)
 
-		// Paginate section links
-		// due to counting cats manually (i.e., not in SQL) the pagination
-		// must also be done manually after retrieving the full slice of links
-		// and counting cats
+		// Pagination
 		page, next_page := 1, -1
 		if opts.Page < 0 {
 			return nil, e.ErrInvalidPageParams
@@ -114,7 +117,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 
-		// all sections
+		// All sections
 	} else {
 		submitted, err := ScanTmapLinks[T](query.NewTmapSubmitted(tmap_owner).FromOptions(opts).Query)
 		if err != nil {
@@ -129,22 +132,15 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return nil, err
 		}
 
-		all_links := slices.Concat(*submitted, *copied, *tagged)
-		if len(all_links) == 0 {
+		links_from_all_sections := slices.Concat(*submitted, *copied, *tagged)
+		if len(links_from_all_sections) == 0 {
 			return model.FilteredTmap[T]{
 				TmapSections:   &model.TmapSections[T]{},
 				NSFWLinksCount: 0,
 			}, nil
 		}
 
-		var cat_counts *[]model.CatCount
-		if has_cat_filter {
-			cat_counts = GetCatCountsFromTmapLinks(&all_links, &model.TmapCatCountsOptions{
-				RawCatsParams: opts.RawCatsParams,
-			})
-		} else {
-			cat_counts = GetCatCountsFromTmapLinks(&all_links, nil)
-		}
+		cat_counts = GetCatCountsFromTmapLinks(&links_from_all_sections, cat_counts_opts)
 
 		// limit sections to top 20 links
 		// 20+ links: indicate in response so can be paginated
@@ -284,7 +280,7 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 
 func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOptions) *[]model.CatCount {
 	var omitted_cats []string
-	// Use raw cats params here to determine omitted_cats because CatsFilter
+	// Use raw_cats_params here to determine omitted_cats because CatsFilter
 	// (from BuildTmapFromOpts) is modified to escape reserved chars and
 	// include singular/plural spelling variations. To correctly count cats
 	// (omitting ones passed in the request), omitted_cats must _not_ have

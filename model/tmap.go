@@ -77,10 +77,6 @@ type PaginatedTmapSection[T TmapLink | TmapLinkSignedIn] struct {
 	NextPage       int
 }
 
-type TmapCatCountsOptions struct {
-	RawCatsParams string
-}
-
 type TmapOptions struct {
 	OwnerLoginName string
 	// RawCatsParams (reserved chars unescaped, plural/singular variations not
@@ -94,4 +90,8 @@ type TmapOptions struct {
 	IncludeNSFW    bool
 	Section        string
 	Page           int
+}
+
+type TmapCatCountsOptions struct {
+	RawCatsParams string
 }
