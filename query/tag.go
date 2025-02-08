@@ -234,6 +234,41 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	return gcc
 }
 
+func (gcc *GlobalCatCounts) WithURLContaining(snippet string) *GlobalCatCounts {
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str)",
+		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
+		1,
+	)
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"SELECT id, '', global_cats||','",
+		"SELECT id, '', global_cats||',', url",
+		1,
+	)
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"substr(str, instr(str, ',') + 1)",
+		"substr(str, instr(str, ',') + 1),\nurl",
+		1,
+	)
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"GROUP BY LOWER(global_cat)",
+		"\nAND url LIKE ?\nGROUP BY LOWER(global_cat)",
+		1,
+	)
+
+	// insert into args in 2nd-to-last position
+	last_arg := gcc.Args[len(gcc.Args)-1]
+	gcc.Args = gcc.Args[:len(gcc.Args)-1]
+	gcc.Args = append(gcc.Args, "%"+snippet+"%")
+	gcc.Args = append(gcc.Args, last_arg)
+
+	return gcc
+}
+
 func (gcc *GlobalCatCounts) DuringPeriod(period string) *GlobalCatCounts {
 	clause, err := GetPeriodClause(period)
 	if err != nil {

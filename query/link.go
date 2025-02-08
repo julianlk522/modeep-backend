@@ -182,6 +182,7 @@ func (tl *TopLinks) WithURLContaining(snippet string) *TopLinks {
 	tl.Args = tl.Args[:len(tl.Args)-1]
 	tl.Args = append(tl.Args, "%"+snippet+"%")
 	tl.Args = append(tl.Args, last_arg)
+
 	return tl
 }
 

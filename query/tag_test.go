@@ -220,6 +220,52 @@ func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
 	}
 }
 
+func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
+	// Verify no conflict with other methods
+	counts := []model.CatCount{}
+
+	counts_sql := NewTopGlobalCatCounts().
+		SubcatsOfCats(strings.Join(test_cats, ",")).
+		WithURLContaining("google").
+		More()
+	if counts_sql.Error != nil {
+		t.Fatal(counts_sql.Error)
+	}
+
+	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for rows.Next() {
+		var c model.CatCount
+		if err := rows.Scan(&c.Category, &c.Count); err != nil {
+			t.Fatal(err)
+		}
+		counts = append(counts, c)
+	}
+
+	for _, c := range counts {
+		var count int32
+		if err := TestClient.QueryRow(`SELECT count(id) as count 
+		FROM LINKS 
+		WHERE global_cats LIKE '%' || ? || '%'
+		AND url LIKE '%' || ? || '%'`,
+			c.Category,
+			"google",
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		} else if count != c.Count {
+			t.Fatalf(
+				"got %d, want %d for cat %s",
+				count,
+				c.Count,
+				c.Category,
+			)
+		}
+	}
+}
+
 func TestNewTopGlobalCatCountsDuringPeriod(t *testing.T) {
 	var test_periods = []struct {
 		Period string

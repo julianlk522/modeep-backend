@@ -101,6 +101,11 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 		global_cats_sql = global_cats_sql.SubcatsOfCats(cats_params)
 	}
 
+	url_contains_params := r.URL.Query().Get("url_contains")
+	if url_contains_params != "" {
+		global_cats_sql = global_cats_sql.WithURLContaining(url_contains_params)
+	}
+
 	period_params := r.URL.Query().Get("period")
 	if period_params != "" {
 		global_cats_sql = global_cats_sql.DuringPeriod(period_params)
