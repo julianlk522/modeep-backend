@@ -72,7 +72,7 @@ func ErrUnprocessable(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: 422,
-		StatusText:     "Error rendering response.",
+		StatusText:     "Unprocessable.",
 		ErrorText:      err.Error(),
 	}
 }

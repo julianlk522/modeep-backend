@@ -104,7 +104,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	var resp *http.Response
 	resp, err := util.GetResolvedURLResponse(request.URL)
 	if err != nil {
-		render.Render(w, r, e.ErrInvalidRequest(err))
+		render.Render(w, r, e.ErrUnprocessable(err))
 		return
 	}
 	defer resp.Body.Close()
