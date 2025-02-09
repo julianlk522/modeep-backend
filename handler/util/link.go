@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/tls"
 	"slices"
 	"strings"
 
@@ -196,14 +197,28 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 		}
 
 		req.Header.Set("User-Agent", "FITM-Bot (https://fitm.online/about/how#retrieving-metadata)")
+
 		resp, err := http.DefaultClient.Do(req)
-		if err != nil || resp.StatusCode == http.StatusNotFound {
+		if err != nil {
+			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
+				// disable TLS check, try again
+				tr := &http.Transport{
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				}
+				no_tls_client := http.Client{Transport: tr}
+				resp, err = no_tls_client.Do(req)
+				if err != nil {
+					return nil, InvalidURLError(url)
+				}
+				return resp, nil
+			}
+			continue
+		} else if resp.StatusCode == http.StatusNotFound {
 			continue
 		} else if IsRedirect(resp.StatusCode) {
 			return nil, e.ErrRedirect
 		}
 
-		// URL is valid
 		return resp, nil
 	}
 
