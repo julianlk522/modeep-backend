@@ -61,7 +61,7 @@ type NewLinkRequest struct {
 	URL     string
 	Cats    string
 	Summary string
-	LinkID         string
+	LinkID  string `json:"ID"`
 	SubmitDate string
 	LikeCount  int64
 }
