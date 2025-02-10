@@ -8,9 +8,9 @@ import (
 	"github.com/julianlk522/fitm/db"
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
-)
 
-const MAX_TAG_CATS = 15
+	modelutil "github.com/julianlk522/fitm/model/util"
+)
 
 // GetTagPage
 func ScanTagPageLink[T model.Link | model.LinkSignedIn](link_sql *query.TagPageLink) (*T, error) {
@@ -282,7 +282,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 		}
 	}
 
-	if len(cat_rankings) > MAX_TAG_CATS {
+	if len(cat_rankings) > modelutil.NUM_CATS_LIMIT {
 		cat_rankings = LimitToTopCatRankings(cat_rankings)
 	}
 
@@ -308,7 +308,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 
 func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 	// should never happen but just in case...
-	if len(cat_rankings) <= MAX_TAG_CATS {
+	if len(cat_rankings) <= modelutil.NUM_CATS_LIMIT {
 		return cat_rankings
 	}
 
@@ -329,8 +329,8 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 		return 1
 	})
 
-	limited_rankings := make(map[string]float32, MAX_TAG_CATS)
-	for i := 0; i < MAX_TAG_CATS; i++ {
+	limited_rankings := make(map[string]float32, modelutil.NUM_CATS_LIMIT)
+	for i := 0; i < modelutil.NUM_CATS_LIMIT; i++ {
 		limited_rankings[sorted_rankings[i].Cat] = sorted_rankings[i].Score
 	}
 

@@ -14,5 +14,5 @@ const URL_CHAR_LIMIT = 200
 const SUMMARY_CHAR_LIMIT = 400
 
 // Tag
-const NUM_CATS_LIMIT = 10
+const NUM_CATS_LIMIT = 15
 const CAT_CHAR_LIMIT = 30

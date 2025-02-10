@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/julianlk522/fitm/model"
+	modelutil "github.com/julianlk522/fitm/model/util"
 	"github.com/julianlk522/fitm/query"
 )
 
@@ -410,7 +411,7 @@ func TestCalculateAndSetGlobalCats(t *testing.T) {
 		{"0", "flowers"},
 		{"7", "7,lucky,arrest,Best,jest,Test,winchest"},
 		{"11", "test"},
-		// test that calculated global cats are limited to top MAX_TAG_CATS
+		// test that calculated global cats are limited to top TAG_CATS_LIMIT
 		// link 1234567890 has 1 tag with cats "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17" so should be shortened to top 15
 		// (all same scores so sort alphabetically)
 		{"1234567890", "1,10,11,12,13,14,15,16,17,2,3,4,5,6,7"},
@@ -470,15 +471,15 @@ func TestLimitToTopCatRankings(t *testing.T) {
 	}
 
 	limited_rankings := LimitToTopCatRankings(test_rankings)
-	if len(limited_rankings) != MAX_TAG_CATS {
+	if len(limited_rankings) != modelutil.NUM_CATS_LIMIT {
 		t.Fatalf(
 			"expected %d cats, got %d",
-			MAX_TAG_CATS,
+			modelutil.NUM_CATS_LIMIT,
 			len(limited_rankings),
 		)
 	}
 
-	// test with fewer than MAX_TAG_CATS cats just in case, even though
+	// test with fewer than TAG_CATS_LIMIT cats just in case, even though
 	// this condition should be unreachable
 	test_rankings = map[string]float32{
 		"cat1": 1,
