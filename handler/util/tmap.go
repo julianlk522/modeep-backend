@@ -14,7 +14,7 @@ import (
 	"github.com/julianlk522/fitm/query"
 )
 
-const TMAP_CATS_PAGE_LIMIT int = 12
+const TMAP_CATS_PAGE_LIMIT int = 20
 
 // GetTreasureMap
 func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.TmapOptions) (interface{}, error) {
