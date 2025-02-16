@@ -24,19 +24,19 @@ func (sr *SignUpRequest) Bind(r *http.Request) error {
 	switch {
 	case sr.Auth.LoginName == "":
 		return e.ErrNoLoginName
-	case len(sr.Auth.LoginName) < util.LOGIN_NAME_LOWER_LIMIT:
-		return e.LoginNameExceedsLowerLimit(util.LOGIN_NAME_LOWER_LIMIT)
-	case len(sr.Auth.LoginName) > util.LOGIN_NAME_UPPER_LIMIT:
-		return e.LoginNameExceedsUpperLimit(util.LOGIN_NAME_UPPER_LIMIT)
+	case len(sr.Auth.LoginName) < util.LOGIN_NAME_LOWER_CHAR_LIMIT:
+		return e.LoginNameExceedsLowerLimit(util.LOGIN_NAME_LOWER_CHAR_LIMIT)
+	case len(sr.Auth.LoginName) > util.LOGIN_NAME_UPPER_CHAR_LIMIT:
+		return e.LoginNameExceedsUpperLimit(util.LOGIN_NAME_UPPER_CHAR_LIMIT)
 	case util.ContainsInvalidChars(sr.Auth.LoginName):
 		return e.ErrLoginNameContainsInvalidChars
 
 	case sr.Auth.Password == "":
 		return e.ErrNoPassword
-	case len(sr.Auth.Password) < util.PASSWORD_LOWER_LIMIT:
-		return e.PasswordExceedsLowerLimit(util.PASSWORD_LOWER_LIMIT)
-	case len(sr.Auth.Password) > util.PASSWORD_UPPER_LIMIT:
-		return e.PasswordExceedsUpperLimit(util.PASSWORD_UPPER_LIMIT)
+	case len(sr.Auth.Password) < util.PASSWORD_LOWER_CHAR_LIMIT:
+		return e.PasswordExceedsLowerLimit(util.PASSWORD_LOWER_CHAR_LIMIT)
+	case len(sr.Auth.Password) > util.PASSWORD_UPPER_CHAR_LIMIT:
+		return e.PasswordExceedsUpperLimit(util.PASSWORD_UPPER_CHAR_LIMIT)
 	}
 
 	sr.ID = uuid.New().String()

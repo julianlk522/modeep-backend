@@ -25,10 +25,10 @@ func (npr *NewPasswordRequest) Bind(r *http.Request) error {
             return e.ErrNoPassword
         case npr.Token == "":
             return e.ErrNoPasswordResetToken
-        case len(npr.NewPassword) < util.PASSWORD_LOWER_LIMIT:
-            return e.PasswordExceedsLowerLimit(util.PASSWORD_LOWER_LIMIT)
-        case len(npr.NewPassword) > util.PASSWORD_UPPER_LIMIT:
-            return e.PasswordExceedsUpperLimit(util.PASSWORD_UPPER_LIMIT)
+        case len(npr.NewPassword) < util.PASSWORD_LOWER_CHAR_LIMIT:
+            return e.PasswordExceedsLowerLimit(util.PASSWORD_LOWER_CHAR_LIMIT)
+        case len(npr.NewPassword) > util.PASSWORD_UPPER_CHAR_LIMIT:
+            return e.PasswordExceedsUpperLimit(util.PASSWORD_UPPER_CHAR_LIMIT)
         default:
             return nil
     }
