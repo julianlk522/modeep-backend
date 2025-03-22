@@ -1,4 +1,4 @@
-db/profile-pics
+db/img/*
 db/backup
 !db/backup/backup_now.sh
 db/fitm*.db

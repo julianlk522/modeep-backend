@@ -29,7 +29,7 @@ var pic_dir string
 
 func init() {
 	work_dir, _ := os.Getwd()
-	pic_dir = filepath.Join(work_dir, "db/profile-pics")
+	pic_dir = filepath.Join(work_dir, "db/img/profile")
 }
 
 func EditAbout(w http.ResponseWriter, r *http.Request) {
