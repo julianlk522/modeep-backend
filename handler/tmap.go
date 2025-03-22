@@ -25,11 +25,11 @@ import (
 	"github.com/julianlk522/fitm/query"
 )
 
-var pic_dir string
+var profile_pic_dir string
 
 func init() {
 	work_dir, _ := os.Getwd()
-	pic_dir = filepath.Join(work_dir, "db/img/profile")
+	profile_pic_dir = filepath.Join(work_dir, "db/img/profile")
 }
 
 func EditAbout(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +55,7 @@ func EditAbout(w http.ResponseWriter, r *http.Request) {
 
 func GetProfilePic(w http.ResponseWriter, r *http.Request) {
 	var file_name string = chi.URLParam(r, "file_name")
-	path := pic_dir + "/" + file_name
+	path := profile_pic_dir + "/" + file_name
 
 	if _, err := os.Stat(path); err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrProfilePicNotFound))
@@ -93,14 +93,14 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := os.Stat(pic_dir); err != nil {
+	if _, err := os.Stat(profile_pic_dir); err != nil {
 		render.Render(w, r, e.Err500(e.ErrCouldNotCreateProfilePic))
 		return
 	}
 
 	extension := filepath.Ext(handler.Filename)
 	unique_name := uuid.New().String() + extension
-	full_path := pic_dir + "/" + unique_name
+	full_path := profile_pic_dir + "/" + unique_name
 
 	dst, err := os.Create(full_path)
 	if err != nil {
@@ -141,7 +141,7 @@ func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
-	pfp_path := pic_dir + "/" + pfp
+	pfp_path := profile_pic_dir + "/" + pfp
 
 	// Delete from DB
 	_, err = db.Client.Exec(

@@ -77,10 +77,11 @@ func main() {
 	// PUBLIC
 	r.Post("/signup", h.SignUp)
 	r.Post("/login", h.LogIn)
-	r.Get("/pic/{file_name}", h.GetProfilePic)
+	r.Get("/pic/profile/{file_name}", h.GetProfilePic)
 	r.Post("/email-password-reset-link", h.AttemptPasswordReset)
 	r.Post("/reset-password", h.ResetPassword)
 
+	r.Get("/pic/preview/{file_name}", h.GetPreviewImg)
 	r.Get("/cats", h.GetTopGlobalCats)
 	r.Get("/cats/*", h.GetSpellfixMatchesForSnippet)
 	r.Get("/contributors", h.GetTopContributors)

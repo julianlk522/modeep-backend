@@ -3,6 +3,8 @@ package handler
 import (
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"strings"
 
@@ -17,6 +19,13 @@ import (
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
 )
+
+var preview_img_dir string
+
+func init() {
+	work_dir, _ := os.Getwd()
+	preview_img_dir = filepath.Join(work_dir, "db/img/preview")
+}
 
 func GetLinks(w http.ResponseWriter, r *http.Request) {
 	links_sql := query.NewTopLinks()
@@ -81,6 +90,18 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.Err500(err))
 	}
 	render.JSON(w, r, resp)
+}
+
+func GetPreviewImg(w http.ResponseWriter, r *http.Request) {
+	var file_name string = chi.URLParam(r, "file_name")
+	path := preview_img_dir + "/" + file_name
+
+	if _, err := os.Stat(path); err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrPreviewImgNotFound))
+		return
+	}
+
+	http.ServeFile(w, r, path)
 }
 
 func AddLink(w http.ResponseWriter, r *http.Request) {

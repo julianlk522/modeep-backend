@@ -16,6 +16,8 @@ var (
 	ErrNoLinkWithID        error = errors.New("no link found with given ID")
 	ErrNoCats              error = errors.New("no cats provided")
 	ErrNoPeriod            error = errors.New("no period provided")
+	// Preview Img
+	ErrPreviewImgNotFound error = errors.New("preview image not found at specified path")
 	// Add link
 	ErrNoURL                 error = errors.New("no URL provided")
 	ErrInvalidURL            error = errors.New("invalid URL provided")
