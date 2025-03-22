@@ -27,7 +27,7 @@ func TestNewTagPageLink(t *testing.T) {
 		&l.Summary,
 		&l.SummaryCount,
 		&l.LikeCount,
-		&l.ImgURL,
+		&l.PreviewImgFilename,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestNewTagPageLink(t *testing.T) {
 		&lsi.Summary,
 		&lsi.TagCount,
 		&lsi.LikeCount,
-		&lsi.ImgURL,
+		&lsi.PreviewImgFilename,
 		&lsi.IsLiked,
 		&lsi.IsCopied,
 	); err != nil {

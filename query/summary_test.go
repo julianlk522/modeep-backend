@@ -68,7 +68,7 @@ func Test_SummaryPageLinkFromID(t *testing.T) {
 		&l.Summary,
 		&l.TagCount,
 		&l.LikeCount,
-		&l.ImgURL,
+		&l.PreviewImgFilename,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +96,7 @@ func TestSummaryPageLinkAsSignedInUser(t *testing.T) {
 		&l.Summary,
 		&l.TagCount,
 		&l.LikeCount,
-		&l.ImgURL,
+		&l.PreviewImgFilename,
 		&l.IsLiked,
 		&l.IsCopied,
 	)

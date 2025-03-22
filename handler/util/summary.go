@@ -41,7 +41,7 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (interface{}, erro
 			&l.Summary,
 			&l.LikeCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 			&l.IsLiked,
 			&l.IsCopied,
 		)
@@ -94,7 +94,7 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (interface{}, erro
 			&l.Summary,
 			&l.LikeCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		)
 		if err != nil {
 			if err == sql.ErrNoRows {

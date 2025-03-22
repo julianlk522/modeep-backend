@@ -133,7 +133,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&link.CopyCount,
 			&link.ClickCount,
 			&link.TagCount,
-			&link.ImgURL,
+			&link.PreviewImgFilename,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -177,7 +177,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&link.CopyCount,
 			&link.ClickCount,
 			&link.TagCount,
-			&link.ImgURL,
+			&link.PreviewImgFilename,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -279,7 +279,7 @@ func TestLinksSortBy(t *testing.T) {
 				&link.CopyCount,
 				&link.ClickCount,
 				&link.TagCount,
-				&link.ImgURL,
+				&link.PreviewImgFilename,
 			)
 			if err != nil {
 				t.Fatal(err)
@@ -428,7 +428,7 @@ func TestNSFW(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {
@@ -464,7 +464,7 @@ func TestNSFW(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {

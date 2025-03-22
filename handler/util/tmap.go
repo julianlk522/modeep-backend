@@ -235,7 +235,7 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 				&l.CopyCount,
 				&l.ClickCount,
 				&l.TagCount,
-				&l.ImgURL)
+				&l.PreviewImgFilename)
 			if err != nil {
 				return nil, err
 			}
@@ -261,7 +261,7 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 				&l.CopyCount,
 				&l.ClickCount,
 				&l.TagCount,
-				&l.ImgURL,
+				&l.PreviewImgFilename,
 
 				// signed-in only properties
 				&l.IsLiked,

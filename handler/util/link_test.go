@@ -314,7 +314,7 @@ func TestGetLinkExtraMetadataFromHTML(t *testing.T) {
 		case 0:
 			if x_md.AutoSummary != "og:description" {
 				t.Fatalf("og:description provided but auto summary set to: %s", x_md.AutoSummary)
-			} else if x_md.PreviewImgURL != "https://i.ytimg.com/vi/L4gaqVH0QHU/maxresdefault.jpg" {
+			} else if x_md.PreviewImgFilename != "https://i.ytimg.com/vi/L4gaqVH0QHU/maxresdefault.jpg" {
 				t.Fatal("expected og:image to be set")
 			}
 		case 1:
@@ -332,7 +332,7 @@ func TestGetLinkExtraMetadataFromHTML(t *testing.T) {
 		case 4:
 			if x_md.AutoSummary != "test" {
 				t.Fatalf("og:sitename provided but auto summary set to: %s", x_md.AutoSummary)
-			} else if x_md.PreviewImgURL != "https://i.ytimg.com/vi/XdfoXdzGmr0/maxresdefault.jpg" {
+			} else if x_md.PreviewImgFilename != "https://i.ytimg.com/vi/XdfoXdzGmr0/maxresdefault.jpg" {
 				t.Fatal("expected og:image to be set")
 			}
 		default:

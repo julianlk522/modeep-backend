@@ -30,7 +30,7 @@ func ScanTagPageLink[T model.Link | model.LinkSignedIn](link_sql *query.TagPageL
 				&l.Summary,
 				&l.SummaryCount,
 				&l.LikeCount,
-				&l.ImgURL,
+				&l.PreviewImgFilename,
 			); err != nil {
 			return nil, err
 		}
@@ -49,7 +49,7 @@ func ScanTagPageLink[T model.Link | model.LinkSignedIn](link_sql *query.TagPageL
 				&l.Summary,
 				&l.SummaryCount,
 				&l.LikeCount,
-				&l.ImgURL,
+				&l.PreviewImgFilename,
 				&l.IsLiked,
 				&l.IsCopied,
 			); err != nil {

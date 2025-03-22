@@ -152,7 +152,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		if yt_md, err := util.GetYTVideoMetadata(final_url); err == nil {
 			new_link.URL = "https://www.youtube.com/watch?v=" + yt_md.ID
 			new_link.AutoSummary = yt_md.Items[0].Snippet.Title
-			new_link.PreviewImgURL = yt_md.Items[0].Snippet.Thumbnails.Default.URL
+			new_link.PreviewImgFilename = yt_md.Items[0].Snippet.Thumbnails.Default.URL
 		} else {
 			x_md = util.GetLinkExtraMetadataFromResponse(resp)
 		}
@@ -161,7 +161,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 	if x_md != nil {
 		new_link.AutoSummary = x_md.AutoSummary
-		new_link.PreviewImgURL = x_md.PreviewImgURL
+		new_link.PreviewImgFilename = x_md.PreviewImgFilename
 	}
 
 	// Verified: add link
@@ -237,7 +237,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		new_link.SubmitDate,
 		new_link.Cats,
 		new_link.Summary,
-		new_link.PreviewImgURL,
+		new_link.PreviewImgFilename,
 	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return

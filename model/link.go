@@ -29,7 +29,7 @@ type Link struct {
 	CopyCount    int
 	ClickCount   int64
 	TagCount     int
-	ImgURL       string
+	PreviewImgFilename       string
 }
 
 func (l Link) GetCats() string {
@@ -101,7 +101,7 @@ func (nlr *NewLinkRequest) Bind(r *http.Request) error {
 
 type LinkExtraMetadata struct {
 	AutoSummary string
-	PreviewImgURL string
+	PreviewImgFilename string
 }
 
 type NewLink struct {

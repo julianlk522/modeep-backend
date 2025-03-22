@@ -80,7 +80,7 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 				&l.CopyCount,
 				&l.ClickCount,
 				&l.TagCount,
-				&l.ImgURL,
+				&l.PreviewImgFilename,
 			)
 			if err != nil {
 				return nil, err
@@ -107,7 +107,7 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 				&l.CopyCount,
 				&l.ClickCount,
 				&l.TagCount,
-				&l.ImgURL,
+				&l.PreviewImgFilename,
 				&l.IsLiked,
 				&l.IsCopied,
 			); err != nil {
@@ -248,7 +248,7 @@ func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata
 	if html_md.OGImage != "" {
 		resp, err := http.Get(html_md.OGImage)
 		if err == nil && resp.StatusCode != 404 && !IsRedirect(resp.StatusCode) {
-			x_md.PreviewImgURL = html_md.OGImage
+			x_md.PreviewImgFilename = html_md.OGImage
 		}
 	}
 

@@ -125,7 +125,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if l.SubmittedBy != test_req_login_name {
@@ -179,7 +179,7 @@ func TestNewTmapSubmittedFromCats(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if !strings.Contains(l.Cats, test_cats[0]) || !strings.Contains(l.Cats, test_cats[1]) {
@@ -218,7 +218,7 @@ func TestNewTmapSubmittedAsSignedInUser(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {
@@ -251,7 +251,7 @@ func TestNewTmapSubmittedNSFW(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if strings.Contains(l.Cats, "NSFW") {
@@ -292,7 +292,7 @@ func TestNewTmapCopied(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if l.TagCount == 0 {
@@ -343,7 +343,7 @@ func TestNewTmapCopiedFromCats(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if !strings.Contains(l.Cats, test_cats[0]) || !strings.Contains(l.Cats, test_cats[1]) {
@@ -396,7 +396,7 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {
@@ -482,7 +482,7 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {
@@ -530,7 +530,7 @@ func TestNewTmapCopiedNSFW(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if strings.Contains(l.Cats, "NSFW") {
@@ -570,7 +570,7 @@ func TestNewTmapTagged(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if l.TagCount == 0 {
@@ -619,7 +619,7 @@ func TestNewTmapTaggedFromCats(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if !strings.Contains(l.Cats, test_cats[0]) || !strings.Contains(l.Cats, test_cats[1]) {
@@ -672,7 +672,7 @@ func TestNewTmapTaggedAsSignedInUser(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {
@@ -706,7 +706,7 @@ func TestNewTmapTaggedNSFW(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if strings.Contains(l.Cats, "NSFW") {
@@ -749,7 +749,7 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if !strings.Contains(l.Cats, test_cats[0]) || !strings.Contains(l.Cats, test_cats[1]) {
@@ -785,7 +785,7 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			&l.CopyCount,
 			&l.ClickCount,
 			&l.TagCount,
-			&l.ImgURL,
+			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
 		} else if !strings.Contains(l.Cats, test_cats[0]) || !strings.Contains(l.Cats, test_cats[1]) {
