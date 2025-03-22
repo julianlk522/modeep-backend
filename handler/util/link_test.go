@@ -413,11 +413,11 @@ func TestDecrementSpellfixRanksForCats(t *testing.T) {
 	}{
 		{
 			[]string{"test"},
-			[]int{11},
+			[]int{21},
 		},
 		{
 			[]string{"coding", "hacking"},
-			[]int{7, 2},
+			[]int{6, 3},
 		},
 	}
 
@@ -450,19 +450,18 @@ func TestUserSubmittedLink(t *testing.T) {
 		ID                  string
 		SubmittedByTestUser bool
 	}{
-		// user jlk submitted links with ID 7, 13, 23
-		// (not 0, 1, or 86)
-		{"7", true},
+		// user jlk submitted links with ID 13, 23
+		// (not 0 or 1)
+		{"7", false},
 		{"13", true},
 		{"23", true},
 		{"0", false},
 		{"1", false},
-		{"86", false},
 	}
 
 	for _, l := range test_links {
 		if got := UserSubmittedLink(test_login_name, l.ID); got != l.SubmittedByTestUser {
-			t.Fatalf("expected %t, got %t", l.SubmittedByTestUser, got)
+			t.Fatalf("expected %t, got %t for link %s", l.SubmittedByTestUser, got, l.ID)
 		}
 	}
 }

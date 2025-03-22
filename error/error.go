@@ -57,6 +57,15 @@ func Err404(err error) render.Renderer {
 	}
 }
 
+func ErrConflict(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 409,
+		StatusText:     err.Error(),
+		ErrorText:      err.Error(),
+	}
+}
+
 func ErrContentTooLarge(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,

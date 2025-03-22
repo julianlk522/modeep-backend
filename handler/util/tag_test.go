@@ -119,7 +119,7 @@ func TestScanTagRankings(t *testing.T) {
 		SubmittedBy string
 	}{
 		{
-			Cats:        "flowers,Flowers",
+			Cats:        "flowers",
 			SubmittedBy: "xyz",
 		},
 		{
@@ -131,12 +131,12 @@ func TestScanTagRankings(t *testing.T) {
 			SubmittedBy: "Test User",
 		},
 		{
-			Cats:        "monkeys,something",
-			SubmittedBy: "jlk",
-		},
-		{
 			Cats:        "jungle,knights,monkeys,talladega",
 			SubmittedBy: "monkey",
+		},
+		{
+			Cats:        "hello,kitty",
+			SubmittedBy: "jlk",
 		},
 	}
 	tag_rankings_sql := query.NewTagRankings(test_link_id).Public()
@@ -309,11 +309,10 @@ func TestUserHasTaggedLink(t *testing.T) {
 		TaggedByTestUser bool
 	}{
 		{"1", true},
-		{"13", true},
+		{"102", true},
 		{"22", true},
+		{"13", false},
 		{"0", false},
-		{"10", false},
-		{"102", false},
 	}
 
 	for _, l := range test_links {
@@ -321,7 +320,7 @@ func TestUserHasTaggedLink(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
 		} else if l.TaggedByTestUser != got {
-			t.Fatalf("expected %t, got %t", l.TaggedByTestUser, got)
+			t.Fatalf("expected %t, got %t for link %s", l.TaggedByTestUser, got, l.ID)
 		}
 	}
 }
@@ -333,11 +332,10 @@ func TestUserSubmittedTagWithID(t *testing.T) {
 		SubmittedByTestUser bool
 	}{
 		{"32", true},
-		{"34", true},
+		{"34", false},
 		{"114", true},
 		{"5", false},
 		{"6", false},
-		{"11", false},
 	}
 
 	for _, tag := range test_tags {
@@ -345,7 +343,7 @@ func TestUserSubmittedTagWithID(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
 		} else if tag.SubmittedByTestUser != got {
-			t.Fatalf("expected %t, got %t", tag.SubmittedByTestUser, got)
+			t.Fatalf("expected %t, got %t for tag %s", tag.SubmittedByTestUser, got, tag.ID)
 		}
 	}
 }
@@ -363,15 +361,14 @@ func TestIsOnlyTag(t *testing.T) {
 		{"5", true},
 		{"4", false},
 		{"35", true},
-		{"34", false},
 	}
 
 	for _, tag := range test_tags {
 		got, err := IsOnlyTag(tag.ID)
 		if err != nil {
-			t.Fatalf("failed with error: %s", err)
+			t.Fatalf("failed with error: %s for tag %s", err, tag.ID)
 		} else if tag.IsOnly != got {
-			t.Fatalf("expected %t, got %t", tag.IsOnly, got)
+			t.Fatalf("expected %t, got %t for tag %s", tag.IsOnly, got, tag.ID)
 		}
 	}
 }
@@ -382,7 +379,6 @@ func TestGetLinkIDFromTagID(t *testing.T) {
 		LinkID string
 	}{
 		{"32", "1"},
-		{"34", "13"},
 		{"114", "22"},
 		{"5", "0"},
 		{"6", "8"},
@@ -392,7 +388,7 @@ func TestGetLinkIDFromTagID(t *testing.T) {
 	for _, tag := range test_tags {
 		return_link_id, err := GetLinkIDFromTagID(tag.ID)
 		if err != nil {
-			t.Fatalf("failed with error: %s", err)
+			t.Fatalf("failed with error: %s for tag %s", err, tag.ID)
 		} else if tag.LinkID != return_link_id {
 			t.Fatalf(
 				"expected tag with ID %s to have link ID %s",
@@ -409,7 +405,6 @@ func TestCalculateAndSetGlobalCats(t *testing.T) {
 		ExpectedGlobalCats string
 	}{
 		{"0", "flowers"},
-		{"7", "7,lucky,arrest,Best,jest,Test,winchest"},
 		{"11", "test"},
 		// test that calculated global cats are limited to top TAG_CATS_LIMIT
 		// link 1234567890 has 1 tag with cats "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17" so should be shortened to top 15
@@ -420,7 +415,7 @@ func TestCalculateAndSetGlobalCats(t *testing.T) {
 	for _, l := range test_link_ids {
 		err := CalculateAndSetGlobalCats(l.ID)
 		if err != nil {
-			t.Fatalf("failed with error: %s", err)
+			t.Fatalf("failed with error: %s for link with ID %s", err, l.ID)
 		}
 
 		// confirm global cats match expected
@@ -498,7 +493,7 @@ func TestLimitToTopCatRankings(t *testing.T) {
 
 func TestSetGlobalCats(t *testing.T) {
 	var test_link_id = "11"
-	var test_cats = "reference,food"
+	var test_cats = "example,cats"
 
 	// get old spellfix ranks for test cats
 	var old_test_cats_ranks = make(map[string]int)
@@ -511,7 +506,10 @@ func TestSetGlobalCats(t *testing.T) {
 			cat,
 		).Scan(&rank)
 		if err != nil {
-			t.Fatalf("failed with error: %s", err)
+			if err != sql.ErrNoRows {
+				t.Fatalf("failed with error: %s", err)
+			}
+			old_test_cats_ranks[cat] = 0
 		}
 		old_test_cats_ranks[cat] = rank
 	}

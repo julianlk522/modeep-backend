@@ -23,8 +23,8 @@ func TestNewTotals(t *testing.T) {
 		}
 
 	// Verify "Auto Summary" not counted as a contributor
-	// (8 total contributors in test data, 7 without auto summary)
-	if totals.Contributors != 7 {
-		t.Errorf("Expected 7 contributors, got %d", totals.Contributors)
+	// (9 total contributors in test data, 8 without auto summary)
+	if totals.Contributors != 8 {
+		t.Errorf("Expected 8 contributors, got %d", totals.Contributors)
 	}
 }

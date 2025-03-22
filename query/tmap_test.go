@@ -42,7 +42,7 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 
 	// Copied / Tagged
 	// test user jlk copied link 76 with global tag "engine,search,NSFW",
-	// test user jlk tagged link 9122ce5a-b8ae-4059-afb4-b9ad602c13c2 with
+	// test user jlk tagged link c880180f-935d-4fd1-9a82-14dca4bd18f3 with
 	// cat "NSFW"
 	// (count should be 2)
 

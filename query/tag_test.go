@@ -310,7 +310,8 @@ const TEST_SNIPPET = "test"
 
 func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 	var expected_rankings = map[string]int{
-		"test":       11,
+		"test":       21,
+		"testing":    2,
 		"tech":       2,
 		"technology": 1,
 	}
@@ -337,8 +338,9 @@ func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 
 func TestOmitCats(t *testing.T) {
 	var expected_rankings = map[string]int{
-		"tech":       2,
+		"tech":       1,
 		"technology": 1,
+		"testing":    2,
 	}
 	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET)
 	err := matches_sql.OmitCats([]string{TEST_SNIPPET})

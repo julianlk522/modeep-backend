@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"strings"
 
@@ -23,8 +23,11 @@ import (
 var preview_img_dir string
 
 func init() {
-	work_dir, _ := os.Getwd()
-	preview_img_dir = filepath.Join(work_dir, "db/img/preview")
+	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
+	if test_data_path == "" {
+		log.Panic("FITM_TEST_DATA_PATH not set")
+	}
+	preview_img_dir = test_data_path + "/img/preview"
 }
 
 func GetLinks(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +140,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 
 	if is_duplicate, link_id := util.LinkAlreadyAdded(final_url); is_duplicate {
 		render.Status(r, http.StatusConflict)
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrDuplicateLink(final_url, link_id)))
+		render.Render(w, r, e.ErrConflict(e.ErrDuplicateLink(final_url, link_id)))
 		return
 	}
 
@@ -162,6 +165,39 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	if x_md != nil {
 		new_link.AutoSummary = x_md.AutoSummary
 		new_link.PreviewImgFilename = x_md.PreviewImgFilename
+	}
+
+	// download preview img, save path
+	if new_link.PreviewImgFilename != "" {
+		prevew_img_resp, err := http.Get(new_link.PreviewImgFilename)
+		if err != nil {
+			log.Printf("could not get preview image: %s", err)
+		}
+		defer prevew_img_resp.Body.Close()
+
+		var extension string
+		if strings.Contains(new_link.PreviewImgFilename, ".jpg") {
+			extension = ".jpg"
+		} else if strings.Contains(new_link.PreviewImgFilename, ".png") {
+			extension = ".png"
+		} else if strings.Contains(new_link.PreviewImgFilename, ".jpeg") {
+			extension = ".jpeg"
+		} else if strings.Contains(new_link.PreviewImgFilename, ".webp") {
+			extension = ".webp"
+		}
+		
+		new_pic_file_name := request.LinkID + extension
+		new_pic_file, err := os.Create(preview_img_dir + "/" + new_pic_file_name)
+		if err != nil {
+			log.Printf("could not create new preview image: %s", err)
+		}
+		defer new_pic_file.Close()
+		_, err = io.Copy(new_pic_file, prevew_img_resp.Body)
+		if err != nil {
+			log.Printf("could not copy preview image: %s", err)
+		}
+		
+		new_link.PreviewImgFilename = new_pic_file_name
 	}
 
 	// Verified: add link
@@ -190,7 +226,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 				new_link.SummaryCount = 1
 		}
 	}
-		
+	
 	// Insert summary
 	new_link.Summary = request.Summary
 	if new_link.Summary != "" {

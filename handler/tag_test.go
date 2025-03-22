@@ -15,6 +15,7 @@ import (
 )
 
 func TestAddTag(t *testing.T) {
+	// TODO: fix so that payloads are correctly passed to mock request body
 	test_tag_requests := []struct {
 		Payload map[string]string
 		Valid   bool
@@ -85,11 +86,11 @@ func TestAddTag(t *testing.T) {
 			},
 			Valid: false,
 		},
-		// should pass because test user jlk has not tagged link with ID 10
+		// should pass because test user jlk has not tagged link with ID 895bed6e-54f9-46d3-ad3f-bb529ba4a1f8
 		{
 			Payload: map[string]string{
-				"link_id": "10",
-				"cats":    "testtest",
+				"link_id": "895bed6e-54f9-46d3-ad3f-bb529ba4a1f8",
+				"cats":    "test",
 			},
 			Valid: true,
 		},
@@ -273,7 +274,7 @@ func TestDeleteTag(t *testing.T) {
 		},
 		// test user jlk did submit tag 34
 		{
-			TagID:              "34",
+			TagID:              "127",
 			Valid:              true,
 			ExpectedStatusCode: 204,
 		},
@@ -346,7 +347,8 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 			OmittedCats:        "",
 			ExpectedStatusCode: 200,
 			Results: map[string]int32{
-				"test":       11,
+				"test":       21,
+				"testing":    2,
 				"tech":       2,
 				"technology": 1,
 			},
@@ -356,6 +358,7 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 			OmittedCats:        "test",
 			ExpectedStatusCode: 200,
 			Results: map[string]int32{
+				"testing":    2,
 				"tech":       2,
 				"technology": 1,
 			},
@@ -365,7 +368,8 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 			OmittedCats:        "tech,technology",
 			ExpectedStatusCode: 200,
 			Results: map[string]int32{
-				"test": 11,
+				"test": 21,
+				"testing":    2,
 			},
 		},
 		{
@@ -387,7 +391,7 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 	r := chi.NewRouter()
 	r.Get("/cats/*", GetSpellfixMatchesForSnippet)
 
-	for _, tr := range test_requests {
+	for i, tr := range test_requests {
 		req, err := http.NewRequest("GET", "/cats/"+tr.Snippet, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -432,7 +436,7 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 		}
 		for _, res := range results {
 			if tr.Results[res.Category] != res.Count {
-				t.Fatalf("expected %d for cat %s, got %d", tr.Results[res.Category], res.Category, res.Count)
+				t.Fatalf("expected %d for cat %s, got %d (i: %d)", tr.Results[res.Category], res.Category, res.Count, i)
 			}
 		}
 	}

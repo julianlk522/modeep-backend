@@ -66,7 +66,7 @@ func TestSignUp(t *testing.T) {
 		},
 		{
 			Payload: map[string]string{
-				"login_name": "test",
+				"login_name": "testicus",
 				"password":   "testtest",
 			},
 			Valid: true,

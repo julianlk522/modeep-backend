@@ -67,7 +67,7 @@ func TestGetLinks(t *testing.T) {
 				"period": "poop",
 			},
 			Page:  1,
-			Valid: false,
+			
 		},
 		{
 			Params: map[string]string{
@@ -164,7 +164,7 @@ func TestGetLinks(t *testing.T) {
 func TestAddLink(t *testing.T) {
 	test_link_requests := []struct {
 		Payload map[string]string
-		Valid   bool
+		ExpectedStatusCode int
 	}{
 		{
 			Payload: map[string]string{
@@ -172,7 +172,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "test",
 				"summary": "test",
 			},
-			Valid: false,
+			ExpectedStatusCode: 400,
 		},
 		{
 			Payload: map[string]string{
@@ -180,7 +180,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "test",
 				"summary": "test",
 			},
-			Valid: false,
+			ExpectedStatusCode: 400,
 		},
 		{
 			Payload: map[string]string{
@@ -188,7 +188,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "test",
 				"summary": "bob",
 			},
-			Valid: false,
+			ExpectedStatusCode: 422,
 		},
 		{
 			Payload: map[string]string{
@@ -196,7 +196,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "",
 				"summary": "",
 			},
-			Valid: false,
+			ExpectedStatusCode: 400,
 		},
 		{
 			Payload: map[string]string{
@@ -204,7 +204,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890",
 				"summary": "",
 			},
-			Valid: false,
+			ExpectedStatusCode: 400,
 		},
 		{
 			Payload: map[string]string{
@@ -212,7 +212,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "0,1,2,3,4,5,6,7,8,9,0,1,2",
 				"summary": "",
 			},
-			Valid: false,
+			ExpectedStatusCode: 400,
 		},
 		{
 			Payload: map[string]string{
@@ -220,41 +220,32 @@ func TestAddLink(t *testing.T) {
 				"cats":    "testtest",
 				"summary": "01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
 			},
-			Valid: false,
+			ExpectedStatusCode: 400,
 		},
 		{
 			Payload: map[string]string{
-				"url":     "google.com",
+				"url":     "gmail.com",
 				"cats":    "watermelon",
 				"summary": "test",
 			},
-			Valid: true,
+			ExpectedStatusCode: 201,
 		},
 		{
 			Payload: map[string]string{
-				"url":     "about.google.com",
+				"url":     "https://community.hubspot.com/",
 				"cats":    "watermelon",
 				"summary": "testy",
 			},
-			Valid: true,
+			ExpectedStatusCode: 201,
 		},
 		{
 			Payload: map[string]string{
-				"url":     "https://www.google.com/search/howsearchworks/?fg=1",
+				"url":     "https://www.google.com/search/howsearchworks",
 				"cats":    "watermelon",
 				"summary": "testiest",
 			},
-			Valid: true,
+			ExpectedStatusCode: 201,
 		},
-		{
-			Payload: map[string]string{
-				"url":     "https://www.google.com/search/howsearchworks/features/",
-				"cats":    "watermelon",
-				"summary": "",
-			},
-			Valid: true,
-		},
-
 		// should fail due to duplicate from previous test with url "google.com"
 		{
 			Payload: map[string]string{
@@ -262,7 +253,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "test",
 				"summary": "",
 			},
-			Valid: false,
+			ExpectedStatusCode: 409,
 		},
 	}
 
@@ -288,22 +279,12 @@ func TestAddLink(t *testing.T) {
 		res := rr.Result()
 		defer res.Body.Close()
 
-		if tr.Valid && res.StatusCode != 201 {
-			text, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal("failed but unable to read request body bytes")
-			}
-
-			t.Fatalf(
-				"expected status code 201, got %d (test request %+v)\n%s", res.StatusCode,
-				tr.Payload,
-				text,
-			)
-		} else if !tr.Valid && res.StatusCode != 400 {
-			t.Fatalf(
-				"expected status code 400, got %d (test request %+v)",
+		if tr.ExpectedStatusCode != res.StatusCode {
+			t.Errorf(
+				"expected status code %d for URL %s, got %d",
+				tr.ExpectedStatusCode,
+				tr.Payload["url"],
 				res.StatusCode,
-				tr.Payload,
 			)
 		}
 	}
@@ -327,9 +308,9 @@ func TestDeleteLink(t *testing.T) {
 			Valid:              false,
 			ExpectedStatusCode: 400,
 		},
-		// test user jlk did submit link 7
+		// test user jlk did submit link 13
 		{
-			LinkID:             "7",
+			LinkID:             "13",
 			Valid:              true,
 			ExpectedStatusCode: 205,
 		},

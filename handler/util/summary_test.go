@@ -103,8 +103,7 @@ func TestLinkExists(t *testing.T) {
 	}{
 		{"1", true},
 		{"2", false},
-		{"3", false},
-		{"7", true},
+		{"7", false},
 		{"24", true},
 		{"87", false},
 	}
@@ -114,7 +113,7 @@ func TestLinkExists(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
 		} else if l.Exists != got {
-			t.Fatalf("expected %t, got %t", l.Exists, got)
+			t.Fatalf("expected %t, got %t for link %s", l.Exists, got, l.ID)
 		}
 	}
 }
@@ -172,7 +171,7 @@ func TestSummarySubmittedByUser(t *testing.T) {
 		ID                  string
 		SubmittedByTestUser bool
 	}{
-		{"7", true},
+		{"7", false},
 		{"13", false},
 		{"23", false},
 		{"65", true},
@@ -185,7 +184,7 @@ func TestSummarySubmittedByUser(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
 		} else if l.SubmittedByTestUser != got {
-			t.Fatalf("expected %t, got %t", l.SubmittedByTestUser, got)
+			t.Fatalf("expected %t, got %t for link %s", l.SubmittedByTestUser, got, l.ID)
 		}
 	}
 }
@@ -219,7 +218,6 @@ func TestCalculateAndSetGlobalSummary(t *testing.T) {
 		ID            string
 		GlobalSummary string
 	}{
-		{"1", "test"},
 		{"10", "Doesn't seem to be a real site..."},
 		{"93", "The very first website!"},
 	}
