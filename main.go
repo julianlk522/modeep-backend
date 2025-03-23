@@ -131,8 +131,8 @@ func main() {
 
 		// Users
 		r.Put("/about", h.EditAbout)
-		r.Post("/pic", h.UploadProfilePic)
-		r.Delete("/pic", h.DeleteProfilePic)
+		r.Post("/pic/profile", h.UploadProfilePic)
+		r.Delete("/pic/profile", h.DeleteProfilePic)
 		r.Put("/email", h.UpdateEmail)
 
 		// Links
