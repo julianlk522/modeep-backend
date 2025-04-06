@@ -134,10 +134,17 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	// save adjusted URL (after any redirects e.g., to wwww.)
-	url_after_redirects := resp.Request.URL.String()
-	// remove trailing slash
-	final_url := strings.TrimSuffix(url_after_redirects, "/")
+	// unless modified due to 302/401/403/429 etc. redirect
+	final_url := request.URL
 
+	is_google_sorry_page := strings.Contains(resp.Request.URL.String(), "google.com/sorry")
+	if !(resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests || is_google_sorry_page) {
+		url_after_redirects := resp.Request.URL.String()
+		final_url = strings.TrimSuffix(url_after_redirects, "/")	
+	} else {
+		final_url = strings.TrimSuffix(final_url, "/")
+	}
+	
 	if is_duplicate, link_id := util.LinkAlreadyAdded(final_url); is_duplicate {
 		render.Status(r, http.StatusConflict)
 		render.Render(w, r, e.ErrConflict(e.ErrDuplicateLink(final_url, link_id)))
