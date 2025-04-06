@@ -196,6 +196,7 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 			continue
 		}
 
+		req.Header.Set("Accept", "*/*")
 		req.Header.Set("User-Agent", "FITM-Bot (https://fitm.online/about/how#retrieving-metadata)")
 
 		resp, err := http.DefaultClient.Do(req)

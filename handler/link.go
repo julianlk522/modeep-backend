@@ -293,8 +293,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	new_link.LikeCount = request.LikeCount
-
 	render.Status(r, http.StatusCreated)
 	render.JSON(w, r, new_link)
 }

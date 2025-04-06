@@ -57,13 +57,19 @@ type Contributor struct {
 	LinksSubmitted int
 }
 
+type NewLink struct {
+	*NewLinkRequest
+	*LinkExtraMetadata
+	SubmittedBy  string
+	SummaryCount int
+}
+
 type NewLinkRequest struct {
 	URL     string
 	Cats    string
 	Summary string
 	LinkID  string `json:"ID"`
 	SubmitDate string
-	LikeCount  int64
 }
 
 func (nlr *NewLinkRequest) Bind(r *http.Request) error {
@@ -94,7 +100,6 @@ func (nlr *NewLinkRequest) Bind(r *http.Request) error {
 
 	nlr.LinkID = uuid.New().String()
 	nlr.SubmitDate = util.NEW_LONG_TIMESTAMP()
-	nlr.LikeCount = 0
 
 	return nil
 }
@@ -102,13 +107,6 @@ func (nlr *NewLinkRequest) Bind(r *http.Request) error {
 type LinkExtraMetadata struct {
 	AutoSummary string
 	PreviewImgFilename string
-}
-
-type NewLink struct {
-	*NewLinkRequest
-	*LinkExtraMetadata
-	SubmittedBy  string
-	SummaryCount int
 }
 
 type YTVideoMetadata struct {
