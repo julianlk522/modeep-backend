@@ -6,8 +6,6 @@ import (
 	"github.com/go-chi/render"
 )
 
-var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."}
-
 type ErrResponse struct {
 	Err            error  `json:"-"`
 	HTTPStatusCode int    `json:"-"`

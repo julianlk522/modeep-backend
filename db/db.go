@@ -34,8 +34,7 @@ func Connect() error {
 		return err
 	}
 
-	err = Client.Ping()
-	if err != nil {
+	if err = Client.Ping(); err != nil {
 		return err
 	}
 

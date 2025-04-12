@@ -135,14 +135,19 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 
 	// save adjusted URL (after any redirects e.g., to wwww.)
 	// unless modified due to 302/401/403/429 etc. redirect
-	final_url := request.URL
+	url_after_redirects := resp.Request.URL.String()
+	var final_url string
 
-	is_google_sorry_page := strings.Contains(resp.Request.URL.String(), "google.com/sorry")
-	if !(resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests || is_google_sorry_page) {
-		url_after_redirects := resp.Request.URL.String()
+	is_302_redirect := resp.StatusCode == http.StatusFound
+	is_unauthorized := resp.StatusCode == http.StatusUnauthorized
+	is_forbidden := resp.StatusCode == http.StatusForbidden
+	is_too_many_requests := resp.StatusCode == http.StatusTooManyRequests
+	is_google_sorry_page := strings.Contains(url_after_redirects, "google.com/sorry")
+
+	if !(is_302_redirect || is_unauthorized || is_forbidden || is_too_many_requests || is_google_sorry_page) {
 		final_url = strings.TrimSuffix(url_after_redirects, "/")	
 	} else {
-		final_url = strings.TrimSuffix(final_url, "/")
+		final_url = strings.TrimSuffix(request.URL, "/")
 	}
 	
 	if is_duplicate, link_id := util.LinkAlreadyAdded(final_url); is_duplicate {

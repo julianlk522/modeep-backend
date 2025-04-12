@@ -20,33 +20,30 @@ func SetupTestDB() error {
 		return fmt.Errorf("could not open in-memory DB: %s", err)
 	}
 
-	var sql_dump_path string
+	var sql_dump_path, db_dir string
 
 	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
 	if test_data_path == "" {
 		log.Printf("FITM_TEST_DATA_PATH not set, using default path")
 		_, dbtest_file, _, _ := runtime.Caller(0)
 		dbtest_dir := filepath.Dir(dbtest_file)
-		db_dir := filepath.Join(dbtest_dir, "../db")
-		sql_dump_path = filepath.Join(db_dir, "fitm_test.db.sql")
+		db_dir = filepath.Join(dbtest_dir, "../db")
 	} else {
 		log.Print("using FITM_TEST_DATA_PATH")
-		sql_dump_path = filepath.Join(test_data_path, "fitm_test.db.sql")
+		db_dir = test_data_path
 	}
+	sql_dump_path = filepath.Join(db_dir, "fitm_test.db.sql")
 
 	sql_dump, err := os.ReadFile(sql_dump_path)
 	if err != nil {
 		return err
-	}
-	_, err = TestClient.Exec(string(sql_dump))
-	if err != nil {
+	} else if _, err = TestClient.Exec(string(sql_dump)); err != nil {
 		return err
 	}
 
 	// verify in-memory DB loaded test data
 	var link_id string
-	err = TestClient.QueryRow("SELECT id FROM Links WHERE id = '1';").Scan(&link_id)
-	if err != nil {
+	if err = TestClient.QueryRow("SELECT id FROM Links WHERE id = '1';").Scan(&link_id); err != nil {
 		return fmt.Errorf("in-memory DB did not receive dump data: %s", err)
 	}
 	log.Printf("verified test DB dump data loaded")
