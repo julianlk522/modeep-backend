@@ -11,7 +11,7 @@ import (
 )
 
 func GetTopContributors(w http.ResponseWriter, r *http.Request) {
-	contributors_sql := query.NewContributors()
+	contributors_sql := query.NewTopContributors()
 
 	cats_params := r.URL.Query().Get("cats")
 	if cats_params != "" {

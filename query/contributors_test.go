@@ -8,8 +8,8 @@ import (
 	"github.com/julianlk522/fitm/model"
 )
 
-func TestNewContributors(t *testing.T) {
-	contributors_sql := NewContributors()
+func TestNewTopContributors(t *testing.T) {
+	contributors_sql := NewTopContributors()
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
@@ -45,8 +45,8 @@ func TestNewContributors(t *testing.T) {
 	}
 }
 
-func TestContributorsFromCats(t *testing.T) {
-	contributors_sql := NewContributors().FromCats(
+func TestTopContributorsFromCats(t *testing.T) {
+	contributors_sql := NewTopContributors().FromCats(
 		[]string{
 			"umvc3",
 			"c. viper",
@@ -79,8 +79,8 @@ FROM Links l`,
 	}
 }
 
-func TestContributorsWithURLContaining(t *testing.T) {
-	contributors_sql := NewContributors().WithURLContaining("google")
+func TestTopContributorsWithURLContaining(t *testing.T) {
+	contributors_sql := NewTopContributors().WithURLContaining("google")
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
@@ -122,7 +122,7 @@ func TestContributorsWithURLContaining(t *testing.T) {
 	}
 }
 
-func TestContributorsDuringPeriod(t *testing.T) {
+func TestTopContributorsDuringPeriod(t *testing.T) {
 	var test_periods = [7]struct {
 		Period string
 		Valid  bool
@@ -137,7 +137,7 @@ func TestContributorsDuringPeriod(t *testing.T) {
 
 	// Period only
 	for _, period := range test_periods {
-		contributors_sql := NewContributors().DuringPeriod(period.Period)
+		contributors_sql := NewTopContributors().DuringPeriod(period.Period)
 		if period.Valid && contributors_sql.Error != nil {
 			t.Fatal(contributors_sql.Error)
 		} else if !period.Valid && contributors_sql.Error == nil {
@@ -153,7 +153,7 @@ func TestContributorsDuringPeriod(t *testing.T) {
 
 	// Period and Cats
 	for _, period := range test_periods {
-		contributors_sql := NewContributors().DuringPeriod(period.Period).FromCats([]string{"umvc3"})
+		contributors_sql := NewTopContributors().DuringPeriod(period.Period).FromCats([]string{"umvc3"})
 		if period.Valid && contributors_sql.Error != nil {
 			t.Fatal(contributors_sql.Error)
 		} else if !period.Valid && contributors_sql.Error == nil {

@@ -10,7 +10,7 @@ type Contributors struct {
 	*Query
 }
 
-func NewContributors() *Contributors {
+func NewTopContributors() *Contributors {
 	return (&Contributors{
 		Query: &Query{
 			Text: CONTRIBUTORS_BASE,

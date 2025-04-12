@@ -7,9 +7,8 @@ import (
 )
 
 func TestScanContributors(t *testing.T) {
-
 	// no cats
-	contributors_sql := query.NewContributors()
+	contributors_sql := query.NewTopContributors()
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
@@ -20,7 +19,7 @@ func TestScanContributors(t *testing.T) {
 	}
 
 	// single cat
-	contributors_sql = query.NewContributors().FromCats(test_single_cat)
+	contributors_sql = query.NewTopContributors().FromCats(test_single_cat)
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
@@ -52,7 +51,7 @@ func TestScanContributors(t *testing.T) {
 	}
 
 	// multiple cats
-	contributors_sql = query.NewContributors().FromCats(test_multiple_cats)
+	contributors_sql = query.NewTopContributors().FromCats(test_multiple_cats)
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
