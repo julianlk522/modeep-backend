@@ -20,49 +20,19 @@ import (
 )
 
 func GetLinks(w http.ResponseWriter, r *http.Request) {
-	links_sql := query.NewTopLinks()
+	ctx := r.Context()
+	links_sql := query.
+		NewTopLinks().
+		FromRequestParams(
+			r.URL.Query(),
+		)
 
-	cats_params := r.URL.Query().Get("cats")
-	if cats_params != "" {
-		cats := strings.Split(cats_params, ",")
-		links_sql = links_sql.FromCats(cats)
-	}
-
-	url_contains_params := r.URL.Query().Get("url_contains")
-	if url_contains_params != "" {
-		links_sql = links_sql.WithURLContaining(url_contains_params)
-	}
-
-	period_params := r.URL.Query().Get("period")
-	if period_params != "" {
-		links_sql = links_sql.DuringPeriod(period_params)
-	}
-
-	sort_params := r.URL.Query().Get("sort_by")
-	if sort_params != "" {
-		links_sql = links_sql.SortBy(sort_params)
-	}
-
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := ctx.Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
 	if req_user_id != "" {
 		links_sql = links_sql.AsSignedInUser(req_user_id)
 	}
 
-	var nsfw_params string
-	if r.URL.Query().Get("nsfw") != "" {
-		nsfw_params = r.URL.Query().Get("nsfw")
-	} else if r.URL.Query().Get("NSFW") != "" {
-		nsfw_params = r.URL.Query().Get("NSFW")
-	}
-
-	if nsfw_params == "true" {
-		links_sql = links_sql.NSFW()
-	} else if nsfw_params != "false" && nsfw_params != "" {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidNSFWParams))
-		return
-	}
-
-	page := r.Context().Value(m.PageKey).(int)
+	page := ctx.Value(m.PageKey).(int)
 	links_sql = links_sql.Page(page)
 
 	if links_sql.Error != nil {
@@ -72,15 +42,17 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 
 	var resp interface{}
 	var err error
+	cats_params := r.URL.Query().Get("cats")
+
 	if req_user_id != "" {
 		resp, err = util.PrepareLinksResponse[model.LinkSignedIn](links_sql, page, cats_params)
 	} else {
 		resp, err = util.PrepareLinksResponse[model.Link](links_sql, page, cats_params)
 	}
-
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
 	}
+
 	render.JSON(w, r, resp)
 }
 

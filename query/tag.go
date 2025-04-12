@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	e "github.com/julianlk522/fitm/error"
@@ -177,6 +178,32 @@ WHERE global_cat != ''
 GROUP BY LOWER(global_cat)
 ORDER BY count DESC, LOWER(global_cat) ASC
 LIMIT ?`
+
+func (gcc *GlobalCatCounts) FromRequestParams(params url.Values) *GlobalCatCounts {
+	cats_params := params.Get("cats")
+	if cats_params != "" {
+		gcc = gcc.SubcatsOfCats(cats_params)
+	}
+
+	url_contains_params := params.Get("url_contains")
+	if url_contains_params != "" {
+		gcc = gcc.WithURLContaining(url_contains_params)
+	}
+
+	period_params := params.Get("period")
+	if period_params != "" {
+		gcc = gcc.DuringPeriod(period_params)
+	}
+
+	more_params := params.Get("more")
+	if more_params == "true" {
+		gcc = gcc.More()
+	} else if more_params != "" {
+		gcc.Error = e.ErrInvalidMoreFlag
+	}
+
+	return gcc
+}
 
 func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	// Lowercase to ensure all case variations are returned

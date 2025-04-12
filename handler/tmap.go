@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	_ "golang.org/x/image/webp"
@@ -22,7 +21,6 @@ import (
 	util "github.com/julianlk522/fitm/handler/util"
 	m "github.com/julianlk522/fitm/middleware"
 	"github.com/julianlk522/fitm/model"
-	"github.com/julianlk522/fitm/query"
 )
 
 var profile_pic_dir string
@@ -182,64 +180,15 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var opts = &model.TmapOptions{
-		OwnerLoginName: login_name,
+	opts, err := util.GetTmapOptsFromRequestParams(
+		r.URL.Query(),
+	)
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
 	}
+	opts.OwnerLoginName = login_name
 
-	// Get opts from params
-	cats_params := r.URL.Query().Get("cats")
-	if cats_params != "" {
-
-		// For GetCatCountsFromTmapLinks()
-		opts.RawCatsParams = cats_params
-
-		cats := query.GetCatsOptionalPluralOrSingularForms(
-			query.GetCatsWithEscapedReservedChars(
-				strings.Split(cats_params, ","),
-			),
-		)
-		opts.CatsFilter = cats
-	}
-
-	var nsfw_params string
-	if r.URL.Query().Get("nsfw") != "" {
-		nsfw_params = r.URL.Query().Get("nsfw")
-	} else if r.URL.Query().Get("NSFW") != "" {
-		nsfw_params = r.URL.Query().Get("NSFW")
-	}
-	if nsfw_params == "true" {
-		opts.IncludeNSFW = true
-	} else if nsfw_params != "false" && nsfw_params != "" {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidNSFWParams))
-	}
-
-	sort_params := r.URL.Query().Get("sort_by")
-	if sort_params == "newest" {
-		opts.SortByNewest = true
-	} else if sort_params != "rating" && sort_params != "" {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidSortByParams))
-	}
-
-	section_params := strings.ToLower(r.URL.Query().Get("section"))
-	if section_params != "" {
-		switch section_params {
-		case "submitted", "copied", "tagged":
-			opts.Section = section_params
-		default:
-			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidSectionParams))
-		}
-	}
-
-	page_params := r.URL.Query().Get("page")
-	if page_params != "" && page_params != "0" {
-		page, err := strconv.Atoi(page_params)
-		if err != nil || page < 1 {
-			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidPageParams))
-		}
-		opts.Page = page
-	}
-
-	// Build and serve Treasure Map
 	var tmap interface{}
 
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)

@@ -3,6 +3,8 @@ package handler
 import (
 	"database/sql"
 	"math"
+	"net/url"
+	"strconv"
 
 	"github.com/julianlk522/fitm/db"
 
@@ -16,7 +18,64 @@ import (
 
 const TMAP_CATS_PAGE_LIMIT int = 20
 
-// GetTreasureMap
+func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
+	var opts = &model.TmapOptions{}
+
+	cats_params := params.Get("cats")
+	if cats_params != "" {
+
+		// For GetCatCountsFromTmapLinks()
+		opts.RawCatsParams = cats_params
+
+		cats := query.GetCatsOptionalPluralOrSingularForms(
+			query.GetCatsWithEscapedReservedChars(
+				strings.Split(cats_params, ","),
+			),
+		)
+		opts.CatsFilter = cats
+	}
+
+	var nsfw_params string
+	if params.Get("nsfw") != "" {
+		nsfw_params = params.Get("nsfw")
+	} else if params.Get("NSFW") != "" {
+		nsfw_params = params.Get("NSFW")
+	}
+	if nsfw_params == "true" {
+		opts.IncludeNSFW = true
+	} else if nsfw_params != "false" && nsfw_params != "" {
+		return nil, e.ErrInvalidNSFWParams
+	}
+
+	sort_params := params.Get("sort_by")
+	if sort_params == "newest" {
+		opts.SortByNewest = true
+	} else if sort_params != "rating" && sort_params != "" {
+		return nil, e.ErrInvalidSortByParams
+	}
+
+	section_params := strings.ToLower(params.Get("section"))
+	if section_params != "" {
+		switch section_params {
+		case "submitted", "copied", "tagged":
+			opts.Section = section_params
+		default:
+			return nil, e.ErrInvalidSectionParams
+		}
+	}
+
+	page_params := params.Get("page")
+	if page_params != "" && page_params != "0" {
+		page, err := strconv.Atoi(page_params)
+		if err != nil || page < 1 {
+			return nil, e.ErrInvalidPageParams
+		}
+		opts.Page = page
+	}
+
+	return opts, nil
+}
+
 func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.TmapOptions) (interface{}, error) {
 	if opts.OwnerLoginName == "" {
 		return nil, e.ErrNoTmapOwnerLoginName

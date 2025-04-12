@@ -2,7 +2,10 @@ package query
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
+
+	e "github.com/julianlk522/fitm/error"
 )
 
 const LINKS_PAGE_LIMIT = 20
@@ -107,6 +110,44 @@ ORDER BY
 
 const LINKS_LIMIT = `
 LIMIT ?;`
+
+func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
+	cats_params := params.Get("cats")
+	if cats_params != "" {
+		cats := strings.Split(cats_params, ",")
+		tl = tl.FromCats(cats)
+	}
+
+	url_contains_params := params.Get("url_contains")
+	if url_contains_params != "" {
+		tl = tl.WithURLContaining(url_contains_params)
+	}
+
+	period_params := params.Get("period")
+	if period_params != "" {
+		tl = tl.DuringPeriod(period_params)
+	}
+
+	sort_params := params.Get("sort_by")
+	if sort_params != "" {
+		tl = tl.SortBy(sort_params)
+	}
+
+	var nsfw_params string
+	if params.Get("nsfw") != "" {
+		nsfw_params = params.Get("nsfw")
+	} else if params.Get("NSFW") != "" {
+		nsfw_params = params.Get("NSFW")
+	}
+
+	if nsfw_params == "true" {
+		tl = tl.NSFW()
+	} else if nsfw_params != "false" && nsfw_params != "" {
+		tl.Error = e.ErrInvalidNSFWParams
+	}
+
+	return tl
+}
 
 func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	if len(cats) == 0 || cats[0] == "" {

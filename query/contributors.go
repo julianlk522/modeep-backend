@@ -1,6 +1,7 @@
 package query
 
 import (
+	"net/url"
 	"strings"
 )
 
@@ -25,6 +26,26 @@ FROM Links l
 GROUP BY l.submitted_by
 ORDER BY count DESC, l.submitted_by ASC
 LIMIT ?;`
+
+func (c *Contributors) FromRequestParams(params url.Values) *Contributors {
+	cats_params := params.Get("cats")
+	if cats_params != "" {
+		cats := strings.Split(cats_params, ",")
+		c = c.FromCats(cats)
+	}
+
+	url_contains_params := params.Get("url_contains")
+	if url_contains_params != "" {
+		c = c.WithURLContaining(url_contains_params)
+	}
+
+	period_params := params.Get("period")
+	if period_params != "" {
+		c = c.DuringPeriod(period_params)
+	}
+
+	return c
+}
 
 func (c *Contributors) FromCats(cats []string) *Contributors {
 	if len(cats) == 0 {

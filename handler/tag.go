@@ -93,30 +93,13 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
-	global_cats_sql := query.NewTopGlobalCatCounts()
+	query_params := r.URL.Query()
 
-	// cats_params used to query subcats of cats
-	cats_params := r.URL.Query().Get("cats")
-	if cats_params != "" {
-		global_cats_sql = global_cats_sql.SubcatsOfCats(cats_params)
-	}
-
-	url_contains_params := r.URL.Query().Get("url_contains")
-	if url_contains_params != "" {
-		global_cats_sql = global_cats_sql.WithURLContaining(url_contains_params)
-	}
-
-	period_params := r.URL.Query().Get("period")
-	if period_params != "" {
-		global_cats_sql = global_cats_sql.DuringPeriod(period_params)
-	}
-
-	more_params := r.URL.Query().Get("more")
-	if more_params == "true" {
-		global_cats_sql = global_cats_sql.More()
-	} else if more_params != "" {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidMoreFlag))
-	}
+	global_cats_sql := query.
+		NewTopGlobalCatCounts().
+		FromRequestParams(
+			query_params,
+		)
 
 	if global_cats_sql.Error != nil {
 		render.Render(w, r, e.Err500(global_cats_sql.Error))
@@ -133,13 +116,16 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 	// if any cat plural/singular spelling variations were merged
 
 	// (on pages with links it is more accurate to search the links, but
-	// that is not possible from the /more page because there are none)
+	// there are none on the /more page so not possible under that condition)
 
 	// it is more accurate to check links because that way you know for sure
 	// whether a seemingly merged cat was actually merged or just a subcat
 
 	// this approach is not 100% reliable but for now I can't think of a better
 	// way to do it
+	more_params := query_params.Get("more")
+	cats_params := query_params.Get("cats")
+	
 	if more_params == "true" && cats_params != "" {
 		split_cats_params := strings.Split(cats_params, ",")
 		merged_cats := []string{}
