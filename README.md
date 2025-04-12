@@ -1,17 +1,20 @@
 # FITM: The Flexible Internet Treasure Map
 
-FITM is a system for sharing valuable Internet content. You can use it to efficiently find links that the community has shared, using a variety of filtration methods, or contribute ones you think other people should know about. You can upvote links to help the best ones get more attention.
+FITM is a simple and effective social bookmarking system and link database.
 
-It can be used for targeted searches or for run rabbit hole adventures into new and unknown territory.
+It is useful for targeted searches or for run rabbit hole adventures into new and unknown territory.
 
-If you're a fan of Internet treasure, and you want others to enjoy what you know about, consider sharing it here to help strangers find it.
+If you're a fan of Internet treasure, and you want to find more or share what you know about with others, this is for you.
 
-## Available Filters:
-- Tag Category(ies)
-- Submit Date
-- Submitter
-- NSFW/non-NSFW
+## Filters:
+
+-   [Cats](https://fitm.online/about/how#cats)
+-   Submit Date
+-   Submitter
+-   NSFW/non-NSFW
+-   URL Contains Snippet
 
 ## Sort Methods:
-- Like Count
-- Submit Date
+
+-   Like Count
+-   Submit Date
