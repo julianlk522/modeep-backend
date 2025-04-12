@@ -59,9 +59,10 @@ type Contributor struct {
 
 type NewLink struct {
 	*NewLinkRequest
-	*LinkExtraMetadata
+	LinkExtraMetadata
 	SubmittedBy  string
 	SummaryCount int
+	PreviewImgFilename string
 }
 
 type NewLinkRequest struct {
@@ -106,7 +107,7 @@ func (nlr *NewLinkRequest) Bind(r *http.Request) error {
 
 type LinkExtraMetadata struct {
 	AutoSummary string
-	PreviewImgFilename string
+	PreviewImgURL string
 }
 
 type YTVideoMetadata struct {

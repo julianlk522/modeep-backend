@@ -2,6 +2,9 @@ package handler
 
 import (
 	"crypto/tls"
+	"io"
+	"log"
+	"os"
 	"slices"
 	"strings"
 
@@ -15,6 +18,17 @@ import (
 
 	"net/http"
 )
+
+// capitalized so it can be exported and used in GetPreviewImg handler
+var Preview_img_dir string
+
+func init() {
+	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
+	if test_data_path == "" {
+		log.Panic("FITM_TEST_DATA_PATH not set")
+	}
+	Preview_img_dir = test_data_path + "/img/preview"
+}
 
 const MAX_DAILY_LINKS = 50
 
@@ -249,7 +263,7 @@ func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata
 	if html_md.OGImage != "" {
 		resp, err := http.Get(html_md.OGImage)
 		if err == nil && resp.StatusCode != 404 && !IsRedirect(resp.StatusCode) {
-			x_md.PreviewImgFilename = html_md.OGImage
+			x_md.PreviewImgURL = html_md.OGImage
 		}
 	}
 
@@ -258,6 +272,44 @@ func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata
 
 func IsRedirect(status_code int) bool {
 	return status_code > 299 && status_code < 400
+}
+
+func SavePreviewImgAndGetFileName(url string, link_id string) string {
+	if url == "" {
+		log.Printf("no URL provided: could not fetch preview image")
+		return ""
+	}
+
+	prevew_img_resp, err := http.Get(url)
+	if err != nil {
+		log.Printf("could not fetch preview image: %s", err)
+		return ""
+	}
+	defer prevew_img_resp.Body.Close()
+
+	var extension string
+	if strings.Contains(url, ".jpg") {
+		extension = ".jpg"
+	} else if strings.Contains(url, ".png") {
+		extension = ".png"
+	} else if strings.Contains(url, ".jpeg") {
+		extension = ".jpeg"
+	} else if strings.Contains(url, ".webp") {
+		extension = ".webp"
+	}
+	
+	pic_file_name := link_id + extension
+	pic_file, err := os.Create(Preview_img_dir + "/" + pic_file_name)
+	if err != nil {
+		log.Printf("could not create new preview image: %s", err)
+	}
+	defer pic_file.Close()
+
+	if _, err = io.Copy(pic_file, prevew_img_resp.Body); err != nil {
+		log.Printf("could not copy preview image: %s", err)
+	}
+	
+	return pic_file_name
 }
 
 func LinkAlreadyAdded(url string) (bool, string) {

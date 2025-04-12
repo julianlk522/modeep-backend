@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -19,16 +18,6 @@ import (
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
 )
-
-var preview_img_dir string
-
-func init() {
-	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
-	if test_data_path == "" {
-		log.Panic("FITM_TEST_DATA_PATH not set")
-	}
-	preview_img_dir = test_data_path + "/img/preview"
-}
 
 func GetLinks(w http.ResponseWriter, r *http.Request) {
 	links_sql := query.NewTopLinks()
@@ -97,7 +86,7 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 
 func GetPreviewImg(w http.ResponseWriter, r *http.Request) {
 	var file_name string = chi.URLParam(r, "file_name")
-	path := preview_img_dir + "/" + file_name
+	path := util.Preview_img_dir + "/" + file_name
 
 	if _, err := os.Stat(path); err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrPreviewImgNotFound))
@@ -160,7 +149,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	var new_link = &model.NewLink{
 		SubmittedBy:    req_login_name,
 		NewLinkRequest: &model.NewLinkRequest{},
-		LinkExtraMetadata: &model.LinkExtraMetadata{},
 	}
 	var x_md *model.LinkExtraMetadata
 
@@ -168,7 +156,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		if yt_md, err := util.GetYTVideoMetadata(final_url); err == nil {
 			new_link.URL = "https://www.youtube.com/watch?v=" + yt_md.ID
 			new_link.AutoSummary = yt_md.Items[0].Snippet.Title
-			new_link.PreviewImgFilename = yt_md.Items[0].Snippet.Thumbnails.Default.URL
+			new_link.PreviewImgURL = yt_md.Items[0].Snippet.Thumbnails.Default.URL
 		} else {
 			x_md = util.GetLinkExtraMetadataFromResponse(resp)
 		}
@@ -177,40 +165,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 	if x_md != nil {
 		new_link.AutoSummary = x_md.AutoSummary
-		new_link.PreviewImgFilename = x_md.PreviewImgFilename
-	}
-
-	// download preview img, save path
-	if new_link.PreviewImgFilename != "" {
-		prevew_img_resp, err := http.Get(new_link.PreviewImgFilename)
-		if err != nil {
-			log.Printf("could not get preview image: %s", err)
-		}
-		defer prevew_img_resp.Body.Close()
-
-		var extension string
-		if strings.Contains(new_link.PreviewImgFilename, ".jpg") {
-			extension = ".jpg"
-		} else if strings.Contains(new_link.PreviewImgFilename, ".png") {
-			extension = ".png"
-		} else if strings.Contains(new_link.PreviewImgFilename, ".jpeg") {
-			extension = ".jpeg"
-		} else if strings.Contains(new_link.PreviewImgFilename, ".webp") {
-			extension = ".webp"
-		}
-		
-		new_pic_file_name := request.LinkID + extension
-		new_pic_file, err := os.Create(preview_img_dir + "/" + new_pic_file_name)
-		if err != nil {
-			log.Printf("could not create new preview image: %s", err)
-		}
-		defer new_pic_file.Close()
-		_, err = io.Copy(new_pic_file, prevew_img_resp.Body)
-		if err != nil {
-			log.Printf("could not copy preview image: %s", err)
-		}
-		
-		new_link.PreviewImgFilename = new_pic_file_name
+		new_link.PreviewImgURL = x_md.PreviewImgURL
 	}
 
 	// Verified: add link
@@ -278,6 +233,11 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	if new_link.Summary == "" && new_link.AutoSummary != "" {
 		new_link.Summary = new_link.AutoSummary
 	}
+	new_link.PreviewImgFilename = util.SavePreviewImgAndGetFileName(
+		new_link.PreviewImgURL, 
+		new_link.LinkID,
+	)
+
 	if _, err = tx.Exec(
 		"INSERT INTO Links VALUES(?,?,?,?,?,?,?);",
 		new_link.LinkID,
