@@ -368,8 +368,8 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 			OmittedCats:        "tech,technology",
 			ExpectedStatusCode: 200,
 			Results: map[string]int32{
-				"test": 21,
-				"testing":    2,
+				"test":    21,
+				"testing": 2,
 			},
 		},
 		{

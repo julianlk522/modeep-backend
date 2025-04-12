@@ -30,9 +30,9 @@ func TestLoginNameTaken(t *testing.T) {
 
 func TestAuthenticateUser(t *testing.T) {
 	var test_logins = []struct {
-		LoginName          string
-		Password           string
-		Valid bool
+		LoginName string
+		Password  string
+		Valid     bool
 	}{
 		{"jlk", "password", false},
 		{"monkey", "monkey", true},

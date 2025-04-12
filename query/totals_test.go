@@ -12,15 +12,15 @@ func TestNewTotals(t *testing.T) {
 	totals_sql := NewTotals()
 	if err := TestClient.
 		QueryRow(totals_sql.Text).
-		Scan(&totals.Links, 
-			&totals.Clicks, 
+		Scan(&totals.Links,
+			&totals.Clicks,
 			&totals.Contributors,
-			&totals.Likes, 
-			&totals.Tags, 
-			&totals.Summaries, 
+			&totals.Likes,
+			&totals.Tags,
+			&totals.Summaries,
 		); err != nil {
-			t.Fatal(err)
-		}
+		t.Fatal(err)
+	}
 
 	// Verify "Auto Summary" not counted as a contributor
 	// (9 total contributors in test data, 8 without auto summary)

@@ -193,7 +193,7 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 func TestGetLinkExtraMetadataFromResponse(t *testing.T) {
 	var test_links = []struct {
 		new_link *model.NewLink
-		Valid   bool
+		Valid    bool
 	}{
 		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "abc.com"}}, true},
 		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "www.abc.com"}}, true},

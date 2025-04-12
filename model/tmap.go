@@ -25,7 +25,7 @@ func (ear *EditAboutRequest) Bind(r *http.Request) error {
 	if len(ear.About) > util.PROFILE_ABOUT_CHAR_LIMIT {
 		return e.ProfileAboutLengthExceedsLimit(util.PROFILE_ABOUT_CHAR_LIMIT)
 
-		// cannot have ONLY newline, carriage return, whitespace, or 
+		// cannot have ONLY newline, carriage return, whitespace, or
 		// unicode control characters
 		// though they are allowed if there is other text
 	} else if len(ear.About) > 0 && !regexp.MustCompile(`[^\n\r\s\p{C}]`).MatchString(ear.About) {

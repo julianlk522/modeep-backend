@@ -18,18 +18,18 @@ type HasCats interface {
 }
 
 type Link struct {
-	ID           string
-	URL          string
-	SubmittedBy  string
-	SubmitDate   string
-	Cats         string
-	Summary      string
-	SummaryCount int
-	LikeCount    int64
-	CopyCount    int
-	ClickCount   int64
-	TagCount     int
-	PreviewImgFilename       string
+	ID                 string
+	URL                string
+	SubmittedBy        string
+	SubmitDate         string
+	Cats               string
+	Summary            string
+	SummaryCount       int
+	LikeCount          int64
+	CopyCount          int
+	ClickCount         int64
+	TagCount           int
+	PreviewImgFilename string
 }
 
 func (l Link) GetCats() string {
@@ -60,16 +60,16 @@ type Contributor struct {
 type NewLink struct {
 	*NewLinkRequest
 	LinkExtraMetadata
-	SubmittedBy  string
-	SummaryCount int
+	SubmittedBy        string
+	SummaryCount       int
 	PreviewImgFilename string
 }
 
 type NewLinkRequest struct {
-	URL     string
-	Cats    string
-	Summary string
-	LinkID  string `json:"ID"`
+	URL        string
+	Cats       string
+	Summary    string
+	LinkID     string `json:"ID"`
 	SubmitDate string
 }
 
@@ -106,12 +106,12 @@ func (nlr *NewLinkRequest) Bind(r *http.Request) error {
 }
 
 type LinkExtraMetadata struct {
-	AutoSummary string
+	AutoSummary   string
 	PreviewImgURL string
 }
 
 type YTVideoMetadata struct {
-	ID string
+	ID    string
 	Items []YTVideoItems `json:"items"`
 }
 
@@ -141,8 +141,8 @@ func (dlr *DeleteLinkRequest) Bind(r *http.Request) error {
 }
 
 type NewClickRequest struct {
-	LinkID string `json:"link_id"`
-	IPAddr string
+	LinkID    string `json:"link_id"`
+	IPAddr    string
 	Timestamp string
 }
 
@@ -152,6 +152,6 @@ func (ncr *NewClickRequest) Bind(r *http.Request) error {
 	}
 
 	ncr.Timestamp = util.NEW_LONG_TIMESTAMP()
-	
+
 	return nil
 }

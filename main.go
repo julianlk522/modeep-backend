@@ -105,7 +105,7 @@ func main() {
 		r.
 			With(m.Pagination).
 			Get("/links", h.GetLinks)
-		
+
 		r.
 			With(httprate.Limit(
 				2,
@@ -115,7 +115,7 @@ func main() {
 					if user_id != "" {
 						return user_id, nil
 					}
-					
+
 					return httprate.KeyByIP(r)
 				}),
 			)).

@@ -90,7 +90,7 @@ func TestTopContributorsWithURLContaining(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer rows.Close()
-	
+
 	var contributors []model.Contributor
 	for rows.Next() {
 		var c model.Contributor

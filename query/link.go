@@ -210,7 +210,7 @@ func (tl *TopLinks) WithURLContaining(snippet string) *TopLinks {
 
 	and_clause := `
 	url LIKE ?`
-	
+
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_ORDER_BY,

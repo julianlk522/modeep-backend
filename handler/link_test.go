@@ -66,8 +66,7 @@ func TestGetLinks(t *testing.T) {
 				"cats":   "umvc3",
 				"period": "poop",
 			},
-			Page:  1,
-			
+			Page: 1,
 		},
 		{
 			Params: map[string]string{
@@ -163,7 +162,7 @@ func TestGetLinks(t *testing.T) {
 
 func TestAddLink(t *testing.T) {
 	test_link_requests := []struct {
-		Payload map[string]string
+		Payload            map[string]string
 		ExpectedStatusCode int
 	}{
 		{
@@ -363,32 +362,32 @@ func TestDeleteLink(t *testing.T) {
 
 func TestClickLink(t *testing.T) {
 	var test_requests = []struct {
-		LinkID             string
-		UserID             string
-		Valid              bool
+		LinkID string
+		UserID string
+		Valid  bool
 	}{
 		{
-			LinkID:             "0",
-			UserID:             test_user_id,
-			Valid:              true,
+			LinkID: "0",
+			UserID: test_user_id,
+			Valid:  true,
 		},
 		// not a real link
 		{
-			LinkID:             "-1",
-			UserID:             test_user_id,
-			Valid:              false,
+			LinkID: "-1",
+			UserID: test_user_id,
+			Valid:  false,
 		},
 		// not a real user
 		{
-			LinkID:             "99",
-			UserID:             "-1",
-			Valid:              true,
+			LinkID: "99",
+			UserID: "-1",
+			Valid:  true,
 		},
 		// no user ID: should be attributed to "anonymous"
 		{
-			LinkID:             "99",
-			UserID:             "",
-			Valid:              true,
+			LinkID: "99",
+			UserID: "",
+			Valid:  true,
 		},
 	}
 
@@ -443,7 +442,7 @@ func TestClickLink(t *testing.T) {
 			t.Fatalf(
 				"expected anonymous user ID (test request %+v), body: %s",
 				tr,
-				text,)
+				text)
 		}
 	}
 }

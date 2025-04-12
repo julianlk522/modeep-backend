@@ -5,7 +5,7 @@ import "testing"
 func TestContainsInvalidChars(t *testing.T) {
 	var test_login_names = []struct {
 		LoginName string
-		Valid      bool
+		Valid     bool
 	}{
 		{"alltext", true},
 		{"text4ndNumb3r5", true},
@@ -16,7 +16,7 @@ func TestContainsInvalidChars(t *testing.T) {
 		{"otherWeirdChars$%*", false},
 		{";;;;", false},
 		{"::::", false},
-		{"hypen-also-unacceptable", false},
+		{"hyphen-also-unacceptable", false},
 		{"~~~~", false},
 		{"```", false},
 		{"///", false},

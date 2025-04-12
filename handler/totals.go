@@ -16,18 +16,17 @@ func GetTotals(w http.ResponseWriter, r *http.Request) {
 
 	if err := db.Client.
 		QueryRow(totals_sql.Text).
-		Scan(&totals.Links, 
-			&totals.Clicks, 
+		Scan(&totals.Links,
+			&totals.Clicks,
 			&totals.Contributors,
-			&totals.Likes, 
-			&totals.Tags, 
-			&totals.Summaries, 
+			&totals.Likes,
+			&totals.Tags,
+			&totals.Summaries,
 		); err != nil {
-			render.Render(w, r, e.Err500(err))
-			return
-		}
+		render.Render(w, r, e.Err500(err))
+		return
+	}
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, totals)
 }
-

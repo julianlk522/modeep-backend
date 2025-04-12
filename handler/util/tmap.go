@@ -256,12 +256,12 @@ func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 			&u.Email,
 			&u.Created,
 		); err != nil {
-			if err == sql.ErrNoRows {
-				return nil, e.ErrNoUserWithLoginName
-			} else {
-				return nil, err
-			}
+		if err == sql.ErrNoRows {
+			return nil, e.ErrNoUserWithLoginName
+		} else {
+			return nil, err
 		}
+	}
 
 	return &u, nil
 }

@@ -445,8 +445,8 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 					if err := TestClient.QueryRow(`SELECT global_cats
 						FROM Links
 						WHERE id = ?`, lid).Scan(&cats); err != nil {
-							t.Fatal(err)
-						}
+						t.Fatal(err)
+					}
 				}
 				t.Fatal(err)
 			}

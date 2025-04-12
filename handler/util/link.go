@@ -189,7 +189,7 @@ func CountMergedCatSpellingVariants[T model.HasCats](pl *model.PaginatedLinks[T]
 }
 
 // Add link (non-YT)
-func GetLinkExtraMetadataFromResponse(resp *http.Response) (*model.LinkExtraMetadata) {
+func GetLinkExtraMetadataFromResponse(resp *http.Response) *model.LinkExtraMetadata {
 	if resp == nil {
 		return nil
 	} else if resp.StatusCode != http.StatusForbidden {
@@ -297,7 +297,7 @@ func SavePreviewImgAndGetFileName(url string, link_id string) string {
 	} else if strings.Contains(url, ".webp") {
 		extension = ".webp"
 	}
-	
+
 	pic_file_name := link_id + extension
 	pic_file, err := os.Create(Preview_img_dir + "/" + pic_file_name)
 	if err != nil {
@@ -308,7 +308,7 @@ func SavePreviewImgAndGetFileName(url string, link_id string) string {
 	if _, err = io.Copy(pic_file, prevew_img_resp.Body); err != nil {
 		log.Printf("could not copy preview image: %s", err)
 	}
-	
+
 	return pic_file_name
 }
 

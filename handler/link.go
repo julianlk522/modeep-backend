@@ -107,11 +107,11 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	is_google_sorry_page := strings.Contains(url_after_redirects, "google.com/sorry")
 
 	if !(is_302_redirect || is_unauthorized || is_forbidden || is_too_many_requests || is_google_sorry_page) {
-		final_url = strings.TrimSuffix(url_after_redirects, "/")	
+		final_url = strings.TrimSuffix(url_after_redirects, "/")
 	} else {
 		final_url = strings.TrimSuffix(request.URL, "/")
 	}
-	
+
 	if is_duplicate, link_id := util.LinkAlreadyAdded(final_url); is_duplicate {
 		render.Status(r, http.StatusConflict)
 		render.Render(w, r, e.ErrConflict(e.ErrDuplicateLink(final_url, link_id)))
@@ -162,11 +162,11 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 			new_link.SubmitDate,
 		); err != nil {
 			log.Print("Error adding auto summary: ", err)
-			} else {
-				new_link.SummaryCount = 1
+		} else {
+			new_link.SummaryCount = 1
 		}
 	}
-	
+
 	// Insert summary
 	new_link.Summary = request.Summary
 	if new_link.Summary != "" {
@@ -206,7 +206,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		new_link.Summary = new_link.AutoSummary
 	}
 	new_link.PreviewImgFilename = util.SavePreviewImgAndGetFileName(
-		new_link.PreviewImgURL, 
+		new_link.PreviewImgURL,
 		new_link.LinkID,
 	)
 
@@ -440,13 +440,13 @@ func ClickLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := struct {
-		ID string `json:"id"`
-		LinkID string `json:"link_id"`
-		UserID string `json:"user_id"`
-		IPAddr string `json:"ip_addr"`
+		ID        string `json:"id"`
+		LinkID    string `json:"link_id"`
+		UserID    string `json:"user_id"`
+		IPAddr    string `json:"ip_addr"`
 		Timestamp string `json:"timestamp"`
 	}{
-		LinkID: request.LinkID,
+		LinkID:    request.LinkID,
 		Timestamp: request.Timestamp,
 	}
 

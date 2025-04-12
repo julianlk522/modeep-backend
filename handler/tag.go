@@ -125,7 +125,7 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 	// way to do it
 	more_params := query_params.Get("more")
 	cats_params := query_params.Get("cats")
-	
+
 	if more_params == "true" && cats_params != "" {
 		split_cats_params := strings.Split(cats_params, ",")
 		merged_cats := []string{}
