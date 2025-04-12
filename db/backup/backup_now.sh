@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 NOW=$(date -u +%m-%d-%y_%H:%M:%S)
 mkdir $NOW
