@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 LOG_FILE="/var/log/fitm/update.log"
 log() {
@@ -26,45 +26,37 @@ go mod tidy
 go build --tags 'fts5' .
 log "build complete"
 
-# interrupt running server process(es)
-PIDs=$(pgrep -f fitm)
-log "found PID(s): $PIDs"
-if [ -n "$PIDs" ]; then
-    for PID in $PIDs; do
-        log "attempting to stop process $PID"
-        kill $PID
-        # send SIGTERM signal to gracefully stop process
-        
-        # countdown process stop
-        countdown=10
+# identify running server process
+PID=$(pgrep -f fitm)
 
-        # while process exists
-        while kill -0 $PID 2>/dev/null; do
-        ## (kill -0 evals to status 0 if process exists and 1 if process does not exist)
-        ## (2>/dev/null redirects stderr to null device file to suppress)
-            if [ $countdown -le 0 ]; then
-                log "countdown exceeded for PID $PID. Forcing kill."
-                kill -9 $PID
-                break
-            fi
-            sleep 1
-            ((countdown--))
-        done
-        log "stopped process $PID"
-    done
-fi
-log "all old processes stopped"
+# send SIGTERM signal to gracefully stop
+kill $PID
 
-# start tmux session if not exists already
-if ! tmux has-session -t FITM 2>/dev/null; then
-    log "creating new FITM tmux session"
-    tmux new-session -d -s FITM
+countdown=10
+# while process exists
+## (kill -0 evals to status 0 if process exists and 1 if process does not exist)
+## (2>/dev/null redirects stderr to null device file to suppress)
+while kill -0 $PID 2>/dev/null; do
+    ## force if stuck
+    if [ $countdown -le 0 ]; then
+        kill -9 $PID
+        break
+    fi
+    sleep 1
+    ((countdown--))
+done
+log "stopped process $PID"
+
+# start tmux session if it doesn't already exist
+if ! tmux has-session -t fitm-backend 2>/dev/null; then
+    log "creating new fitm-backend tmux session"
+    tmux new-session -d -s fitm-backend
 fi
 
-# start new binary in tmux session
-tmux send-keys -t FITM "cd $FITM_BACKEND_ROOT && ./fitm" ENTER
+# run fresh binary in tmux session
+tmux send-keys -t fitm-backend "cd $FITM_BACKEND_ROOT && ./fitm" ENTER
 
 # detach
-tmux detach -s FITM
+tmux detach -s fitm-backend
 
 log "update complete and server restarted"
