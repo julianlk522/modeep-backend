@@ -27,6 +27,7 @@ func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.ErrUnauthorized(e.ErrNoWebhookSignature))
 		return
 	}
+	log.Printf("Signature header: %s", signature_header)
 
 	// get signature, skipping "sha256="
 	gh_hash := signature_header[7:]
@@ -40,7 +41,7 @@ func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// generate new hmac using secret
+	// generate hmac using secret
 	server_hash := hmac.New(
 		sha256.New,
 		[]byte(signkey_secret),
@@ -55,6 +56,7 @@ func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
 	// generate expected signature
 	server_signature := "sha256=" + hex.EncodeToString(server_hash.Sum(nil))
 	if !hmac.Equal([]byte(gh_hash), []byte(server_signature)) {
+		log.Printf("Signature mismatch: expected %s, got %s", server_signature, gh_hash)
 		render.Render(w, r, e.ErrUnauthorized(e.ErrInvalidWebhookSignature))
 		return
 	}

@@ -131,6 +131,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.ErrUnprocessable(err))
 		return
 	}
+	log.Printf("resp.StatusCode: %d", resp.StatusCode)
 	defer resp.Body.Close()
 
 	// save adjusted URL (after any redirects e.g., to wwww.)
