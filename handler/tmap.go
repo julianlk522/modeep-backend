@@ -37,7 +37,7 @@ func EditAbout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	_, err := db.Client.Exec(
 		`UPDATE Users SET about = ? WHERE id = ?`,
 		edit_about_data.About,
@@ -114,7 +114,7 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	_, err = db.Client.Exec(`UPDATE Users SET pfp = ? WHERE id = ?`, unique_name, req_user_id)
 	if err != nil {
 		render.Render(w, r, e.Err500(e.ErrCouldNotSaveProfilePic))
@@ -125,7 +125,7 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 
 	if has_pfp := util.UserWithIDHasProfilePic(req_user_id); !has_pfp {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoProfilePic))
@@ -189,9 +189,9 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 	}
 	opts.OwnerLoginName = login_name
 
-	var tmap interface{}
+	var tmap any
 
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	if req_user_id != "" {
 		opts.AsSignedInUser = req_user_id
 		tmap, err = util.BuildTmapFromOpts[model.TmapLinkSignedIn](opts)

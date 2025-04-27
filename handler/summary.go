@@ -47,7 +47,7 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	link_exists, err := util.LinkExists(summary_data.LinkID)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -132,7 +132,7 @@ func DeleteSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	owns_summary, err := util.SummarySubmittedByUser(delete_data.SummaryID, req_user_id)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -195,7 +195,7 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
+	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	user_exists, err := util.UserExists(req_login_name)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -204,7 +204,7 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserWithLoginName))
 	}
 
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	owns_summary, err := util.SummarySubmittedByUser(summary_id, req_user_id)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -273,7 +273,7 @@ func UnlikeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	already_liked, err := util.UserHasLikedSummary(req_user_id, summary_id)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))

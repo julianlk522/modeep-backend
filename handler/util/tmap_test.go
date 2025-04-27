@@ -77,7 +77,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 			opts.CatsFilter = cats
 		}
 
-		var tmap interface{}
+		var tmap any
 		var err error
 
 		if td.RequestingUserID != "" {
@@ -212,7 +212,7 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 		t.Fatalf("failed with error %s", err)
 	}
 
-	var all_links interface{}
+	var all_links any
 
 	switch tmap.(type) {
 	case model.Tmap[model.TmapLink]:

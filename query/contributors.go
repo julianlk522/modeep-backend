@@ -15,7 +15,7 @@ func NewTopContributors() *Contributors {
 	return (&Contributors{
 		Query: &Query{
 			Text: CONTRIBUTORS_BASE,
-			Args: []interface{}{CONTRIBUTORS_PAGE_LIMIT},
+			Args: []any{CONTRIBUTORS_PAGE_LIMIT},
 		},
 	})
 }

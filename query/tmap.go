@@ -14,7 +14,7 @@ func NewTmapProfile(login_name string) *TmapProfile {
 	return (&TmapProfile{
 		&Query{
 			Text: TMAP_PROFILE,
-			Args: []interface{}{login_name},
+			Args: []any{login_name},
 		},
 	})
 }
@@ -36,7 +36,7 @@ func NewTmapNSFWLinksCount(login_name string) *TmapNSFWLinksCount {
 	return &TmapNSFWLinksCount{
 		&Query{
 			Text: TMAP_NSFW_LINKS_COUNT,
-			Args: []interface{}{login_name, login_name, login_name},
+			Args: []any{login_name, login_name, login_name},
 		},
 	}
 }
@@ -163,7 +163,7 @@ func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 	}
 
 	// Insert match_arg arg * 2 after first login_name arg and before last 2 args
-	trailing_args := make([]interface{}, len(tnlc.Args[1:]))
+	trailing_args := make([]any, len(tnlc.Args[1:]))
 	copy(trailing_args, tnlc.Args[1:])
 	tnlc.Args = append(tnlc.Args[:1], match_arg, match_arg)
 	tnlc.Args = append(tnlc.Args, trailing_args...)
@@ -188,7 +188,7 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 				SUBMITTED_WHERE +
 				TMAP_DEFAULT_ORDER_BY,
 			// login_name used in PossibleUserCats, PossibleUserSummary, where
-			Args: []interface{}{login_name, login_name, login_name},
+			Args: []any{login_name, login_name, login_name},
 		},
 	}
 
@@ -212,7 +212,7 @@ func (ts *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
 	ts.Text = fields_replacer.Replace(ts.Text)
 
 	// Prepend req_user_id arg * 2
-	ts.Args = append([]interface{}{req_user_id, req_user_id}, ts.Args...)
+	ts.Args = append([]any{req_user_id, req_user_id}, ts.Args...)
 
 	return ts
 }
@@ -284,7 +284,7 @@ func NewTmapCopied(login_name string) *TmapCopied {
 				TMAP_DEFAULT_ORDER_BY,
 			// login_name used in UserCopies, PossibleUserCats,
 			// PossibleUserSummary, where
-			Args: []interface{}{login_name, login_name, login_name, login_name},
+			Args: []any{login_name, login_name, login_name, login_name},
 		},
 	}
 
@@ -311,7 +311,7 @@ func (tc *TmapCopied) AsSignedInUser(req_user_id string) *TmapCopied {
 	tc.Text = fields_replacer.Replace(tc.Text)
 
 	// Insert req_user_id * 2 between args 0 and 1
-	new_args := make([]interface{}, 0, len(tc.Args)+2)
+	new_args := make([]any, 0, len(tc.Args)+2)
 	new_args = append(new_args, tc.Args[0])
 	new_args = append(new_args, req_user_id, req_user_id)
 	new_args = append(new_args, tc.Args[1:]...)
@@ -385,7 +385,7 @@ func NewTmapTagged(login_name string) *TmapTagged {
 				TAGGED_WHERE +
 				TMAP_DEFAULT_ORDER_BY,
 			// login_name used in UserCats, PossibleUserSummary, UserCopies, where
-			Args: []interface{}{login_name, login_name, login_name, login_name},
+			Args: []any{login_name, login_name, login_name, login_name},
 		},
 	}
 
@@ -457,7 +457,7 @@ func (tt *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
 	tt.Text = fields_replacer.Replace(tt.Text)
 
 	// Prepend req_user_id arg * 2
-	tt.Args = append([]interface{}{req_user_id, req_user_id}, tt.Args...)
+	tt.Args = append([]any{req_user_id, req_user_id}, tt.Args...)
 
 	return tt
 }
@@ -553,10 +553,10 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 
 	// TmapCopied
 	if strings.Contains(q.Text, USER_COPIES_CTE) {
-		q.Args = []interface{}{login_name, login_name, match_arg, login_name, match_arg, login_name}
+		q.Args = []any{login_name, login_name, match_arg, login_name, match_arg, login_name}
 		// TmapSubmitted
 	} else {
-		q.Args = []interface{}{login_name, match_arg, login_name, match_arg, login_name}
+		q.Args = []any{login_name, match_arg, login_name, match_arg, login_name}
 	}
 
 	// Insert GLOBAL_CATS_JOIN

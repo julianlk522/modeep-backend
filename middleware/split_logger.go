@@ -68,7 +68,7 @@ type SplitLogEntry struct {
 	Request   *http.Request
 }
 
-func (sle *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
+func (sle *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra any) {
 	sle.LogEntry.Write(status, bytes, header, elapsed, extra)
 
 	// save GitHub webhook responses

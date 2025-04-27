@@ -12,7 +12,7 @@ import (
 // Get summaries
 func TestBuildSummaryPageForLink(t *testing.T) {
 	ctx := context.Background()
-	jwt_claims := map[string]interface{}{
+	jwt_claims := map[string]any{
 		"user_id":    test_user_id,
 		"login_name": test_login_name,
 	}

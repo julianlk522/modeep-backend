@@ -120,7 +120,7 @@ func TestGetLinks(t *testing.T) {
 		)
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"user_id":    tglr.Params["req_user_id"],
 			"login_name": tglr.Params["req_login_name"],
 		}
@@ -266,7 +266,7 @@ func TestAddLink(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"user_id":    test_user_id,
 			"login_name": test_login_name,
 		}
@@ -331,7 +331,7 @@ func TestDeleteLink(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"login_name": test_login_name,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
@@ -407,7 +407,7 @@ func TestClickLink(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"user_id": tr.UserID,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)

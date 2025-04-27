@@ -74,6 +74,7 @@ func TestHasAcceptableAspectRatio(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer f.Close()
+		
 		img, _, err := image.Decode(f)
 		if err != nil {
 			t.Fatal(err)

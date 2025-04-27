@@ -93,7 +93,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
+	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	user_exists, err := util.UserExists(req_login_name)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))

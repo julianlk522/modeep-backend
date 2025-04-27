@@ -32,8 +32,8 @@ PID=$(pgrep -f fitm)
 # send SIGTERM signal to gracefully stop
 kill $PID
 
+# while process exists, try to kill it
 countdown=10
-# while process exists
 ## (kill -0 evals to status 0 if process exists and 1 if process does not exist)
 ## (2>/dev/null redirects stderr to null device file to suppress)
 while kill -0 $PID 2>/dev/null; do
@@ -47,7 +47,7 @@ while kill -0 $PID 2>/dev/null; do
 done
 log "stopped process $PID"
 
-# start tmux session if it doesn't already exist
+# start tmux session if one doesn't already exist
 if ! tmux has-session -t fitm-backend 2>/dev/null; then
     log "creating new fitm-backend tmux session"
     tmux new-session -d -s fitm-backend

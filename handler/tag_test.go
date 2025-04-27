@@ -111,7 +111,7 @@ func TestAddTag(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"user_id":    test_user_id,
 			"login_name": test_login_name,
 		}
@@ -219,7 +219,7 @@ func TestEditTag(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"user_id":    test_user_id,
 			"login_name": test_login_name,
 		}
@@ -302,7 +302,7 @@ func TestDeleteTag(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"login_name": test_login_name,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)

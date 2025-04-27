@@ -54,7 +54,7 @@ func TestEditAbout(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"user_id":    test_user_id,
 			"login_name": test_login_name,
 		}
@@ -111,7 +111,7 @@ func TestDeleteProfilePic(t *testing.T) {
 		)
 
 		ctx := context.Background()
-		jwt_claims := map[string]interface{}{
+		jwt_claims := map[string]any{
 			"user_id": test_user_id,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)

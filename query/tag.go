@@ -26,7 +26,7 @@ func NewTagPageLink(link_id string) *TagPageLink {
 		Text: TAG_PAGE_LINK_BASE_FIELDS +
 			TAG_PAGE_LINK_BASE_FROM +
 			TAG_PAGE_LINK_BASE_JOINS,
-		Args: []interface{}{link_id},
+		Args: []any{link_id},
 	},
 	})
 }
@@ -116,7 +116,7 @@ type TagRankings struct {
 func NewTagRankings(link_id string) *TagRankings {
 	return (&TagRankings{Query: &Query{
 		Text: TAG_RANKINGS_BASE,
-		Args: []interface{}{link_id, TAG_RANKINGS_PAGE_LIMIT},
+		Args: []any{link_id, TAG_RANKINGS_PAGE_LIMIT},
 	},
 	})
 }
@@ -156,7 +156,7 @@ func NewTopGlobalCatCounts() *GlobalCatCounts {
 	return (&GlobalCatCounts{
 		Query: &Query{
 			Text: GLOBAL_CATS_BASE,
-			Args: []interface{}{GLOBAL_CATS_PAGE_LIMIT},
+			Args: []any{GLOBAL_CATS_PAGE_LIMIT},
 		},
 	})
 }
@@ -359,7 +359,7 @@ func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
 		GROUP BY LOWER(word)
 		ORDER BY distance, rank DESC
 		LIMIT ?;`,
-			Args: []interface{}{
+			Args: []any{
 				snippet,
 				snippet,
 				SPELLFIX_DISTANCE_LIMIT,

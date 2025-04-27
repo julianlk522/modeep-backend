@@ -24,7 +24,7 @@ func NewTopLinks() *TopLinks {
 				LINKS_NO_NSFW_CATS_WHERE +
 				LINKS_ORDER_BY +
 				LINKS_LIMIT,
-			Args: []interface{}{LINKS_PAGE_LIMIT},
+			Args: []any{LINKS_PAGE_LIMIT},
 		},
 	})
 }
@@ -287,7 +287,7 @@ func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
 	tl.Text = auth_replacer.Replace(tl.Text)
 
 	// Prepend args
-	tl.Args = append([]interface{}{req_user_id, req_user_id}, tl.Args...)
+	tl.Args = append([]any{req_user_id, req_user_id}, tl.Args...)
 
 	return tl
 }

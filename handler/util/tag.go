@@ -14,7 +14,7 @@ import (
 
 // GetTagPage
 func ScanTagPageLink[T model.Link | model.LinkSignedIn](link_sql *query.TagPageLink) (*T, error) {
-	var link interface{}
+	var link any
 
 	switch any(new(T)).(type) {
 	case *model.Link:

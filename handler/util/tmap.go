@@ -76,7 +76,7 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	return opts, nil
 }
 
-func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.TmapOptions) (interface{}, error) {
+func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.TmapOptions) (any, error) {
 	if opts.OwnerLoginName == "" {
 		return nil, e.ErrNoTmapOwnerLoginName
 	}
@@ -115,13 +115,19 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		switch opts.Section {
 		case "submitted":
-			links, err = ScanTmapLinks[T](query.NewTmapSubmitted(tmap_owner).FromOptions(opts).Query)
+			links, err = ScanTmapLinks[T](query.
+				NewTmapSubmitted(tmap_owner).
+				FromOptions(opts).Query)
 			nsfw_links_count_sql = nsfw_links_count_sql.SubmittedOnly()
 		case "copied":
-			links, err = ScanTmapLinks[T](query.NewTmapCopied(tmap_owner).FromOptions(opts).Query)
+			links, err = ScanTmapLinks[T](query.
+					NewTmapCopied(tmap_owner).
+					FromOptions(opts).Query)
 			nsfw_links_count_sql = nsfw_links_count_sql.CopiedOnly()
 		case "tagged":
-			links, err = ScanTmapLinks[T](query.NewTmapTagged(tmap_owner).FromOptions(opts).Query)
+			links, err = ScanTmapLinks[T](query.
+					NewTmapTagged(tmap_owner).
+					FromOptions(opts).Query)
 			nsfw_links_count_sql = nsfw_links_count_sql.TaggedOnly()
 		default:
 			return nil, e.ErrInvalidSectionParams
@@ -141,13 +147,14 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		// counting cats and pagination are both done in Go
-		// because merging all the links SQLs together is a headache
+		// because merging all the links SQL queries together is a headache
 		// and doesn't make perf thattt much better since tmap contains <= 60
 		// links at a time (single section contains <= 20 links)
 		// and looping over <= 60 links is trivial
 		cat_counts = GetCatCountsFromTmapLinks(links, cat_counts_opts)
 
 		// Pagination
+		// TODO: move to separate util function
 		page, next_page := 1, -1
 		if opts.Page < 0 {
 			return nil, e.ErrInvalidPageParams
@@ -159,13 +166,16 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		if page > total_pages {
 			links = &[]T{}
 		} else if page == total_pages {
-			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1):]
+			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : ]
 		} else {
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : query.LINKS_PAGE_LIMIT*page]
 			next_page = page + 1
 		}
 
-		if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
+		if err := db.Client.QueryRow(
+			nsfw_links_count_sql.Text, 
+			nsfw_links_count_sql.Args...,
+		).Scan(&nsfw_links_count); err != nil {
 			return nil, err
 		}
 
@@ -178,15 +188,21 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		// All sections
 	} else {
-		submitted, err := ScanTmapLinks[T](query.NewTmapSubmitted(tmap_owner).FromOptions(opts).Query)
+		submitted, err := ScanTmapLinks[T](query.
+			NewTmapSubmitted(tmap_owner).
+			FromOptions(opts).Query)
 		if err != nil {
 			return nil, err
 		}
-		copied, err := ScanTmapLinks[T](query.NewTmapCopied(tmap_owner).FromOptions(opts).Query)
+		copied, err := ScanTmapLinks[T](query.
+			NewTmapCopied(tmap_owner).
+			FromOptions(opts).Query)
 		if err != nil {
 			return nil, err
 		}
-		tagged, err := ScanTmapLinks[T](query.NewTmapTagged(tmap_owner).FromOptions(opts).Query)
+		tagged, err := ScanTmapLinks[T](query.
+			NewTmapTagged(tmap_owner).
+			FromOptions(opts).Query)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +241,10 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			Cats:             cat_counts,
 		}
 
-		if err := db.Client.QueryRow(nsfw_links_count_sql.Text, nsfw_links_count_sql.Args...).Scan(&nsfw_links_count); err != nil {
+		if err := db.Client.QueryRow(
+			nsfw_links_count_sql.Text, 
+			nsfw_links_count_sql.Args...,
+		).Scan(&nsfw_links_count); err != nil {
 			return nil, err
 		}
 
@@ -273,7 +292,7 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 	}
 	defer rows.Close()
 
-	var links interface{}
+	var links any
 
 	switch any(new(T)).(type) {
 	case *model.TmapLink:
@@ -411,8 +430,9 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	return &counts
 }
 
-// merge counts of capitalization variants e.g. "Music" and "music"
 func MergeCatCountsCapitalizationVariants(counts *[]model.CatCount, omitted_cats []string) {
+	// e.g. "Music" and "music"
+	
 	for i, count := range *counts {
 		for j := i + 1; j < len(*counts); j++ {
 			if strings.EqualFold(count.Category, (*counts)[j].Category) {

@@ -16,7 +16,7 @@ func NewSummaryPageLink(ID string) *SummaryPageLink {
 			Text: SUMMARY_PAGE_LINK_BASE_FIELDS +
 				SUMMARY_PAGE_LINK_BASE_FROM +
 				SUMMARY_PAGE_LINK_BASE_JOINS,
-			Args: []interface{}{ID},
+			Args: []any{ID},
 		},
 	})
 }
@@ -113,7 +113,7 @@ func NewSummariesForLink(link_id string) *Summaries {
 				SUMMARIES_FROM +
 				SUMMARIES_JOIN +
 				SUMMARIES_GROUP_BY_AND_LIMIT,
-			Args: []interface{}{link_id, SUMMARIES_PAGE_LIMIT},
+			Args: []any{link_id, SUMMARIES_PAGE_LIMIT},
 		},
 	})
 }

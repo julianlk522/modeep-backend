@@ -18,7 +18,6 @@ const YT_VID_URL_REGEX = `^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+`
 func IsYTVideo(url string) bool {
 	match, _ := regexp.MatchString(YT_VID_URL_REGEX, url)
 	return match
-
 }
 
 func GetYTVideoMetadata(url string) (*model.YTVideoMetadata, error) {

@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-var claims_defaults = map[string]interface{}{
+var claims_defaults = map[string]any{
 	"user_id":    "",
 	"login_name": "",
 	"iat":        nil,

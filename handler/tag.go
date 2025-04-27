@@ -34,7 +34,7 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 	// refresh global cats before querying
 	util.CalculateAndSetGlobalCats(link_id)
 
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	link_sql := query.NewTagPageLink(link_id)
 	if req_user_id != "" {
 		link_sql = link_sql.AsSignedInUser(req_user_id)
@@ -44,7 +44,7 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
+	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	user_tag, err := util.GetUserTagForLink(req_login_name, link_id)
 	if err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(err))
@@ -217,7 +217,7 @@ func AddTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
+	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	duplicate, err := util.UserHasTaggedLink(req_login_name, tag_data.LinkID)
 	if err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(err))
@@ -258,7 +258,7 @@ func EditTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
+	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	owns_tag, err := util.UserSubmittedTagWithID(req_login_name, edit_tag_data.ID)
 	if err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoTagWithID))
@@ -321,7 +321,7 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["login_name"].(string)
+	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	owns_tag, err := util.UserSubmittedTagWithID(req_login_name, delete_tag_data.ID)
 	if err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(err))

@@ -111,7 +111,7 @@ func main() {
 				2,
 				time.Second,
 				httprate.WithKeyFuncs(func(r *http.Request) (string, error) {
-					user_id := r.Context().Value(m.JWTClaimsKey).(map[string]interface{})["user_id"].(string)
+					user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 					if user_id != "" {
 						return user_id, nil
 					}

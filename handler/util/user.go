@@ -65,7 +65,7 @@ func GetJWTFromLoginName(login_name string) (string, error) {
 		return "", err
 	}
 
-	claims := map[string]interface{}{
+	claims := map[string]any{
 		"user_id":    id.String,
 		"login_name": login_name,
 	}
