@@ -41,7 +41,7 @@ func TestNewSummaryPageLink(t *testing.T) {
 		{"summary"},
 		{"like_count"},
 		{"tag_count"},
-		{"img_url"},
+		{"img_file"},
 	}
 
 	for i, col := range cols {

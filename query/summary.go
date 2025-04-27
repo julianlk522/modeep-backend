@@ -30,7 +30,7 @@ cats,
 summary, 
 COALESCE(like_count,0) as like_count,
 tag_count,   
-img_url`
+img_file`
 
 const SUMMARY_PAGE_LINK_BASE_FROM = ` 
 FROM 
@@ -42,7 +42,7 @@ FROM
 		submit_date as sd, 
 		COALESCE(global_cats,"") as cats, 
 		global_summary as summary, 
-		COALESCE(img_url,"") as img_url 
+		COALESCE(img_file,"") as img_file 
 	FROM Links
 	WHERE id = ?
 	)`

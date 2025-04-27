@@ -46,7 +46,7 @@ func TestNewTopLinks(t *testing.T) {
 		{"copy_count"},
 		{"click_count"},
 		{"tag_count"},
-		{"img_url"},
+		{"img_file"},
 		{"page_count"},
 	}
 
@@ -364,7 +364,7 @@ func TestAsSignedInUser(t *testing.T) {
 		{"copy_count"},
 		{"click_count"},
 		{"tag_count"},
-		{"img_url"},
+		{"img_file"},
 		{"page_count"},
 		{"is_liked"},
 		{"is_copied"},

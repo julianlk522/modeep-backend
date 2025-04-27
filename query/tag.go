@@ -40,7 +40,7 @@ const TAG_PAGE_LINK_BASE_FIELDS = `SELECT
 	summary,
 	COALESCE(summary_count,0) as summary_count, 
 	COUNT("Link Likes".id) as like_count, 
-	img_url`
+	img_file`
 
 const TAG_PAGE_LINK_BASE_FROM = `
 FROM 
@@ -52,7 +52,7 @@ FROM
 		submit_date as sd, 
 		COALESCE(global_cats,"") as cats, 
 		global_summary as summary, 
-		COALESCE(img_url,"") as img_url 
+		COALESCE(img_file,"") as img_file 
 	FROM Links
 	WHERE id = ?
 	)`
