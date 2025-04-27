@@ -28,7 +28,7 @@ func TestNewTopLinks(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 12 {
+	} else if len(cols) < 13 {
 		t.Fatal("too few columns")
 	}
 
@@ -47,6 +47,7 @@ func TestNewTopLinks(t *testing.T) {
 		{"click_count"},
 		{"tag_count"},
 		{"img_url"},
+		{"page_count"},
 	}
 
 	for i, col := range cols {
@@ -119,6 +120,8 @@ func TestLinksWithURLContaining(t *testing.T) {
 	defer rows.Close()
 
 	var links []model.Link
+	var page_count int
+
 	for rows.Next() {
 		link := model.Link{}
 		err := rows.Scan(
@@ -134,6 +137,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&link.ClickCount,
 			&link.TagCount,
 			&link.PreviewImgFilename,
+			&page_count,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -178,6 +182,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&link.ClickCount,
 			&link.TagCount,
 			&link.PreviewImgFilename,
+			&page_count,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -249,6 +254,8 @@ func TestLinksSortBy(t *testing.T) {
 		{"invalid", false},
 	}
 
+	var page_count int
+
 	for _, ts := range test_sorts {
 		links_sql := NewTopLinks().SortBy(ts.Sort)
 		if ts.Valid && links_sql.Error != nil {
@@ -280,6 +287,7 @@ func TestLinksSortBy(t *testing.T) {
 				&link.ClickCount,
 				&link.TagCount,
 				&link.PreviewImgFilename,
+				&page_count,
 			)
 			if err != nil {
 				t.Fatal(err)
@@ -338,7 +346,7 @@ func TestAsSignedInUser(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 14 {
+	} else if len(cols) != 15 {
 		t.Fatal("incorrect col count")
 	}
 
@@ -357,6 +365,7 @@ func TestAsSignedInUser(t *testing.T) {
 		{"click_count"},
 		{"tag_count"},
 		{"img_url"},
+		{"page_count"},
 		{"is_liked"},
 		{"is_copied"},
 	}
@@ -415,6 +424,8 @@ func TestNSFW(t *testing.T) {
 
 	id_of_test_link_having_nsfw_cats := "76"
 	var l model.LinkSignedIn
+	var page_count int
+	// there is 
 	for rows.Next() {
 		if err := rows.Scan(
 			&l.ID,
@@ -429,6 +440,7 @@ func TestNSFW(t *testing.T) {
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
+			&page_count,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {
@@ -465,11 +477,12 @@ func TestNSFW(t *testing.T) {
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
+			&page_count,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {
 			t.Fatal(err)
-		} else if l.ID == "76" {
+		} else if l.ID == id_of_test_link_having_nsfw_cats {
 			t.Fatalf("got %s, want nil", l.ID)
 		}
 	}

@@ -101,7 +101,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 			is_filtered = false
 		case model.FilteredTmap[model.TmapLink], model.FilteredTmap[model.TmapLinkSignedIn]:
 			is_filtered = true
-		case model.PaginatedTmapSection[model.TmapLink], model.PaginatedTmapSection[model.TmapLinkSignedIn]:
+		case model.TmapSectionPage[model.TmapLink], model.TmapSectionPage[model.TmapLinkSignedIn]:
 			continue
 		}
 

@@ -56,7 +56,7 @@ SummaryCount AS (
 )
 `
 
-const LINKS_BASE_FIELDS = ` 
+var LINKS_BASE_FIELDS = fmt.Sprintf(` 
 SELECT 
 	l.id, 
     l.url, 
@@ -69,7 +69,10 @@ SELECT
 	COALESCE(cpc.copy_count, 0) AS copy_count,
 	COALESCE(clc.click_count, 0) AS click_count, 
     COALESCE(tc.tag_count, 0) AS tag_count,
-    COALESCE(l.img_url, '') AS img_url`
+    COALESCE(l.img_url, '') AS img_url,
+	(COUNT(*) OVER() + %d - 1) / %d AS page_count`, 
+LINKS_PAGE_LIMIT,
+LINKS_PAGE_LIMIT)
 
 const LINKS_FROM = `
 FROM

@@ -138,11 +138,11 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		if links == nil || len(*links) == 0 {
-			return model.PaginatedTmapSection[T]{
+			return model.TmapSectionPage[T]{
 				Links:          &[]T{},
 				Cats:           &[]model.CatCount{},
 				NSFWLinksCount: 0,
-				NextPage:       -1,
+				PageCount:       -1,
 			}, nil
 		}
 
@@ -155,21 +155,20 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		// Pagination
 		// TODO: move to separate util function
-		page, next_page := 1, -1
+		page := 1
 		if opts.Page < 0 {
 			return nil, e.ErrInvalidPageParams
 		} else if opts.Page > 0 {
 			page = opts.Page
 		}
 
-		total_pages := int(math.Ceil(float64(len(*links)) / float64(query.LINKS_PAGE_LIMIT)))
-		if page > total_pages {
+		page_count := int(math.Ceil(float64(len(*links)) / float64(query.LINKS_PAGE_LIMIT)))
+		if page > page_count {
 			links = &[]T{}
-		} else if page == total_pages {
+		} else if page == page_count {
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : ]
 		} else {
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : query.LINKS_PAGE_LIMIT*page]
-			next_page = page + 1
 		}
 
 		if err := db.Client.QueryRow(
@@ -179,10 +178,10 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return nil, err
 		}
 
-		return model.PaginatedTmapSection[T]{
+		return model.TmapSectionPage[T]{
 			Links:          links,
 			Cats:           cat_counts,
-			NextPage:       next_page,
+			PageCount:      page_count,
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 

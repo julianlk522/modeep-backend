@@ -45,9 +45,9 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 	cats_params := r.URL.Query().Get("cats")
 
 	if req_user_id != "" {
-		resp, err = util.PrepareLinksResponse[model.LinkSignedIn](links_sql, page, cats_params)
+		resp, err = util.PrepareLinksResponse[model.LinkSignedIn](links_sql, cats_params)
 	} else {
-		resp, err = util.PrepareLinksResponse[model.Link](links_sql, page, cats_params)
+		resp, err = util.PrepareLinksResponse[model.Link](links_sql, cats_params)
 	}
 	if err != nil {
 		render.Render(w, r, e.Err500(err))

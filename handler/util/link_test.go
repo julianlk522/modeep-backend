@@ -13,25 +13,21 @@ import (
 func TestPrepareLinksResponse(t *testing.T) {
 	var test_requests = []struct {
 		LinksSQL   *query.TopLinks
-		Page       int
 		CatsParams string
 		Valid      bool
 	}{
 		{
-			LinksSQL:   query.NewTopLinks(),
-			Page:       1,
+			LinksSQL:   query.NewTopLinks().Page(1),
 			CatsParams: "",
 			Valid:      true,
 		},
 		{
 			LinksSQL:   query.NewTopLinks().FromCats([]string{"umvc3", "flowers"}).Page(1),
-			Page:       1,
 			CatsParams: "umvc3,flowers",
 			Valid:      true,
 		},
 		{
-			LinksSQL:   query.NewTopLinks().DuringPeriod("batman"),
-			Page:       1,
+			LinksSQL:   query.NewTopLinks().DuringPeriod("batman").Page(1),
 			CatsParams: "",
 			Valid:      false,
 		},
@@ -41,14 +37,13 @@ func TestPrepareLinksResponse(t *testing.T) {
 					Text: "spiderman",
 				},
 			},
-			Page:       1,
 			CatsParams: "",
 			Valid:      false,
 		},
 	}
 
 	for _, tr := range test_requests {
-		_, err := PrepareLinksResponse[model.Link](tr.LinksSQL, tr.Page, tr.CatsParams)
+		_, err := PrepareLinksResponse[model.Link](tr.LinksSQL, tr.CatsParams)
 		if tr.Valid && err != nil {
 			t.Fatal(err)
 		} else if !tr.Valid && err == nil {
@@ -62,71 +57,49 @@ func TestScanLinks(t *testing.T) {
 	// NewTopLinks().Error tested in query/link_test.go
 
 	// signed out
-	links_signed_out, err := ScanLinks[model.Link](links_sql)
+	links_page, err := ScanLinks[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
-	} else if len(*links_signed_out) == 0 {
+	} else if len(*links_page.Links) == 0 {
 		t.Fatal("no links")
 	}
 
 	// signed in
 	links_sql = links_sql.AsSignedInUser(test_req_user_id)
-	links_signed_in, err := ScanLinks[model.LinkSignedIn](links_sql)
+	signed_in_links_page, err := ScanLinks[model.LinkSignedIn](links_sql)
 	if err != nil {
 		t.Fatal(err)
-	} else if len(*links_signed_in) == 0 {
+	} else if len(*signed_in_links_page.Links) == 0 {
 		t.Fatal("no links")
 	}
 }
 
 func TestPaginateLinks(t *testing.T) {
 
-	// no links
-	links_sql := query.NewTopLinks().FromCats([]string{"umvc3"}).DuringPeriod("day").Page(1)
-
-	links, err := ScanLinks[model.Link](links_sql)
-	if err != nil {
-		t.Fatal(err)
-	} else if len(*links) != 0 {
-		t.Fatal("expected no links")
-	}
-
-	pl := PaginateLinks(links, 0)
-	if pl.Links != nil {
-		t.Fatal("expected no links")
-	} else if pl.NextPage != -1 {
-		t.Fatal("expected no more pages")
-	}
-
 	// single page
-	links_sql = query.NewTopLinks().FromCats([]string{"umvc3", "flowers"}).Page(1)
-	links, err = ScanLinks[model.Link](links_sql)
+	links_sql := query.NewTopLinks().FromCats([]string{"umvc3", "flowers"}).Page(1)
+	links_page, err := ScanLinks[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pl = PaginateLinks(links, 1)
-	if len(*pl.Links) == 0 {
+	PaginateLinks(links_page.Links)
+	if len(*links_page.Links) == 0 {
 		t.Fatal("expected links")
-	} else if pl.NextPage != -1 {
-		t.Fatal("expected no more pages")
 	}
 
 	// multiple pages
 	links_sql = query.NewTopLinks().Page(1)
-
-	links, err = ScanLinks[model.Link](links_sql)
+	links_page, err = ScanLinks[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
-	} else if len(*links) == 0 {
+	} else if len(*links_page.Links) == 0 {
 		t.Fatal("expected links")
 	}
 
-	pl = PaginateLinks(links, 1)
-	if len(*pl.Links) == 0 {
+	PaginateLinks(links_page.Links)
+	if len(*links_page.Links) == 0 {
 		t.Fatal("expected links")
-	} else if pl.NextPage != 2 {
-		t.Fatalf("expected next page to be 2, got %d (%d links)", pl.NextPage, len(*pl.Links))
 	}
 }
 
@@ -134,57 +107,57 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 	// no links; no merged cats
 	test_cat := "nonexistentcat"
 	links_sql := query.NewTopLinks().FromCats([]string{test_cat}).DuringPeriod("day").Page(1)
-	links, err := ScanLinks[model.Link](links_sql)
+	links_page, err := ScanLinks[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pl := PaginateLinks(links, 1)
-	CountMergedCatSpellingVariants(pl, test_cat)
-	if len(pl.MergedCats) != 0 {
+	PaginateLinks(links_page.Links)
+	CountMergedCatSpellingVariants(links_page, test_cat)
+	if len(links_page.MergedCats) != 0 {
 		t.Fatal("expected no merged cats")
 	}
 
 	// 1 merged cat
 	test_cat = "flower" // should merge "flowers"
 	links_sql = query.NewTopLinks().FromCats([]string{test_cat})
-	links, err = ScanLinks[model.Link](links_sql)
+	links_page, err = ScanLinks[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pl = PaginateLinks(links, 1)
-	CountMergedCatSpellingVariants(pl, test_cat)
-	if len(pl.MergedCats) != 1 {
-		t.Fatalf("expected 1 merged cat, got %d (%v)", len(pl.MergedCats), pl.MergedCats)
+	PaginateLinks(links_page.Links)
+	CountMergedCatSpellingVariants(links_page, test_cat)
+	if len(links_page.MergedCats) != 1 {
+		t.Fatalf("expected 1 merged cat, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
 	}
 
 	// multiple merged cats
 	test_cats := []string{"flower", "tests"} // should merge "flowers" and "test"
 	links_sql = query.NewTopLinks().FromCats(test_cats)
-	links, err = ScanLinks[model.Link](links_sql)
+	links_page, err = ScanLinks[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pl = PaginateLinks(links, 1)
-	CountMergedCatSpellingVariants(pl, strings.Join(test_cats, ","))
-	if len(pl.MergedCats) != 2 {
-		t.Fatalf("expected 2 merged cats, got %d (%v)", len(pl.MergedCats), pl.MergedCats)
+	PaginateLinks(links_page.Links)
+	CountMergedCatSpellingVariants(links_page, strings.Join(test_cats, ","))
+	if len(links_page.MergedCats) != 2 {
+		t.Fatalf("expected 2 merged cats, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
 	}
 
 	// inconsistent capitalization: should still merge
 	test_cat = "FlOwEr" // should merge "flowers"
 	links_sql = query.NewTopLinks().FromCats([]string{test_cat})
-	links, err = ScanLinks[model.Link](links_sql)
+	links_page, err = ScanLinks[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pl = PaginateLinks(links, 1)
-	CountMergedCatSpellingVariants(pl, test_cat)
-	if len(pl.MergedCats) != 1 {
-		t.Fatalf("expected 1 merged cat, got %d (%v)", len(pl.MergedCats), pl.MergedCats)
+	PaginateLinks(links_page.Links)
+	CountMergedCatSpellingVariants(links_page, test_cat)
+	if len(links_page.MergedCats) != 1 {
+		t.Fatalf("expected 1 merged cat, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
 	}
 
 }

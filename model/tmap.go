@@ -70,11 +70,11 @@ type FilteredTmap[T TmapLink | TmapLinkSignedIn] struct {
 	NSFWLinksCount int
 }
 
-type PaginatedTmapSection[T TmapLink | TmapLinkSignedIn] struct {
+type TmapSectionPage[T TmapLink | TmapLinkSignedIn] struct {
 	Links          *[]T
 	Cats           *[]CatCount
 	NSFWLinksCount int
-	NextPage       int
+	PageCount       int
 }
 
 type TmapOptions struct {

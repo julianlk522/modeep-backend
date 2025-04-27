@@ -47,24 +47,25 @@ func UserHasSubmittedMaxDailyLinks(login_name string) (bool, error) {
 	return count >= MAX_DAILY_LINKS, nil
 }
 
-func PrepareLinksResponse[T model.HasCats](links_sql *query.TopLinks, page int, cats_params string) (*model.PaginatedLinks[T], error) {
+func PrepareLinksResponse[T model.HasCats](links_sql *query.TopLinks, cats_params string) (*model.LinksPage[T], error) {
+	links_page, err := ScanLinks[T](links_sql)
+	if err != nil {
+		return nil, err
+	}
+	
+	PaginateLinks(links_page.Links)
+	if cats_params != "" {
+		CountMergedCatSpellingVariants(links_page, cats_params)
+	}
+
+	return links_page, nil
+}
+
+func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*model.LinksPage[T], error) {
 	if links_sql.Error != nil {
 		return nil, links_sql.Error
 	}
 
-	links, err := ScanLinks[T](links_sql)
-	if err != nil {
-		return nil, err
-	}
-	pl := PaginateLinks(links, page)
-	if cats_params != "" {
-		CountMergedCatSpellingVariants(pl, cats_params)
-	}
-
-	return pl, nil
-}
-
-func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[]T, error) {
 	rows, err := db.Client.Query(links_sql.Text, links_sql.Args...)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -74,7 +75,10 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 	}
 	defer rows.Close()
 
-	var links interface{}
+	// NOTE: this both scans the links and creates the LinksPage struct
+	// because page_count must be taken here from the query result rows
+	var links any
+	var page_count int
 
 	switch any(new(T)).(type) {
 	case *model.Link:
@@ -95,6 +99,7 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
+				&page_count,
 			)
 			if err != nil {
 				return nil, err
@@ -122,6 +127,7 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
+				&page_count,
 				&l.IsLiked,
 				&l.IsCopied,
 			); err != nil {
@@ -134,40 +140,34 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*[
 		links = &signed_in_links
 	}
 
-	return links.(*[]T), nil
-}
-
-func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T, page int) *model.PaginatedLinks[T] {
-	if links == nil || len(*links) == 0 {
-		return &model.PaginatedLinks[T]{NextPage: -1}
+	if links == nil || len(*links.(*[]T)) == 0 {
+		return &model.LinksPage[T]{PageCount: -1}, nil
 	}
 
+	return &model.LinksPage[T]{
+		Links: links.(*[]T),
+		PageCount: page_count,
+	}, nil
+}
+
+func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
 	if len(*links) == query.LINKS_PAGE_LIMIT+1 {
-		sliced := (*links)[0:query.LINKS_PAGE_LIMIT]
-		return &model.PaginatedLinks[T]{
-			NextPage: page + 1,
-			Links:    &sliced,
-		}
-	} else {
-		return &model.PaginatedLinks[T]{
-			NextPage: -1,
-			Links:    links,
-		}
+		*links = (*links)[0:query.LINKS_PAGE_LIMIT]
 	}
 }
 
-func CountMergedCatSpellingVariants[T model.HasCats](pl *model.PaginatedLinks[T], cats_params string) {
-	if pl.Links == nil || len(*pl.Links) == 0 {
+func CountMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cats_params string) {
+	if lp.Links == nil || len(*lp.Links) == 0 {
 		return
 	}
 
-	cat_fiters := strings.Split(strings.ToLower(cats_params), ",")
+	cat_filters := strings.Split(strings.ToLower(cats_params), ",")
 
-	for _, link := range *pl.Links {
+	for _, link := range *lp.Links {
 		link_cats := strings.Split(strings.ToLower(link.GetCats()), ",")
 		has_cat_from_filters := false
 		for _, cat := range link_cats {
-			if slices.Contains(cat_fiters, cat) {
+			if slices.Contains(cat_filters, cat) {
 				has_cat_from_filters = true
 				break
 			}
@@ -177,9 +177,9 @@ func CountMergedCatSpellingVariants[T model.HasCats](pl *model.PaginatedLinks[T]
 			// find out which cat(s) spelling variants were added
 			// and add them to MergedCats so that frontend can alert user
 			for _, lc := range link_cats {
-				for _, cf := range cat_fiters {
-					if CatsAreSingularOrPluralVariationsOfEachOther(lc, cf) && !slices.Contains(pl.MergedCats, lc) {
-						pl.MergedCats = append(pl.MergedCats, lc)
+				for _, cf := range cat_filters {
+					if CatsAreSingularOrPluralVariationsOfEachOther(lc, cf) && !slices.Contains(lp.MergedCats, lc) {
+						lp.MergedCats = append(lp.MergedCats, lc)
 					}
 				}
 			}

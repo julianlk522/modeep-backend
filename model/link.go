@@ -46,10 +46,10 @@ func (lsi LinkSignedIn) GetCats() string {
 	return lsi.Cats
 }
 
-type PaginatedLinks[T Link | LinkSignedIn] struct {
+type LinksPage[T Link | LinkSignedIn] struct {
 	Links      *[]T
 	MergedCats []string
-	NextPage   int
+	PageCount   int
 }
 
 type Contributor struct {
