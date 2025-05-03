@@ -151,7 +151,9 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*m
 }
 
 func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
-	if len(*links) == query.LINKS_PAGE_LIMIT+1 {
+	if links == nil || len(*links) == 0 {
+		return
+	} else if len(*links) == query.LINKS_PAGE_LIMIT+1 {
 		*links = (*links)[0:query.LINKS_PAGE_LIMIT]
 	}
 }
