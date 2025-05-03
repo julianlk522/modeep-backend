@@ -318,13 +318,23 @@ const LINKS_AUTH_JOINS = `
 	LEFT JOIN IsCopied ic ON l.id = ic.link_id`
 
 func (tl *TopLinks) NSFW() *TopLinks {
-	tl.Text = strings.Replace(
-		tl.Text,
-		LINKS_NO_NSFW_CATS_WHERE+"\nAND",
-		"\nWHERE",
-		1,
-	)
-
+	has_subsequent_clause := strings.Contains(tl.Text, LINKS_NO_NSFW_CATS_WHERE+"\nAND")
+	if has_subsequent_clause {
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_NO_NSFW_CATS_WHERE+"\nAND",
+			"\nWHERE",
+			1,
+		)
+	} else {
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_NO_NSFW_CATS_WHERE,
+			"",
+			1,
+		)
+	}
+	
 	return tl
 }
 
