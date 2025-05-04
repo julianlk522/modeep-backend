@@ -48,11 +48,11 @@ func LoadSpellfix() {
 
 	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
 	if test_data_path == "" {
-		log.Print("FITM_TEST_DATA_PATH not set, attempting find spellfix at default path")
+		log.Print("$FITM_TEST_DATA_PATH not set, attempting find spellfix at default path")
 		spellfix_path = filepath.Join(db_dir, "spellfix")
 
 	} else {
-		log.Print("attempting to find spellfix at FITM_TEST_DATA_PATH")
+		log.Print("attempting to find spellfix at $FITM_TEST_DATA_PATH")
 		spellfix_path = filepath.Join(test_data_path, "spellfix")
 	}
 	sql.Register(

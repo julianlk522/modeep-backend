@@ -64,7 +64,7 @@ func TestHasAcceptableAspectRatio(t *testing.T) {
 
 	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
 	if test_data_path == "" {
-		t.Fatal("FITM_TEST_DATA_PATH not set")
+		t.Fatal("$FITM_TEST_DATA_PATH not set")
 	}
 	pic_dir := test_data_path + "/img/profile"
 
