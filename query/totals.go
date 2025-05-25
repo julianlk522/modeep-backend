@@ -1,5 +1,7 @@
 package query
 
+import "github.com/julianlk522/fitm/db"
+
 func NewTotals() *Query {
 	return &Query{
 		Text: `WITH LinksTotal AS (
@@ -26,6 +28,7 @@ func NewTotals() *Query {
 		SummariesTotal AS (
 			SELECT COUNT(*) AS summary_count
 			FROM Summaries
+			WHERE submitted_by != ?
 		)
 		SELECT *
 		FROM LinksTotal
@@ -34,5 +37,6 @@ func NewTotals() *Query {
 		CROSS JOIN LikesTotal
 		CROSS JOIN TagsTotal
 		CROSS JOIN SummariesTotal;`,
+		Args: []any{db.AUTO_SUMMARY_USER_ID},
 	}
 }

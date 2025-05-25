@@ -15,7 +15,10 @@ func GetTotals(w http.ResponseWriter, r *http.Request) {
 	var totals model.Totals
 
 	if err := db.Client.
-		QueryRow(totals_sql.Text).
+		QueryRow(
+			totals_sql.Text, 
+			totals_sql.Args...,
+		).
 		Scan(&totals.Links,
 			&totals.Clicks,
 			&totals.Contributors,
