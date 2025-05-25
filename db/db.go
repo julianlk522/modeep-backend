@@ -52,7 +52,7 @@ func LoadSpellfix() {
 		spellfix_path = filepath.Join(db_dir, "spellfix")
 
 	} else {
-		log.Print("attempting to find spellfix at $FITM_TEST_DATA_PATH")
+		log.Print("Attempting to find spellfix at $FITM_TEST_DATA_PATH")
 		spellfix_path = filepath.Join(test_data_path, "spellfix")
 	}
 	sql.Register(

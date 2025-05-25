@@ -18,8 +18,9 @@ var (
 	ErrNoProfilePic                 error = errors.New("no profile pic found for user")
 
 	// Links
-	ErrNoTmapOwnerLoginName error = errors.New("no login name provided for treasure map owner")
+	ErrNoTmapOwnerLoginName error = errors.New("no login name provided for Treasure Map owner")
 	ErrInvalidSectionParams error = errors.New("invalid section params provided")
+	ErrInvalidOnlySectionParams error = errors.New("invalid params provided for single Treasure Map section")
 )
 
 func ProfileAboutLengthExceedsLimit(limit int) error {

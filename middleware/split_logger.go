@@ -48,10 +48,10 @@ func NewSplitLogFormatter(logger middleware.LoggerInterface) (*SplitLogFormatter
 	}
 	log_file, err := os.OpenFile(err_log_file_path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Printf("could not open err log file: %s", err)
+		log.Printf("Could not open err log file: %s", err)
 		return nil, err
 	}
-	log.Printf("logging errs to %s", os.Getenv("FITM_ERR_LOG_FILE"))
+	log.Printf("Logging errs to %s", os.Getenv("FITM_ERR_LOG_FILE"))
 
 	return &SplitLogFormatter{
 		DefaultLogFormatter: middleware.DefaultLogFormatter{
