@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/julianlk522/fitm/model"
+	mutil "github.com/julianlk522/fitm/model/util"
 )
 
 type TmapProfile struct {
@@ -188,7 +189,13 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 				SUBMITTED_WHERE +
 				TMAP_DEFAULT_ORDER_BY,
 			// login_name used in PossibleUserCats, PossibleUserSummary, where
-			Args: []any{login_name, login_name, login_name},
+			Args: []any{
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				login_name, 
+				login_name, 
+				login_name,
+			},
 		},
 	}
 
@@ -211,9 +218,18 @@ func (ts *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
 	)
 	ts.Text = fields_replacer.Replace(ts.Text)
 
-	// Prepend req_user_id arg * 2
-	ts.Args = append([]any{req_user_id, req_user_id}, ts.Args...)
+	new_args := make([]any, 0, len(ts.Args)+2)
 
+	first_2_args := make([]any, 2)
+	copy(first_2_args, ts.Args[:2])
+
+	trailing_args := ts.Args[2:]
+
+	new_args = append(new_args, first_2_args...)
+	new_args = append(new_args, req_user_id, req_user_id)
+	new_args = append(new_args, trailing_args...)
+
+	ts.Args = new_args
 	return ts
 }
 
@@ -282,9 +298,14 @@ func NewTmapCopied(login_name string) *TmapCopied {
 				TMAP_NO_NSFW_CATS_WHERE +
 				COPIED_WHERE +
 				TMAP_DEFAULT_ORDER_BY,
-			// login_name used in UserCopies, PossibleUserCats,
-			// PossibleUserSummary, where
-			Args: []any{login_name, login_name, login_name, login_name},
+			Args: []any{
+				login_name, 
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				login_name,
+				login_name, 
+				login_name,
+			},
 		},
 	}
 
@@ -310,11 +331,18 @@ func (tc *TmapCopied) AsSignedInUser(req_user_id string) *TmapCopied {
 	)
 	tc.Text = fields_replacer.Replace(tc.Text)
 
-	// Insert req_user_id * 2 between args 0 and 1
 	new_args := make([]any, 0, len(tc.Args)+2)
-	new_args = append(new_args, tc.Args[0])
+	
+	// login_name, earliest likers/copiers limit * 2
+	first_3_args := make([]any, 3)
+	copy(first_3_args, tc.Args[:3])
+
+	trailing_args := tc.Args[3:]
+
+	new_args = append(new_args, first_3_args...)
 	new_args = append(new_args, req_user_id, req_user_id)
-	new_args = append(new_args, tc.Args[1:]...)
+	new_args = append(new_args, trailing_args...)
+
 	tc.Args = new_args
 
 	return tc
@@ -385,7 +413,14 @@ func NewTmapTagged(login_name string) *TmapTagged {
 				TAGGED_WHERE +
 				TMAP_DEFAULT_ORDER_BY,
 			// login_name used in UserCats, PossibleUserSummary, UserCopies, where
-			Args: []any{login_name, login_name, login_name, login_name},
+			Args: []any{
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				login_name, 
+				login_name, 
+				login_name, 
+				login_name,
+			},
 		},
 	}
 
@@ -456,8 +491,13 @@ func (tt *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
 	)
 	tt.Text = fields_replacer.Replace(tt.Text)
 
-	// Prepend req_user_id arg * 2
-	tt.Args = append([]any{req_user_id, req_user_id}, tt.Args...)
+	first_2_args := make([]any, 2)
+	copy(first_2_args, tt.Args[:2])
+
+	trailing_args := tt.Args[2:]
+
+	tt.Args = append(first_2_args, req_user_id, req_user_id)
+	tt.Args = append(tt.Args, trailing_args...)
 
 	return tt
 }
@@ -540,23 +580,39 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 
 	// Rebuild args with match_arg * 2 (once for PossibleUserCats CTE, once
 	// for GlobalCatsFTS CTE)
-	// order for TmapSubmitted: login_name, MATCH, login_name, MATCH, login_name
-	// order for TmapCopied: login_name, login_name, MATCH, login_name,
-	// MATCH, login_name
+
+	// TmapSubmitted args order: likers/copiers limit, likers/copiers limit, login_name, MATCH, login_name, MATCH, login_name
+	// TmapCopied args order: login_name, likers/copiers limit, likers/copiers limit,  login_name, MATCH, login_name, MATCH, login_name
 
 	// (Only TmapCopied and TmapTagged contain USER_COPIES_CTE, and TmapTagged
 	// does not call this method, so can check for presence of USER_COPIES_CTE
 	// to determine whether TmapSubmitted or TmapCopied)
 
-	// First arg is login_name
-	login_name := q.Args[0].(string)
+	// 4th arg is login_name regardless
+	login_name := q.Args[3].(string)
 
 	// TmapCopied
 	if strings.Contains(q.Text, USER_COPIES_CTE) {
-		q.Args = []any{login_name, login_name, match_arg, login_name, match_arg, login_name}
+		q.Args = []any{
+			login_name, 
+			mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+			mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+			login_name, 
+			match_arg, 
+			login_name, match_arg, 
+			login_name,
+		}
 		// TmapSubmitted
 	} else {
-		q.Args = []any{login_name, match_arg, login_name, match_arg, login_name}
+		q.Args = []any{
+			mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+			mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+			login_name, 
+			match_arg, 
+			login_name, 
+			match_arg, 
+			login_name,
+		}
 	}
 
 	// Insert GLOBAL_CATS_JOIN
@@ -613,10 +669,42 @@ LikeCount AS (
     FROM "Link Likes"
     GROUP BY link_id
 ),
+EarliestLikers AS (
+    SELECT 
+        link_id,
+        GROUP_CONCAT(login_name, ', ') AS earliest_likers
+    FROM (
+        SELECT 
+            ll.link_id,
+            u.login_name,
+            ROW_NUMBER() OVER (PARTITION BY ll.link_id ORDER BY ll.timestamp ASC) as row_num
+        FROM "Link Likes" ll
+        JOIN Users u ON ll.user_id = u.id
+		ORDER BY ll.timestamp ASC, u.login_name ASC
+    ) ranked
+    WHERE row_num <= ?
+    GROUP BY link_id
+),
 CopyCount AS (
 	SELECT link_id, COUNT(*) AS copy_count
 	FROM "Link Copies"
 	GROUP BY link_id
+),
+EarliestCopiers AS (
+    SELECT 
+        link_id,
+        GROUP_CONCAT(login_name, ', ') AS earliest_copiers
+    FROM (
+        SELECT 
+            lc.link_id,
+            u.login_name,
+            ROW_NUMBER() OVER (PARTITION BY lc.link_id ORDER BY lc.timestamp ASC) as row_num
+        FROM "Link Copies" lc
+        JOIN Users u ON lc.user_id = u.id
+		ORDER BY lc.timestamp ASC, u.login_name ASC
+    ) ranked
+    WHERE row_num <= ?
+    GROUP BY link_id
 ),
 ClickCount AS (
 	SELECT link_id, count(*) AS click_count
@@ -667,7 +755,9 @@ SELECT
     COALESCE(pus.user_summary, l.global_summary, '') AS summary,
     COALESCE(sc.summary_count, 0) AS summary_count,
     COALESCE(lc.like_count, 0) AS like_count,
+	COALESCE(el.earliest_likers, '') AS earliest_likers,
 	COALESCE(cpc.copy_count, 0) AS copy_count,
+	COALESCE(ec.earliest_copiers, '') AS earliest_copiers,
 	COALESCE(clc.click_count, 0) AS click_count,
     COALESCE(tc.tag_count, 0) AS tag_count,
     COALESCE(l.img_file, '') AS img_file`
@@ -678,7 +768,9 @@ const TMAP_BASE_JOINS = `
 LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id
 LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
 LEFT JOIN LikeCount lc ON l.id = lc.link_id
+LEFT JOIN EarliestLikers el ON l.id = el.link_id
 LEFT JOIN CopyCount cpc ON l.id = cpc.link_id
+LEFT JOIN EarliestCopiers ec ON l.id = ec.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
 LEFT JOIN SummaryCount sc ON l.id = sc.link_id`

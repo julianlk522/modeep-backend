@@ -13,6 +13,9 @@ const URL_CHAR_LIMIT = 200
 // Summary
 const SUMMARY_CHAR_LIMIT = 400
 
+// Links + Summaries
+const EARLIEST_LIKERS_AND_COPIERS_LIMIT = 10
+
 // Tag
 const NUM_CATS_LIMIT = 15
 const CAT_CHAR_LIMIT = 30

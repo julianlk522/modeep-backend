@@ -16,6 +16,7 @@ import (
 	util "github.com/julianlk522/fitm/handler/util"
 	m "github.com/julianlk522/fitm/middleware"
 	"github.com/julianlk522/fitm/model"
+	mutil "github.com/julianlk522/fitm/model/util"
 	"github.com/julianlk522/fitm/query"
 )
 
@@ -324,10 +325,12 @@ func LikeLink(w http.ResponseWriter, r *http.Request) {
 
 	new_like_id := uuid.New().String()
 	_, err := db.Client.Exec(
-		`INSERT INTO "Link Likes" VALUES(?,?,?);`,
+		`INSERT INTO "Link Likes" VALUES(?,?,?,?);`,
 		new_like_id,
 		link_id,
 		req_user_id,
+		mutil.NEW_LONG_TIMESTAMP(),
+		
 	)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
@@ -385,10 +388,11 @@ func CopyLink(w http.ResponseWriter, r *http.Request) {
 	new_copy_id := uuid.New().String()
 
 	_, err := db.Client.Exec(
-		`INSERT INTO "Link Copies" VALUES(?,?,?);`,
+		`INSERT INTO "Link Copies" VALUES(?,?,?,?);`,
 		new_copy_id,
 		link_id,
 		req_user_id,
+		mutil.NEW_LONG_TIMESTAMP(),
 	)
 	if err != nil {
 		log.Fatal(err)

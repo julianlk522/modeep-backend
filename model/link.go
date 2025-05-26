@@ -26,7 +26,9 @@ type Link struct {
 	Summary            string
 	SummaryCount       int
 	LikeCount          int64
+	EarliestLikers     string
 	CopyCount          int
+	EarliestCopiers    string
 	ClickCount         int64
 	TagCount           int
 	PreviewImgFilename string

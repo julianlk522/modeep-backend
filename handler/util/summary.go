@@ -68,6 +68,7 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (any, error) {
 				&s.SubmittedBy,
 				&s.LastUpdated,
 				&s.LikeCount,
+				&s.EarliestLikers,
 				&s.IsLiked,
 			)
 			if err != nil {
@@ -119,6 +120,7 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (any, error) {
 				&s.SubmittedBy,
 				&s.LastUpdated,
 				&s.LikeCount,
+				&s.EarliestLikers,
 			)
 			if err != nil {
 				return nil, err

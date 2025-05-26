@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	e "github.com/julianlk522/fitm/error"
+	mutil "github.com/julianlk522/fitm/model/util"
 )
 
 const LINKS_PAGE_LIMIT = 20
@@ -24,7 +25,11 @@ func NewTopLinks() *TopLinks {
 				LINKS_NO_NSFW_CATS_WHERE +
 				LINKS_ORDER_BY +
 				LINKS_LIMIT,
-			Args: []any{LINKS_PAGE_LIMIT},
+			Args: []any{
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+				LINKS_PAGE_LIMIT,
+			},
 		},
 	})
 }
@@ -34,10 +39,42 @@ const LINKS_BASE_CTES = `WITH LikeCount AS (
     FROM "Link Likes"
     GROUP BY link_id
 ),
+EarliestLikers AS (
+    SELECT 
+        link_id,
+        GROUP_CONCAT(login_name, ', ') AS earliest_likers
+    FROM (
+        SELECT 
+            ll.link_id,
+            u.login_name,
+            ROW_NUMBER() OVER (PARTITION BY ll.link_id ORDER BY ll.timestamp ASC) as row_num
+        FROM "Link Likes" ll
+        JOIN Users u ON ll.user_id = u.id
+		ORDER BY ll.timestamp ASC, u.login_name ASC
+    ) ranked
+    WHERE row_num <= ?
+    GROUP BY link_id
+),
 CopyCount AS (
 	SELECT link_id, COUNT(*) AS copy_count
 	FROM "Link Copies"
 	GROUP BY link_id
+),
+EarliestCopiers AS (
+    SELECT 
+        link_id,
+        GROUP_CONCAT(login_name, ', ') AS earliest_copiers
+    FROM (
+        SELECT 
+            lc.link_id,
+            u.login_name,
+            ROW_NUMBER() OVER (PARTITION BY lc.link_id ORDER BY lc.timestamp ASC) as row_num
+        FROM "Link Copies" lc
+        JOIN Users u ON lc.user_id = u.id
+		ORDER BY lc.timestamp ASC, u.login_name ASC
+    ) ranked
+    WHERE row_num <= ?
+    GROUP BY link_id
 ),
 ClickCount AS (
 	SELECT link_id, count(*) AS click_count
@@ -53,8 +90,7 @@ SummaryCount AS (
     SELECT link_id, COUNT(*) AS summary_count
     FROM Summaries
     GROUP BY link_id
-)
-`
+)`
 
 var LINKS_BASE_FIELDS = fmt.Sprintf(` 
 SELECT 
@@ -66,7 +102,9 @@ SELECT
     COALESCE(l.global_summary, '') AS summary, 
     COALESCE(sc.summary_count, 0) AS summary_count,
     COALESCE(lc.like_count, 0) AS like_count,
+	COALESCE(el.earliest_likers, '') AS earliest_likers,
 	COALESCE(cpc.copy_count, 0) AS copy_count,
+	COALESCE(ec.earliest_copiers, '') AS earliest_copiers,
 	COALESCE(clc.click_count, 0) AS click_count, 
     COALESCE(tc.tag_count, 0) AS tag_count,
     COALESCE(l.img_file, '') AS img_file,
@@ -80,7 +118,9 @@ FROM
 
 const LINKS_BASE_JOINS = `
 LEFT JOIN LikeCount lc ON l.id = lc.link_id
+LEFT JOIN EarliestLikers el ON l.id = el.link_id
 LEFT JOIN CopyCount cpc ON l.id = cpc.link_id
+LEFT JOIN EarliestCopiers ec ON l.id = ec.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
 LEFT JOIN SummaryCount sc ON l.id = sc.link_id
@@ -289,8 +329,16 @@ func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
 	)
 	tl.Text = auth_replacer.Replace(tl.Text)
 
-	// Prepend args
-	tl.Args = append([]any{req_user_id, req_user_id}, tl.Args...)
+	// insert req_user_id * 2 between 2nd and 3rd args (indexes 1 and 2)
+	first_2_args := tl.Args[:2]
+	trailing_args := tl.Args[2:]
+
+	new_args := make([]any, 0, len(tl.Args)+2)
+	new_args = append(new_args, first_2_args...)
+	new_args = append(new_args, req_user_id, req_user_id)
+	new_args = append(new_args, trailing_args...)
+
+	tl.Args = new_args
 
 	return tl
 }

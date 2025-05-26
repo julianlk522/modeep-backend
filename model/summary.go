@@ -11,11 +11,12 @@ import (
 )
 
 type Summary struct {
-	ID          string
-	Text        string
-	SubmittedBy string
-	LastUpdated string
-	LikeCount   int
+	ID             string
+	Text           string
+	SubmittedBy    string
+	LastUpdated    string
+	LikeCount      int
+	EarliestLikers string
 }
 
 type SummarySignedIn struct {

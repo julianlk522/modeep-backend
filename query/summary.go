@@ -2,6 +2,8 @@ package query
 
 import (
 	"strings"
+
+	mutil "github.com/julianlk522/fitm/model/util"
 )
 
 const SUMMARIES_PAGE_LIMIT = 20
@@ -111,9 +113,13 @@ func NewSummariesForLink(link_id string) *Summaries {
 		Query: &Query{
 			Text: SUMMARIES_BASE_FIELDS +
 				SUMMARIES_FROM +
-				SUMMARIES_JOIN +
+				SUMMARIES_JOINS +
 				SUMMARIES_GROUP_BY_AND_LIMIT,
-			Args: []any{link_id, SUMMARIES_PAGE_LIMIT},
+			Args: []any{
+				link_id,
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				SUMMARIES_PAGE_LIMIT,
+			},
 		},
 	})
 }
@@ -123,7 +129,8 @@ const SUMMARIES_BASE_FIELDS = `SELECT
 	text, 
 	ln, 
 	last_updated, 
-	COALESCE(count(sl.id),0) as like_count`
+	COALESCE(count(sl.id),0) as like_count,
+	COALESCE(earliest_likers, "") as earliest_likers`
 
 const SUMMARIES_FROM = ` 
 FROM 
@@ -139,7 +146,24 @@ FROM
 	ON Users.id = sb
 	)`
 
-const SUMMARIES_JOIN = `
+const SUMMARIES_JOINS = `
+LEFT JOIN (
+	SELECT 
+		summary_id,
+		GROUP_CONCAT(login_name, ', ') AS earliest_likers
+	FROM (
+		SELECT 
+			sl.summary_id,
+			u.login_name,
+			ROW_NUMBER() OVER (PARTITION BY sl.summary_id ORDER BY sl.timestamp ASC) as row_num
+		FROM "Summary Likes" sl
+		JOIN Users u ON sl.user_id = u.id
+		ORDER BY sl.timestamp ASC, u.login_name ASC
+	)
+	WHERE row_num <= ?
+	GROUP BY summary_id
+) EarliestLikers
+ON EarliestLikers.summary_id = sumid
 LEFT JOIN "Summary Likes" as sl 
 ON sl.summary_id = sumid`
 
