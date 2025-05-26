@@ -35,7 +35,7 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 	util.CalculateAndSetGlobalCats(link_id)
 
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
-	link_sql := query.NewTagPageLink(link_id)
+	link_sql := query.NewSingleLink(link_id)
 	if req_user_id != "" {
 		link_sql = link_sql.AsSignedInUser(req_user_id)
 	}
@@ -64,7 +64,7 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req_user_id != "" {
-		link, err := util.ScanTagPageLink[model.LinkSignedIn](link_sql)
+		link, err := util.ScanSingleLink[model.LinkSignedIn](link_sql)
 		if err != nil {
 			render.Render(w, r, e.ErrInvalidRequest(err))
 			return
@@ -77,7 +77,7 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 		})
 
 	} else {
-		link, err := util.ScanTagPageLink[model.Link](link_sql)
+		link, err := util.ScanSingleLink[model.Link](link_sql)
 		if err != nil {
 			render.Render(w, r, e.ErrInvalidRequest(err))
 			return

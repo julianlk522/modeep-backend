@@ -154,6 +154,65 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*m
 	}, nil
 }
 
+func ScanSingleLink[T model.Link | model.LinkSignedIn](link_sql *query.SingleLink) (*T, error) {
+	var link any
+
+	switch any(new(T)).(type) {
+	case *model.LinkSignedIn:
+		var l = &model.LinkSignedIn{}
+		if err := db.Client.
+			QueryRow(link_sql.Text, link_sql.Args...).
+			Scan(
+				&l.ID,
+				&l.URL,
+				&l.SubmittedBy,
+				&l.SubmitDate,
+				&l.Cats,
+				&l.Summary,
+				&l.SummaryCount,
+				&l.LikeCount,
+				&l.EarliestLikers,
+				&l.CopyCount,
+				&l.EarliestCopiers,
+				&l.ClickCount,
+				&l.TagCount,
+				&l.PreviewImgFilename,
+				&l.IsLiked,
+				&l.IsCopied,
+			); err != nil {
+			return nil, err
+		}
+
+		link = l
+	case *model.Link:
+		var l = &model.Link{}
+		if err := db.Client.
+			QueryRow(link_sql.Text, link_sql.Args...).
+			Scan(
+				&l.ID,
+				&l.URL,
+				&l.SubmittedBy,
+				&l.SubmitDate,
+				&l.Cats,
+				&l.Summary,
+				&l.SummaryCount,
+				&l.LikeCount,
+				&l.EarliestLikers,
+				&l.CopyCount,
+				&l.EarliestCopiers,
+				&l.ClickCount,
+				&l.TagCount,
+				&l.PreviewImgFilename,
+			); err != nil {
+			return nil, err
+		}
+
+		link = l
+	}
+
+	return link.(*T), nil
+}
+
 func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
 	if links == nil || len(*links) == 0 {
 		return

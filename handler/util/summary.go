@@ -14,7 +14,7 @@ import (
 )
 
 func BuildSummaryPageForLink(link_id string, r *http.Request) (any, error) {
-	get_link_sql := query.NewSummaryPageLink(link_id)
+	get_link_sql := query.NewSingleLink(link_id)
 	get_summaries_sql := query.NewSummariesForLink(link_id)
 
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
@@ -30,21 +30,7 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (any, error) {
 	}
 
 	if req_user_id != "" {
-		var l model.LinkSignedIn
-
-		err := db.Client.QueryRow(get_link_sql.Text, get_link_sql.Args...).Scan(
-			&l.ID,
-			&l.URL,
-			&l.SubmittedBy,
-			&l.SubmitDate,
-			&l.Cats,
-			&l.Summary,
-			&l.LikeCount,
-			&l.TagCount,
-			&l.PreviewImgFilename,
-			&l.IsLiked,
-			&l.IsCopied,
-		)
+		l, err := ScanSingleLink[model.LinkSignedIn](get_link_sql)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, e.ErrNoLinkWithID
@@ -80,23 +66,12 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (any, error) {
 		l.SummaryCount = len(summaries)
 
 		return model.SummaryPage[model.SummarySignedIn, model.LinkSignedIn]{
-			Link:      l,
+			Link:      *l,
 			Summaries: summaries,
 		}, nil
 
 	} else {
-		var l model.Link
-		err := db.Client.QueryRow(get_link_sql.Text, get_link_sql.Args...).Scan(
-			&l.ID,
-			&l.URL,
-			&l.SubmittedBy,
-			&l.SubmitDate,
-			&l.Cats,
-			&l.Summary,
-			&l.LikeCount,
-			&l.TagCount,
-			&l.PreviewImgFilename,
-		)
+		l, err := ScanSingleLink[model.Link](get_link_sql)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, e.ErrNoLinkWithID
@@ -131,7 +106,7 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (any, error) {
 		l.SummaryCount = len(summaries)
 
 		return model.SummaryPage[model.Summary, model.Link]{
-			Link:      l,
+			Link:      *l,
 			Summaries: summaries,
 		}, nil
 	}

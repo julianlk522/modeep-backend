@@ -411,3 +411,186 @@ func (tl *TopLinks) Page(page int) *TopLinks {
 
 	return tl
 }
+
+type SingleLink struct {
+	Query
+}
+
+func NewSingleLink(link_id string) *SingleLink {
+	return &SingleLink{
+		Query{
+			Text: SINGLE_LINK_BASE_CTES +
+				SINGLE_LINK_BASE_FIELDS +
+				SINGLE_LINK_FROM +
+				SINGLE_LINK_BASE_JOINS + ";",
+			Args: []any{
+				link_id,
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+			},
+		},
+	}
+}
+
+const SINGLE_LINK_BASE_CTES = `WITH 
+Base AS (
+    SELECT
+        id as link_id,
+        url,
+        submitted_by as sb,
+        submit_date as sd,
+        COALESCE(global_cats, "") as cats,
+        COALESCE(global_summary, "") as summary,
+        COALESCE(img_file, "") as img_file
+    FROM Links
+    WHERE id = ?
+),
+SummaryCount AS (
+    SELECT 
+        link_id, 
+        COUNT(*) AS summary_count
+    FROM Summaries
+    GROUP BY link_id
+),
+LikeCount AS (
+    SELECT 
+        link_id, 
+        COUNT(*) as like_count
+    FROM "Link Likes"
+    GROUP BY link_id
+),
+EarliestLikers AS (
+    SELECT 
+        link_id,
+        GROUP_CONCAT(login_name, ', ') AS earliest_likers
+    FROM (
+        SELECT 
+            ll.link_id,
+            u.login_name,
+            ROW_NUMBER() OVER (PARTITION BY ll.link_id ORDER BY ll.timestamp ASC, u.login_name ASC) as row_num
+        FROM "Link Likes" ll
+        JOIN Users u ON ll.user_id = u.id
+		ORDER BY ll.timestamp ASC, u.login_name ASC
+    ) ranked
+    WHERE row_num <= ?
+    GROUP BY link_id
+),
+CopyCount AS (
+    SELECT 
+        link_id, 
+        COUNT(*) as copy_count
+    FROM "Link Copies"
+    GROUP BY link_id
+),
+EarliestCopiers AS (
+    SELECT 
+        link_id,
+        GROUP_CONCAT(login_name, ', ') AS earliest_copiers
+    FROM (
+        SELECT 
+            lc.link_id,
+            u.login_name,
+            ROW_NUMBER() OVER (PARTITION BY lc.link_id ORDER BY lc.timestamp ASC, u.login_name ASC) as row_num
+        FROM "Link Copies" lc
+        JOIN Users u ON lc.user_id = u.id
+		ORDER BY lc.timestamp ASC, u.login_name ASC
+    ) ranked
+    WHERE row_num <= ?
+    GROUP BY link_id
+),
+ClickCount AS (
+    SELECT 
+        link_id, 
+        COUNT(*) AS click_count
+    FROM Clicks
+    GROUP BY link_id
+),
+TagCount AS (
+    SELECT 
+        link_id, 
+        COUNT(*) as tag_count
+    FROM Tags
+    GROUP BY link_id
+)`
+
+const SINGLE_LINK_BASE_FIELDS = `
+SELECT
+    b.link_id,
+    b.url,
+    b.sb,
+    b.sd,
+    b.cats,
+    b.summary,
+    COALESCE(sc.summary_count, 0) as summary_count,
+    COALESCE(lc.like_count, 0) as like_count,
+    el.earliest_likers,
+    COALESCE(cc.copy_count, 0) as copy_count,
+    ec.earliest_copiers,
+    COALESCE(ckc.click_count, 0) as click_count,
+    COALESCE(tc.tag_count, 0) as tag_count,
+    b.img_file`
+
+const SINGLE_LINK_FROM = `
+FROM Base b`
+
+const SINGLE_LINK_BASE_JOINS = `
+LEFT JOIN SummaryCount sc ON sc.link_id = b.link_id
+LEFT JOIN LikeCount lc ON lc.link_id = b.link_id
+LEFT JOIN EarliestLikers el ON el.link_id = b.link_id
+LEFT JOIN CopyCount cc ON cc.link_id = b.link_id
+LEFT JOIN EarliestCopiers ec ON ec.link_id = b.link_id
+LEFT JOIN ClickCount ckc ON ckc.link_id = b.link_id
+LEFT JOIN TagCount tc ON tc.link_id = b.link_id`
+
+func (sl *SingleLink) AsSignedInUser(user_id string) *SingleLink {
+	sl.Text = strings.Replace(
+		sl.Text,
+		SINGLE_LINK_BASE_CTES,
+		SINGLE_LINK_BASE_CTES + SINGLE_LINK_AUTH_CTES,
+		1,
+	)
+
+	sl.Text = strings.Replace(
+		sl.Text,
+		SINGLE_LINK_BASE_FIELDS,
+		SINGLE_LINK_BASE_FIELDS + SINGLE_LINK_AUTH_FIELDS,
+		1,
+	)
+
+	sl.Text = strings.Replace(
+		sl.Text,
+		SINGLE_LINK_BASE_JOINS,
+		SINGLE_LINK_BASE_JOINS + SINGLE_LINK_AUTH_JOINS,
+		1,
+	)
+
+	sl.Args = append(sl.Args, user_id, user_id)
+
+	return sl
+}
+
+const SINGLE_LINK_AUTH_CTES = `,
+IsLiked AS (
+    SELECT 
+        link_id,
+        COUNT(*) as is_liked
+    FROM "Link Likes"
+    WHERE user_id = ?
+    GROUP BY link_id
+),
+IsCopied AS (
+    SELECT 
+        link_id,
+        COUNT(*) as is_copied
+    FROM "Link Copies"
+    WHERE user_id = ?
+    GROUP BY link_id
+)`
+
+const SINGLE_LINK_AUTH_FIELDS = `,
+COALESCE(il.is_liked, 0) as is_liked,
+COALESCE(ic.is_copied, 0) as is_copied`
+
+const SINGLE_LINK_AUTH_JOINS = `
+LEFT JOIN IsLiked il ON il.link_id = b.link_id
+LEFT JOIN IsCopied ic ON ic.link_id = b.link_id`

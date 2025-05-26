@@ -12,56 +12,6 @@ import (
 	modelutil "github.com/julianlk522/fitm/model/util"
 )
 
-// GetTagPage
-func ScanTagPageLink[T model.Link | model.LinkSignedIn](link_sql *query.TagPageLink) (*T, error) {
-	var link any
-
-	switch any(new(T)).(type) {
-	case *model.Link:
-		var l = &model.Link{}
-		if err := db.Client.
-			QueryRow(link_sql.Text, link_sql.Args...).
-			Scan(
-				&l.ID,
-				&l.URL,
-				&l.SubmittedBy,
-				&l.SubmitDate,
-				&l.Cats,
-				&l.Summary,
-				&l.SummaryCount,
-				&l.LikeCount,
-				&l.PreviewImgFilename,
-			); err != nil {
-			return nil, err
-		}
-
-		link = l
-	case *model.LinkSignedIn:
-		var l = &model.LinkSignedIn{}
-		if err := db.Client.
-			QueryRow(link_sql.Text, link_sql.Args...).
-			Scan(
-				&l.ID,
-				&l.URL,
-				&l.SubmittedBy,
-				&l.SubmitDate,
-				&l.Cats,
-				&l.Summary,
-				&l.SummaryCount,
-				&l.LikeCount,
-				&l.PreviewImgFilename,
-				&l.IsLiked,
-				&l.IsCopied,
-			); err != nil {
-			return nil, err
-		}
-
-		link = l
-	}
-
-	return link.(*T), nil
-}
-
 func GetUserTagForLink(login_name string, link_id string) (*model.Tag, error) {
 	var id, cats, last_updated sql.NullString
 

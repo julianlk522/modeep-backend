@@ -5,56 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/julianlk522/fitm/model"
 	modelutil "github.com/julianlk522/fitm/model/util"
 	"github.com/julianlk522/fitm/query"
 )
-
-func TestScanTagPageLink(t *testing.T) {
-	link_sql := query.NewTagPageLink(test_link_id)
-	// NewTagPageLink().Error already tested in query/tag_test.go
-
-	// signed out
-	link, err := ScanTagPageLink[model.Link](link_sql)
-	if err != nil {
-		t.Fatal(err)
-	} else if link == nil {
-		t.Fatal("no link (signed out)")
-	}
-
-	// signed in
-	link_sql = link_sql.AsSignedInUser(test_req_user_id)
-	link_signed_in, err := ScanTagPageLink[model.LinkSignedIn](link_sql)
-	if err != nil {
-		t.Fatal(err)
-	} else if link_signed_in == nil {
-		t.Fatal("no link (signed in)")
-	}
-
-	// Verify link ID
-	if link_signed_in.ID != test_link_id {
-		t.Fatalf(
-			"got link ID %s, want %s",
-			link_signed_in.ID,
-			test_link_id,
-		)
-	}
-
-	// Verify isLiked / isCopied
-	liked := UserHasLikedLink(test_req_user_id, test_link_id)
-	if liked && !link_signed_in.IsLiked {
-		t.Fatalf("expected link with ID %s to be liked by user", test_link_id)
-	} else if !liked && link_signed_in.IsLiked {
-		t.Fatalf("link with ID %s NOT liked by user, expected error", test_link_id)
-	}
-
-	copied := UserHasCopiedLink(test_req_user_id, test_link_id)
-	if copied && !link_signed_in.IsCopied {
-		t.Fatalf("expected link with ID %s to be copied by user", test_link_id)
-	} else if !copied && link_signed_in.IsCopied {
-		t.Fatalf("link with ID %s NOT copied by user, expected error", test_link_id)
-	}
-}
 
 func TestGetUserTagForLink(t *testing.T) {
 	var test_tag = struct {

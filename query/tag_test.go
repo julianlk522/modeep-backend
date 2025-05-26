@@ -8,58 +8,6 @@ import (
 	"github.com/julianlk522/fitm/model"
 )
 
-func TestNewTagPageLink(t *testing.T) {
-	test_link_id := "1"
-
-	// Signed out
-	tag_sql := NewTagPageLink(test_link_id)
-	if tag_sql.Error != nil {
-		t.Fatal(tag_sql.Error)
-	}
-
-	var l model.Link
-	if err := TestClient.QueryRow(tag_sql.Text, tag_sql.Args...).Scan(
-		&l.ID,
-		&l.URL,
-		&l.SubmittedBy,
-		&l.SubmitDate,
-		&l.Cats,
-		&l.Summary,
-		&l.SummaryCount,
-		&l.LikeCount,
-		&l.PreviewImgFilename,
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	if l.ID != test_link_id {
-		t.Fatalf("got %s, want %s", l.ID, test_link_id)
-	}
-
-	// Signed in
-	tag_sql = tag_sql.AsSignedInUser(test_req_user_id)
-	if tag_sql.Error != nil {
-		t.Fatal(tag_sql.Error)
-	}
-
-	var lsi model.LinkSignedIn
-	if err := TestClient.QueryRow(tag_sql.Text, tag_sql.Args...).Scan(
-		&lsi.ID,
-		&lsi.URL,
-		&lsi.SubmittedBy,
-		&lsi.SubmitDate,
-		&lsi.Cats,
-		&lsi.Summary,
-		&lsi.TagCount,
-		&lsi.LikeCount,
-		&lsi.PreviewImgFilename,
-		&lsi.IsLiked,
-		&lsi.IsCopied,
-	); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestNewTagRankings(t *testing.T) {
 	test_link_id := "1"
 	tags_sql := NewTagRankings(test_link_id)
