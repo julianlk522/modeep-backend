@@ -2,16 +2,24 @@ package handler
 
 import (
 	"crypto/tls"
+	"image"
 	"io"
 	"log"
 	"os"
 	"slices"
 	"strings"
 
+	"image/gif"
+	"image/jpeg"
+	"image/png"
+
+	_ "golang.org/x/image/webp"
+
 	"github.com/julianlk522/fitm/db"
 	e "github.com/julianlk522/fitm/error"
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
+	"github.com/nfnt/resize"
 
 	"database/sql"
 	"fmt"
@@ -21,6 +29,8 @@ import (
 
 // capitalized so it can be exported and used in GetPreviewImg handler
 var Preview_img_dir string
+
+const MAX_PREVIEW_IMG_WIDTH_PX = 200
 
 func init() {
 	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
@@ -339,42 +349,59 @@ func IsRedirect(status_code int) bool {
 	return status_code > 299 && status_code < 400
 }
 
-func SavePreviewImgAndGetFileName(url string, link_id string) string {
+func SavePreviewImgAndGetFileName(url string, link_id string) (string, error) {
 	if url == "" {
-		log.Printf("no URL provided: could not fetch preview image")
-		return ""
+		return "", fmt.Errorf("no URL provided: could not fetch preview image")
 	}
 
 	prevew_img_resp, err := http.Get(url)
 	if err != nil {
-		log.Printf("could not fetch preview image: %s", err)
-		return ""
+		return "", fmt.Errorf("could not fetch preview image: %s", err)
 	}
 	defer prevew_img_resp.Body.Close()
 
-	var extension string
-	if strings.Contains(url, ".jpg") {
-		extension = ".jpg"
-	} else if strings.Contains(url, ".png") {
-		extension = ".png"
-	} else if strings.Contains(url, ".jpeg") {
-		extension = ".jpeg"
-	} else if strings.Contains(url, ".webp") {
-		extension = ".webp"
-	}
-
-	pic_file_name := link_id + extension
-	pic_file, err := os.Create(Preview_img_dir + "/" + pic_file_name)
+	img, file_type, err := image.Decode(prevew_img_resp.Body)
 	if err != nil {
-		log.Printf("could not create new preview image: %s", err)
-	}
-	defer pic_file.Close()
-
-	if _, err = io.Copy(pic_file, prevew_img_resp.Body); err != nil {
-		log.Printf("could not copy preview image: %s", err)
+		return "", fmt.Errorf("could not decode preview image: %s", err)
 	}
 
-	return pic_file_name
+	extension := "." + file_type
+	file_name := link_id + extension
+	dst, err := os.Create(Preview_img_dir + "/" + file_name)
+	if err != nil {
+		return "", fmt.Errorf("could not create new preview image file: %s", err)
+	}
+	defer dst.Close()
+
+	// Resize if width too high
+	// height set to 0 to preserve aspect ratio
+	if img.Bounds().Max.X > MAX_PREVIEW_IMG_WIDTH_PX {
+		img_with_size_constraints := resize.Resize(uint(MAX_PREVIEW_IMG_WIDTH_PX), 0, img, resize.Lanczos3)
+
+		switch file_type {
+			case "jpeg":
+				err = jpeg.Encode(dst, img_with_size_constraints, nil)
+			case "png":
+				err = png.Encode(dst, img_with_size_constraints)
+			case "gif":
+				err = gif.Encode(dst, img_with_size_constraints, nil)
+			case "webp":
+				// there is no Encode function for .webp :(
+				// skip and use full sized image
+			default:
+				log.Printf("unknown file type: %s", file_type)
+				err = e.ErrInvalidFileType
+		}
+		if err != nil {
+			return "", fmt.Errorf("could not resize preview image: %s", err)
+		}
+	} else {
+		if _, err = io.Copy(dst, prevew_img_resp.Body); err != nil {
+			return "", fmt.Errorf("could not copy preview image: %s", err)
+		}
+	}
+
+	return file_name, nil
 }
 
 func LinkAlreadyAdded(url string) (bool, string) {

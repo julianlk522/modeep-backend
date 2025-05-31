@@ -203,13 +203,22 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 
 	// Insert link
 	new_link.URL = final_url
+
 	if new_link.Summary == "" && new_link.AutoSummary != "" {
 		new_link.Summary = new_link.AutoSummary
 	}
-	new_link.PreviewImgFilename = util.SavePreviewImgAndGetFileName(
-		new_link.PreviewImgURL,
-		new_link.LinkID,
-	)
+
+	if new_link.PreviewImgFilename != "" {
+		preview_img_file_name, err := util.SavePreviewImgAndGetFileName(
+			new_link.PreviewImgURL,
+			new_link.LinkID,
+		)
+		if err != nil {
+			render.Render(w, r, e.Err500(err))
+			return
+		}
+		new_link.PreviewImgFilename = preview_img_file_name
+	}
 
 	if _, err = tx.Exec(
 		"INSERT INTO Links VALUES(?,?,?,?,?,?,?);",
