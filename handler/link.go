@@ -274,9 +274,10 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch global cats before deleting so spellfix ranks can be updated
-	var gc string
-	err = db.Client.QueryRow("SELECT global_cats FROM Links WHERE id = ?;", request.LinkID).Scan(&gc)
+	// Fetch global cats and preview image file before deleting
+	// so spellfix ranks can be updated and preview image can be deleted
+	var gc, pi string
+	err = db.Client.QueryRow("SELECT global_cats, COALESCE(preview_img_filename, '') FROM Links WHERE id = ?;", request.LinkID).Scan(&gc, &pi)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
@@ -308,6 +309,17 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 	if err = tx.Commit(); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
+	}
+
+	// Delete preview image
+	if pi != "" {
+		preview_img_path := util.Preview_img_dir + "/" + pi
+		if _, err = os.Stat(preview_img_path); err == nil {
+			err = os.Remove(preview_img_path)
+			if err != nil {
+				log.Printf("Could not delete preview image: %s", err)
+			}
+		}
 	}
 
 	w.WriteHeader(http.StatusResetContent)
