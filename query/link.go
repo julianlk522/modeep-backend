@@ -523,9 +523,9 @@ SELECT
     b.summary,
     COALESCE(sc.summary_count, 0) as summary_count,
     COALESCE(lc.like_count, 0) as like_count,
-    el.earliest_likers,
+    COALESCE(el.earliest_likers, "") as earliest_likers,
     COALESCE(cc.copy_count, 0) as copy_count,
-    ec.earliest_copiers,
+	COALESCE(ec.earliest_copiers, "") as earliest_copiers,
     COALESCE(ckc.click_count, 0) as click_count,
     COALESCE(tc.tag_count, 0) as tag_count,
     b.img_file`
