@@ -31,6 +31,8 @@ import (
 
 var profile_pic_dir string
 
+const MAX_PROFILE_PIC_WIDTH_PX int = 200
+
 func init() {
 	work_dir, _ := os.Getwd()
 	profile_pic_dir = filepath.Join(work_dir, "db/img/profile")
@@ -114,28 +116,34 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 	}
 	defer dst.Close()
 
-	// Resize
+	// Resize if width too high
 	// height set to 0 to preserve aspect ratio
-	img_with_size_constraints := resize.Resize(200, 0, img, resize.Lanczos3)
-	switch file_type {
-		case "jpeg":
-			err = jpeg.Encode(dst, img_with_size_constraints, nil)
-		case "png":
-			err = png.Encode(dst, img_with_size_constraints)
-		case "gif":
-			err = gif.Encode(dst, img_with_size_constraints, nil)
-		case "webp":
-			// there is no Encode function for .webp :(
-			// use full sized image
-			_, err = io.Copy(dst, file)
-		default:
-			log.Printf("unknown file type: %s", file_type)
-			err = e.ErrInvalidFileType
-	}
+	if img.Bounds().Max.X > MAX_PROFILE_PIC_WIDTH_PX {
+		img_with_size_constraints := resize.Resize(uint(MAX_PROFILE_PIC_WIDTH_PX), 0, img, resize.Lanczos3)
 
-	if err != nil {
-		render.Render(w, r, e.Err500(e.ErrCouldNotSaveResizedProfilePic))
-		return
+		switch file_type {
+			case "jpeg":
+				err = jpeg.Encode(dst, img_with_size_constraints, nil)
+			case "png":
+				err = png.Encode(dst, img_with_size_constraints)
+			case "gif":
+				err = gif.Encode(dst, img_with_size_constraints, nil)
+			case "webp":
+				// there is no Encode function for .webp :(
+				// skip and use full sized image
+			default:
+				log.Printf("unknown file type: %s", file_type)
+				err = e.ErrInvalidFileType
+		}
+		if err != nil {
+			render.Render(w, r, e.Err500(e.ErrCouldNotSaveResizedProfilePic))
+			return
+		}
+	} else {
+		if _, err = io.Copy(dst, file); err != nil {
+			render.Render(w, r, e.Err500(e.ErrCouldNotSaveProfilePic))
+			return
+		}
 	}
 
 	// Delete old profile pic if there was one
@@ -195,7 +203,7 @@ func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		log.Print("pfp was not present on filesystem at saved path")
+		log.Print("Profile pic was not present on filesystem at saved path")
 	}
 
 	w.WriteHeader(http.StatusNoContent)
