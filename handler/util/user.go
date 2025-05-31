@@ -8,10 +8,6 @@ import (
 	"github.com/julianlk522/fitm/db"
 	e "github.com/julianlk522/fitm/error"
 
-	"image"
-	_ "image/jpeg"
-	_ "image/png"
-
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 	_ "golang.org/x/image/webp"
@@ -91,26 +87,4 @@ func GetJWTFromLoginName(login_name string) (string, error) {
 
 func RenderJWT(token string, w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, map[string]string{"token": token})
-}
-
-// UploadProfilePic
-func HasAcceptableAspectRatio(img image.Image) bool {
-	b := img.Bounds()
-	width, height := b.Max.X, b.Max.Y
-	ratio := float64(width) / float64(height)
-
-	if ratio > 2.0 || ratio < 0.5 {
-		return false
-	}
-
-	return true
-}
-
-// DeleteProfilePic
-func UserWithIDHasProfilePic(user_id string) bool {
-	var p sql.NullString
-	if err := db.Client.QueryRow("SELECT pfp FROM Users WHERE id = ?", user_id).Scan(&p); err != nil {
-		return false
-	}
-	return p.Valid
 }
