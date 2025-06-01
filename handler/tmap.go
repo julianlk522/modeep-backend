@@ -1,21 +1,10 @@
 package handler
 
 import (
-	"image"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
-
-	"image/gif"
-	"image/jpeg"
-	"image/png"
-
-	_ "golang.org/x/image/webp"
-
-	"github.com/nfnt/resize"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -28,15 +17,6 @@ import (
 	m "github.com/julianlk522/fitm/middleware"
 	"github.com/julianlk522/fitm/model"
 )
-
-var profile_pic_dir string
-
-const MAX_PROFILE_PIC_WIDTH_PX int = 200
-
-func init() {
-	work_dir, _ := os.Getwd()
-	profile_pic_dir = filepath.Join(work_dir, "db/img/profile")
-}
 
 func EditAbout(w http.ResponseWriter, r *http.Request) {
 	edit_about_data := &model.EditAboutRequest{}
@@ -61,7 +41,7 @@ func EditAbout(w http.ResponseWriter, r *http.Request) {
 
 func GetProfilePic(w http.ResponseWriter, r *http.Request) {
 	var file_name string = chi.URLParam(r, "file_name")
-	path := profile_pic_dir + "/" + file_name
+	path := util.Profile_pic_dir + "/" + file_name
 
 	if _, err := os.Stat(path); err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrProfilePicNotFound))
@@ -74,100 +54,63 @@ func GetProfilePic(w http.ResponseWriter, r *http.Request) {
 func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 	// Get file (up to 10MB, or 10 * 2^20 bytes)
 	r.ParseMultipartForm(10 << 20)
-	file, handler, err := r.FormFile("pic")
+
+	// Verify valid
+	pic_file_bytes, handler, err := r.FormFile("pic")
 	if err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(err))
 		return
 	}
-	defer file.Close()
+	defer pic_file_bytes.Close()
 
 	if !strings.Contains(handler.Header.Get("Content-Type"), "image") {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidFileType))
 		return
 	}
 
-	// Ensure valid
-	img, file_type, err := image.Decode(file)
-	if err != nil {
-		if err == image.ErrFormat {
-			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidFileType))
-		} else {
-			render.Render(w, r, e.Err500(err))
-		}
+	// Accepted; save file
+	upload := &model.ImgUpload{
+		Bytes: pic_file_bytes,
+		Purpose: "ProfilePic",
+		UID: uuid.New().String(),
+	}
+
+	var file_name string
+	if file_name, err = util.SaveUploadedImg(upload); err != nil {
+		render.Render(w, r, e.Err500(err))
 		return
 	}
 
-	if !util.HasAcceptableAspectRatio(img) {
-		render.Render(
-			w, r, e.ErrInvalidRequest(e.ErrInvalidProfilePicAspectRatio),
-		)
-		return
-	}
-
-	// Accepted: create file and save file path in db
-	extension := filepath.Ext(handler.Filename)
-	unique_name := uuid.New().String() + extension
-	full_path := profile_pic_dir + "/" + unique_name
-
-	dst, err := os.Create(full_path)
-	if err != nil {
-		render.Render(w, r, e.Err500(e.ErrCouldNotCreateProfilePicFile))
-		return
-	}
-	defer dst.Close()
-
-	// Resize if width too high
-	// height set to 0 to preserve aspect ratio
-	if img.Bounds().Max.X > MAX_PROFILE_PIC_WIDTH_PX {
-		img_with_size_constraints := resize.Resize(uint(MAX_PROFILE_PIC_WIDTH_PX), 0, img, resize.Lanczos3)
-
-		switch file_type {
-			case "jpeg":
-				err = jpeg.Encode(dst, img_with_size_constraints, nil)
-			case "png":
-				err = png.Encode(dst, img_with_size_constraints)
-			case "gif":
-				err = gif.Encode(dst, img_with_size_constraints, nil)
-			case "webp":
-				// there is no Encode function for .webp :(
-				// skip and use full sized image
-			default:
-				log.Printf("unknown file type: %s", file_type)
-				err = e.ErrInvalidFileType
-		}
-		if err != nil {
-			render.Render(w, r, e.Err500(e.ErrCouldNotSaveResizedProfilePic))
-			return
-		}
-	} else {
-		if _, err = io.Copy(dst, file); err != nil {
-			render.Render(w, r, e.Err500(e.ErrCouldNotSaveProfilePic))
-			return
-		}
-	}
-
-	// Delete old profile pic if there was one
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
+
+	// Delete old pic if there was one
 	if has_pfp := util.UserWithIDHasProfilePic(req_user_id); has_pfp {
-		var pfp string
-		if err := db.Client.QueryRow(`SELECT pfp FROM Users WHERE id = ?`, req_user_id).Scan(&pfp); err != nil {
+		var current_file_name string
+		if err := db.Client.QueryRow(`SELECT pfp FROM Users WHERE id = ?`, req_user_id).Scan(&current_file_name); err != nil {
 			render.Render(w, r, e.Err500(err))
 			return
 		}
 		
-		pfp_path := profile_pic_dir + "/" + pfp
+		pfp_path := util.Profile_pic_dir + "/" + current_file_name
 		if err = os.Remove(pfp_path); err != nil {
 			log.Printf("Could not remove old profile pic: %s", err)
 		}
 	}
 
-	if _, err = db.Client.Exec(`UPDATE Users SET pfp = ? WHERE id = ?`, unique_name, req_user_id); err != nil {
+	// Update DB
+	if _, err = db.Client.Exec(
+		`UPDATE Users SET pfp = ? WHERE id = ?`, 
+		file_name, 
+		req_user_id,
+	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	http.ServeFile(w, r, full_path)
+	
+	file_path := util.Profile_pic_dir + "/" + file_name
+	http.ServeFile(w, r, file_path)
 }
 
 func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +128,7 @@ func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
-	pfp_path := profile_pic_dir + "/" + pfp
+	pfp_path := util.Profile_pic_dir + "/" + pfp
 
 	// Delete from DB
 	if _, err = db.Client.Exec(

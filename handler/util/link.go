@@ -2,16 +2,10 @@ package handler
 
 import (
 	"crypto/tls"
-	"image"
-	"io"
 	"log"
 	"os"
 	"slices"
 	"strings"
-
-	"image/gif"
-	"image/jpeg"
-	"image/png"
 
 	_ "golang.org/x/image/webp"
 
@@ -19,7 +13,6 @@ import (
 	e "github.com/julianlk522/fitm/error"
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
-	"github.com/nfnt/resize"
 
 	"database/sql"
 	"fmt"
@@ -360,45 +353,14 @@ func SavePreviewImgAndGetFileName(url string, link_id string) (string, error) {
 	}
 	defer prevew_img_resp.Body.Close()
 
-	img, file_type, err := image.Decode(prevew_img_resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("could not decode preview image: %s", err)
+	img_upload := &model.ImgUpload{
+		Bytes: prevew_img_resp.Body,
+		Purpose: "LinkPreview",
+		UID: link_id,
 	}
-
-	extension := "." + file_type
-	file_name := link_id + extension
-	dst, err := os.Create(Preview_img_dir + "/" + file_name)
+	file_name, err := SaveUploadedImg(img_upload)
 	if err != nil {
-		return "", fmt.Errorf("could not create new preview image file: %s", err)
-	}
-	defer dst.Close()
-
-	// Resize if width too high
-	// height set to 0 to preserve aspect ratio
-	if img.Bounds().Max.X > MAX_PREVIEW_IMG_WIDTH_PX {
-		img_with_size_constraints := resize.Resize(uint(MAX_PREVIEW_IMG_WIDTH_PX), 0, img, resize.Lanczos3)
-
-		switch file_type {
-			case "jpeg":
-				err = jpeg.Encode(dst, img_with_size_constraints, nil)
-			case "png":
-				err = png.Encode(dst, img_with_size_constraints)
-			case "gif":
-				err = gif.Encode(dst, img_with_size_constraints, nil)
-			case "webp":
-				// there is no Encode function for .webp :(
-				// skip and use full sized image
-			default:
-				log.Printf("unknown file type: %s", file_type)
-				err = e.ErrInvalidFileType
-		}
-		if err != nil {
-			return "", fmt.Errorf("could not resize preview image: %s", err)
-		}
-	} else {
-		if _, err = io.Copy(dst, prevew_img_resp.Body); err != nil {
-			return "", fmt.Errorf("could not copy preview image: %s", err)
-		}
+		return "", fmt.Errorf("could not save preview image: %s", err)
 	}
 
 	return file_name, nil

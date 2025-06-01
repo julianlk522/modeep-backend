@@ -2,7 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"image"
 	"log"
 	"math"
 	"net/url"
@@ -25,19 +24,6 @@ import (
 )
 
 const TMAP_CATS_PAGE_LIMIT int = 20
-
-// UploadProfilePic
-func HasAcceptableAspectRatio(img image.Image) bool {
-	b := img.Bounds()
-	width, height := b.Max.X, b.Max.Y
-	ratio := float64(width) / float64(height)
-
-	if ratio > 2.0 || ratio < 0.5 {
-		return false
-	}
-
-	return true
-}
 
 // DeleteProfilePic
 func UserWithIDHasProfilePic(user_id string) bool {
