@@ -208,7 +208,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		new_link.Summary = new_link.AutoSummary
 	}
 
-	if new_link.PreviewImgFilename != "" {
+	if new_link.PreviewImgURL != "" {
 		preview_img_file_name, err := util.SavePreviewImgAndGetFileName(
 			new_link.PreviewImgURL,
 			new_link.LinkID,
@@ -277,7 +277,13 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 	// Fetch global cats and preview image file before deleting
 	// so spellfix ranks can be updated and preview image can be deleted
 	var gc, pi string
-	err = db.Client.QueryRow("SELECT global_cats, COALESCE(preview_img_filename, '') FROM Links WHERE id = ?;", request.LinkID).Scan(&gc, &pi)
+	err = db.Client.QueryRow(
+		"SELECT global_cats, COALESCE(img_file, '') FROM Links WHERE id = ?;", 
+		request.LinkID,
+	).Scan(
+		&gc, 
+		&pi,
+	)
 	if err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
