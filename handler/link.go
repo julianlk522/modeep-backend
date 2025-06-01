@@ -209,7 +209,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if new_link.PreviewImgURL != "" {
-		preview_img_file_name, err := util.SavePreviewImgAndGetFileName(
+		new_link.PreviewImgFilename, err = util.SavePreviewImgAndGetFileName(
 			new_link.PreviewImgURL,
 			new_link.LinkID,
 		)
@@ -217,7 +217,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, r, e.Err500(err))
 			return
 		}
-		new_link.PreviewImgFilename = preview_img_file_name
 	}
 
 	if _, err = tx.Exec(
@@ -320,9 +319,11 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 	// Delete preview image
 	if pi != "" {
 		preview_img_path := util.Preview_img_dir + "/" + pi
-		if _, err = os.Stat(preview_img_path); err == nil {
-			err = os.Remove(preview_img_path)
-			if err != nil {
+		_, err = os.Stat(preview_img_path)
+		if err != nil {
+			log.Printf("Preview image not found: %s", preview_img_path)
+		} else {
+			if err = os.Remove(preview_img_path); err != nil {
 				log.Printf("Could not delete preview image: %s", err)
 			}
 		}
