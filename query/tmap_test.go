@@ -77,6 +77,83 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 	}
 }
 
+func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(test_req_login_name).SubmittedOnly()
+	var count int
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	var expected_count int
+	nsfw_submitted_links_sql := `SELECT count(*) as nsfw_submitted_links 
+		FROM LINKS 
+		WHERE submitted_by = ? 
+		AND global_cats LIKE '%' || 'NSFW' || '%';`
+	if err := TestClient.QueryRow(
+		nsfw_submitted_links_sql, 
+		test_req_login_name,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)	
+	}
+
+	if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
+func TestTmapNSFWLinksCountCopiedOnly(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(test_req_login_name).CopiedOnly()
+	var count int
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	var expected_count int
+	nsfw_copied_links_sql := `SELECT count(*) as copy_count
+		FROM "Link Copies" lc
+		LEFT JOIN Users u ON u.id = lc.user_id
+		LEFT JOIN Links l ON l.id = lc.link_id
+		WHERE lc.user_id = ?
+		AND l.global_cats LIKE '%' || 'NSFW' || '%';`
+	if err := TestClient.QueryRow(
+		nsfw_copied_links_sql, 
+		test_req_login_name,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)
+	}
+
+	if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
+func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(test_req_login_name).TaggedOnly()
+	var count int
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	var expected_count int
+	nsfw_tagged_links_sql := `SELECT count(*) as tag_count
+		FROM Tags t
+		LEFT JOIN Links l ON t.link_id = l.id
+		WHERE t.submitted_by = ?
+		AND l.submitted_by != ?
+		AND t.cats LIKE '%' || 'NSFW' || '%';`
+	if err := TestClient.QueryRow(
+		nsfw_tagged_links_sql, 
+		test_req_login_name,
+		test_req_login_name,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)
+	}
+
+	if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
 func TestNewTmapSubmitted(t *testing.T) {
 	// Retrieve all IDs of links submitted by user
 	var submitted_ids []string
