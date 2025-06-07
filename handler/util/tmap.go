@@ -2,7 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"log"
 	"math"
 	"net/url"
 	"strconv"
@@ -99,14 +98,17 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	}
 	tmap_owner := opts.OwnerLoginName
 
-	nsfw_links_count_sql := query.NewTmapNSFWLinksCount(tmap_owner)
+	var profile *model.Profile
+	var cat_counts *[]model.CatCount
+	var cat_counts_opts *model.TmapCatCountsOptions
 
 	has_cat_filter := len(opts.CatsFilter) > 0
-	var profile *model.Profile
 	if has_cat_filter {
-		nsfw_links_count_sql = nsfw_links_count_sql.FromCats(opts.CatsFilter)
-		// add profile only if unfiltered
+		cat_counts_opts = &model.TmapCatCountsOptions{
+			RawCatsParams: opts.RawCatsParams,
+		}
 	} else {
+		// add profile only if unfiltered
 		var err error
 		profile_sql := query.NewTmapProfile(tmap_owner)
 		profile, err = ScanTmapProfile(profile_sql)
@@ -116,14 +118,15 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	}
 
 	var nsfw_links_count int
-
-	var cat_counts *[]model.CatCount
-	var cat_counts_opts *model.TmapCatCountsOptions
-	if has_cat_filter {
-		cat_counts_opts = &model.TmapCatCountsOptions{
-			RawCatsParams: opts.RawCatsParams,
-		}
+	nsfw_links_count_opts := &model.TmapNSFWLinksCountOptions{
+		OnlySection: opts.Section,
+		CatsFilter: opts.CatsFilter,
+		Period: opts.Period,
+		URLContains: opts.URLContains,
 	}
+	nsfw_links_count_sql := query.
+		NewTmapNSFWLinksCount(tmap_owner).
+		FromOptions(nsfw_links_count_opts)
 
 	// Single section
 	if opts.Section != "" {
@@ -132,20 +135,32 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		switch opts.Section {
 		case "submitted":
-			links, err = ScanTmapLinks[T](query.
+			submitted_sql := query.
 				NewTmapSubmitted(tmap_owner).
-				FromOptions(opts).Query)
-			nsfw_links_count_sql = nsfw_links_count_sql.SubmittedOnly()
+				FromOptions(opts)
+			if submitted_sql.Error != nil {
+				return nil, submitted_sql.Error
+			}
+
+			links, err = ScanTmapLinks[T](submitted_sql.Query)
 		case "copied":
-			links, err = ScanTmapLinks[T](query.
-					NewTmapCopied(tmap_owner).
-					FromOptions(opts).Query)
-			nsfw_links_count_sql = nsfw_links_count_sql.CopiedOnly()
+			copied_sql := query.
+				NewTmapCopied(tmap_owner).
+				FromOptions(opts)
+			if copied_sql.Error != nil {
+				return nil, copied_sql.Error
+			}
+
+			links, err = ScanTmapLinks[T](copied_sql.Query)
 		case "tagged":
-			links, err = ScanTmapLinks[T](query.
-					NewTmapTagged(tmap_owner).
-					FromOptions(opts).Query)
-			nsfw_links_count_sql = nsfw_links_count_sql.TaggedOnly()
+			tagged_sql := query.
+				NewTmapTagged(tmap_owner).
+				FromOptions(opts)
+			if tagged_sql.Error != nil {
+				return nil, tagged_sql.Error
+			}
+
+			links, err = ScanTmapLinks[T](tagged_sql.Query)
 		default:
 			return nil, e.ErrInvalidSectionParams
 		}
@@ -204,21 +219,38 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		// All sections
 	} else {
-		submitted, err := ScanTmapLinks[T](query.
+		submitted_sql := query.
 			NewTmapSubmitted(tmap_owner).
-			FromOptions(opts).Query)
+			FromOptions(opts)
+		if submitted_sql.Error != nil {
+			return nil, submitted_sql.Error
+		}
+
+		submitted, err := ScanTmapLinks[T](submitted_sql.Query)
 		if err != nil {
 			return nil, err
 		}
-		copied, err := ScanTmapLinks[T](query.
+
+		copied_sql := query.
 			NewTmapCopied(tmap_owner).
-			FromOptions(opts).Query)
+			FromOptions(opts)
+		if copied_sql.Error != nil {
+			return nil, copied_sql.Error
+		}
+
+		copied, err := ScanTmapLinks[T](copied_sql.Query)
 		if err != nil {
 			return nil, err
 		}
-		tagged, err := ScanTmapLinks[T](query.
+		
+		tagged_sql := query.
 			NewTmapTagged(tmap_owner).
-			FromOptions(opts).Query)
+			FromOptions(opts)
+		if tagged_sql.Error != nil {
+			return nil, tagged_sql.Error
+		}
+
+		tagged, err := ScanTmapLinks[T](tagged_sql.Query)
 		if err != nil {
 			return nil, err
 		}
@@ -231,7 +263,10 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			}, nil
 		}
 
-		cat_counts = GetCatCountsFromTmapLinks(&links_from_all_sections, cat_counts_opts)
+		cat_counts = GetCatCountsFromTmapLinks(
+			&links_from_all_sections, 
+			cat_counts_opts,
+		)
 
 		// limit sections to top 20 links
 		// 20+ links: indicate in response so can be paginated
