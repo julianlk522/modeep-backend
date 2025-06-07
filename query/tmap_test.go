@@ -154,6 +154,179 @@ func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
 	}
 }
 
+func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
+	// get NSFW links count overall first:
+	sql := NewTmapNSFWLinksCount(test_req_login_name)
+	var total_countut int
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&total_countut); err != nil {
+		t.Fatal(err)
+	}
+
+	// should equal "all" period
+	var count_during_all_period int
+	sql = NewTmapNSFWLinksCount(test_req_login_name).DuringPeriod("all")
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_during_all_period); err != nil {
+		t.Fatal(err)
+	}
+
+	if total_countut != count_during_all_period {
+		t.Fatalf("expected %d, got %d", total_countut, count_during_all_period)
+	}
+
+	// last week (none)
+	var count_during_last_week int
+	sql = NewTmapNSFWLinksCount(test_req_login_name).DuringPeriod("week")
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_during_last_week); err != nil {
+		t.Fatal(err)
+	}
+
+	if count_during_last_week != 0 {
+		t.Fatalf("expected %d, got %d", 0, count_during_last_week)
+	}
+}
+
+func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
+	// user bradley has 1 NSFW tmap link: "https://www.googler.com/"
+	// count should be 1 overall and 0 with URL contains: {anything not in that}
+
+	var overall_count int
+	sql := NewTmapNSFWLinksCount(test_req_login_name)
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&overall_count); err != nil {
+		t.Fatal(err)
+	}
+
+	var count_with_url_containing int
+	sql = NewTmapNSFWLinksCount(test_req_login_name).WithURLContaining("googler")
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_with_url_containing); err != nil {
+		t.Fatal(err)
+	}
+
+	if overall_count != count_with_url_containing {
+		t.Fatalf("expected %d, got %d", overall_count, count_with_url_containing)
+	}
+
+	var count_with_url_not_containing int
+	sql = NewTmapNSFWLinksCount(test_req_login_name).WithURLContaining("not_googler")
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_with_url_not_containing); err != nil {
+		t.Fatal(err)
+	}
+
+	if count_with_url_not_containing != 0 {
+		t.Fatalf("expected %d, got %d", 0, count_with_url_not_containing)
+	}
+}
+
+func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
+	var test_options_and_expected_counts = []struct {
+		Options model.TmapNSFWLinksCountOptions
+		ExpectedCount int
+		Valid bool
+	}{
+		{
+			model.TmapNSFWLinksCountOptions{
+				CatsFilter: []string{
+					"search",
+					"engine",
+				},
+				Period: "all",
+				URLContains: "googler",
+			}, 
+			1,
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				CatsFilter: []string{
+					"search",
+					"engine",
+				},
+				Period: "all",
+				URLContains: "not_googler",
+			}, 
+			0,
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				CatsFilter: []string{
+					"search",
+					"engine",
+				},
+				Period: "all",
+			}, 
+			1,
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				OnlySection: "submitted",
+				CatsFilter: []string{
+					"search",
+					"engine",
+				},
+			}, 
+			1,
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				OnlySection: "tagged",
+				CatsFilter: []string{
+					"search",
+					"engine",
+				},
+			}, 
+			0,
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				OnlySection: "copied",
+				CatsFilter: []string{
+					"search",
+					"engine",
+				},
+			}, 
+			0,
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				OnlySection: "boop",
+				CatsFilter: []string{
+					"search",
+					"engine",
+				},
+			}, 
+			1,
+			false,
+		},
+	}
+
+	for _, test := range test_options_and_expected_counts {
+		sql := NewTmapNSFWLinksCount(test_req_login_name).FromOptions(&test.Options)
+		var count int
+		if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+
+		if (test.Valid && sql.Error != nil) || (!test.Valid && sql.Error == nil) {
+			if sql.Error == nil {
+				t.Fatalf("expected error, got nil")
+			}
+		}
+
+		if count != test.ExpectedCount {
+			t.Fatalf("expected %d, got %d (opts: %+v)", 
+				test.ExpectedCount, 
+				count,
+				test.Options,
+			)
+		}
+	}
+	
+}
+
 func TestNewTmapSubmitted(t *testing.T) {
 	// Retrieve all IDs of links submitted by user
 	var submitted_ids []string
