@@ -172,6 +172,70 @@ func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 	return tnlc
 }
 
+func (tnlc *TmapNSFWLinksCount) DuringPeriod(period string) *TmapNSFWLinksCount {
+	period_clause, err := GetPeriodClause(period)
+	if err != nil {
+		tnlc.Error = err
+		return tnlc
+	}
+
+	period_clause = strings.Replace(
+		period_clause,
+		"submit_date",
+		"l.submit_date",
+		1,
+	)
+
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		";",
+		"\nAND "+period_clause + ";",
+		1,
+	)
+
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) WithURLContaining(snippet string) *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		";",
+		"\nAND url LIKE ?;",
+		1,
+	)
+
+	tnlc.Args = append(tnlc.Args, "%"+snippet+"%")
+
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOptions) *TmapNSFWLinksCount {
+	if opts.OnlySection != "" {
+		switch opts.OnlySection {
+		case "submitted":
+			tnlc.SubmittedOnly()
+		case "copied":
+			tnlc.CopiedOnly()
+		case "tagged":
+			tnlc.TaggedOnly()
+		default:
+			tnlc.Error = e.ErrInvalidOnlySectionParams
+			return tnlc
+		}
+	}
+	if len(opts.CatsFilter) > 0 {
+		tnlc.FromCats(opts.CatsFilter)
+	}
+	if opts.Period != "" {
+		tnlc.DuringPeriod(opts.Period)
+	}
+	if opts.URLContains != "" {
+		tnlc.WithURLContaining(opts.URLContains)
+	}
+
+	return tnlc
+}
+
 type TmapSubmitted struct {
 	*Query
 }

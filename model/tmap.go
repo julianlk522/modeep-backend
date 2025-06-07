@@ -92,6 +92,14 @@ type TmapOptions struct {
 	Page           int
 }
 
+type TmapNSFWLinksCountOptions struct {
+	// "Submitted", "Copied", "Tagged"
+	OnlySection string
+	CatsFilter []string
+	Period string
+	URLContains string
+}
+
 type TmapCatCountsOptions struct {
 	RawCatsParams string
 }
