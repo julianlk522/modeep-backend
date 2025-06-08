@@ -402,7 +402,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 	}
 }
 
-func TestNewTmapSubmittedFromCats(t *testing.T) {
+func TestTmapSubmittedFromCats(t *testing.T) {
 	submitted_sql := NewTmapSubmitted(test_login_name).FromCats(test_cats)
 	if submitted_sql.Error != nil {
 		t.Fatal(submitted_sql.Error)
@@ -440,7 +440,7 @@ func TestNewTmapSubmittedFromCats(t *testing.T) {
 	}
 }
 
-func TestNewTmapSubmittedAsSignedInUser(t *testing.T) {
+func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 	submitted_sql := NewTmapSubmitted(test_login_name).AsSignedInUser(test_req_user_id)
 	if submitted_sql.Error != nil {
 		t.Fatal(submitted_sql.Error)
@@ -477,7 +477,7 @@ func TestNewTmapSubmittedAsSignedInUser(t *testing.T) {
 	}
 }
 
-func TestNewTmapSubmittedNSFW(t *testing.T) {
+func TestTmapSubmittedNSFW(t *testing.T) {
 	submitted_sql := NewTmapSubmitted("bradley").NSFW()
 	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
 	if err != nil {
@@ -511,6 +511,190 @@ func TestNewTmapSubmittedNSFW(t *testing.T) {
 
 	if !found_NSFW_link {
 		t.Fatal("bradley's tmap does not but should contain link with NSFW tag")
+	}
+}
+
+func TestTmapSubmittedDuringPeriod(t *testing.T) {
+	var 
+		submitted_links_no_period, 
+		submitted_links_with_all_period, 
+		submittted_links_with_week_period []model.TmapLink
+
+	submitted_sql := NewTmapSubmitted(test_login_name).SortByNewest()
+	rows, _ := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		} else {
+			submitted_links_no_period = append(submitted_links_no_period, l)
+		}
+	}
+
+	all_period_sql := NewTmapSubmitted(test_login_name).DuringPeriod("all")
+	rows, _ = TestClient.Query(all_period_sql.Text, all_period_sql.Args...)
+	defer rows.Close()
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		} else {
+			submitted_links_with_all_period = append(submitted_links_with_all_period, l)
+		}
+	}
+
+	if len(submitted_links_no_period) != len(submitted_links_with_all_period) {
+		t.Fatal("submitted_links_no_period != submitted_links_with_all_period")
+	}
+
+	// verify has all the same link IDs (though order will differ due to 
+	// no period SQL having .SortByNewest() applied)
+	var no_period_links_ids, all_period_links_ids []string
+	for _, l := range submitted_links_no_period {
+		no_period_links_ids = append(no_period_links_ids, l.ID)
+	}
+
+	for _, l := range submitted_links_with_all_period {
+		all_period_links_ids = append(all_period_links_ids, l.ID)
+	}
+
+	for _, id := range no_period_links_ids {
+		if !slices.Contains(all_period_links_ids, id) {
+			t.Fatal("submitted_links_no_period != submitted_links_with_all_period")
+		}
+	}
+
+	for _, id := range all_period_links_ids {
+		if !slices.Contains(no_period_links_ids, id) {
+			t.Fatal("submitted_links_no_period != submitted_links_with_all_period")
+		}
+	}
+
+	week_period_sql := NewTmapSubmitted(test_login_name).DuringPeriod("week")
+	rows, err := TestClient.Query(week_period_sql.Text, week_period_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	
+	defer rows.Close()
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		} else {
+			submittted_links_with_week_period = append(submittted_links_with_week_period, l)
+		}
+	}
+
+	// there should be no links submitted during last week
+	if len(submittted_links_with_week_period) != 0 {
+		t.Fatal("submittted_links_with_week_period != 0")
+	}
+}
+
+func TestTmapSubmittedWithURLContaining(t *testing.T) {
+	url_snippet := "red" 
+	var expected_count int
+	expected_count_sql := `SELECT count(*) as link_count
+		FROM Links l
+		WHERE l.url LIKE '%' || ? || '%'
+		AND l.submitted_by = ?;`
+	err := TestClient.QueryRow(
+		expected_count_sql, 
+		url_snippet, 
+		test_login_name,
+		).Scan(&expected_count)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	submitted_sql := NewTmapSubmitted(test_login_name).WithURLContaining(url_snippet)
+	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links []model.TmapLink
+	for rows.Next() {
+		link := model.TmapLink{}
+		err := rows.Scan(
+			&link.ID,
+			&link.URL,
+			&link.SubmittedBy,
+			&link.SubmitDate,
+			&link.Cats,
+			&link.CatsFromUser,
+			&link.Summary,
+			&link.SummaryCount,
+			&link.LikeCount,
+			&link.EarliestLikers,
+			&link.CopyCount,
+			&link.EarliestCopiers,
+			&link.ClickCount,
+			&link.TagCount,
+			&link.PreviewImgFilename,
+		)
+		if err != nil {
+			t.Fatal(err)
+		} 
+
+		links = append(links, link)
+	}
+
+	if len(links) != expected_count {
+		t.Fatal("len(links) != expected_count")
 	}
 }
 
