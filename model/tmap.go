@@ -79,15 +79,17 @@ type TmapSectionPage[T TmapLink | TmapLinkSignedIn] struct {
 
 type TmapOptions struct {
 	OwnerLoginName string
+	AsSignedInUser string
 	// RawCatsParams (reserved chars unescaped, plural/singular variations not
 	// bundled) is stored in addition to CatsFilter so that
 	// GetCatCountsFromTmapLinks can know the exact values passed in
 	// the request and not count them
 	RawCatsParams  string
 	CatsFilter     []string
-	AsSignedInUser string
+	Period         string
 	SortByNewest   bool
 	IncludeNSFW    bool
+	URLContains    string
 	Section        string
 	Page           int
 }

@@ -3,6 +3,7 @@ package query
 import (
 	"strings"
 
+	e "github.com/julianlk522/fitm/error"
 	"github.com/julianlk522/fitm/model"
 	mutil "github.com/julianlk522/fitm/model/util"
 )
@@ -327,6 +328,53 @@ func (ts *TmapSubmitted) SortByNewest() *TmapSubmitted {
 	return ts
 }
 
+func (ts *TmapSubmitted) DuringPeriod(period string) *TmapSubmitted {
+	period_clause, err := GetPeriodClause(period)
+	if err != nil {
+		ts.Error = err
+		return ts
+	}
+
+	period_clause = strings.Replace(
+		period_clause,
+		"submit_date",
+		"l.submit_date",
+		1,
+	)
+
+	for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		ts.Text = strings.Replace(
+			ts.Text,
+			order_by,
+			"\nAND " + period_clause + order_by,
+			1,
+		)
+	}
+
+	return ts
+}
+
+func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
+	for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		ts.Text = strings.Replace(
+			ts.Text,
+			order_by,
+			"\nAND " + "url LIKE ?" + order_by,
+			1,
+		)
+	} 
+
+	ts.Args = append(ts.Args, "%"+snippet+"%")
+
+	return ts
+}
+
 func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 	if len(opts.CatsFilter) > 0 {
 		ts.FromCats(opts.CatsFilter)
@@ -339,6 +387,12 @@ func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 	}
 	if opts.IncludeNSFW {
 		ts.NSFW()
+	}
+	if opts.Period != "" {
+		ts.DuringPeriod(opts.Period)
+	}
+	if opts.URLContains != "" {
+		ts.WithURLContaining(opts.URLContains)
 	}
 
 	return ts
