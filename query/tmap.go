@@ -38,7 +38,11 @@ func NewTmapNSFWLinksCount(login_name string) *TmapNSFWLinksCount {
 	return &TmapNSFWLinksCount{
 		&Query{
 			Text: TMAP_NSFW_LINKS_COUNT,
-			Args: []any{login_name, login_name, login_name},
+			Args: []any{
+				login_name, 
+				login_name, 
+				login_name,
+			},
 		},
 	}
 }
@@ -242,7 +246,7 @@ type TmapSubmitted struct {
 }
 
 func NewTmapSubmitted(login_name string) *TmapSubmitted {
-	q := &TmapSubmitted{
+	return &TmapSubmitted{
 		Query: &Query{
 			Text: "WITH " + TMAP_BASE_CTES + "," +
 				POSSIBLE_USER_CATS_CTE + "," +
@@ -253,7 +257,6 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 				TMAP_NO_NSFW_CATS_WHERE +
 				SUBMITTED_WHERE +
 				TMAP_DEFAULT_ORDER_BY,
-			// login_name used in PossibleUserCats, PossibleUserSummary, where
 			Args: []any{
 				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
 				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
@@ -263,8 +266,6 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 			},
 		},
 	}
-
-	return q
 }
 
 const SUBMITTED_WHERE = `
@@ -434,7 +435,7 @@ const COPIED_JOIN = `
 INNER JOIN UserCopies uc ON l.id = uc.link_id`
 
 const COPIED_WHERE = ` 
-AND submitted_by != ?`
+AND l.submitted_by != ?`
 
 func (tc *TmapCopied) FromCats(cats []string) *TmapCopied {
 	tc.Query = FromUserOrGlobalCats(tc.Query, cats)
@@ -478,8 +479,8 @@ func (tc *TmapCopied) NSFW() *TmapCopied {
 	// Swap AND to WHERE in WHERE clause
 	tc.Text = strings.Replace(
 		tc.Text,
-		"AND submitted_by !=",
-		"WHERE submitted_by !=",
+		"AND l.submitted_by !=",
+		"WHERE l.submitted_by !=",
 		1,
 	)
 	return tc
@@ -496,6 +497,53 @@ func (tc *TmapCopied) SortByNewest() *TmapCopied {
 	return tc
 }
 
+func (tc *TmapCopied) DuringPeriod(period string) *TmapCopied {
+	period_clause, err := GetPeriodClause(period)
+	if err != nil {
+		tc.Error = err
+		return tc
+	}
+
+	period_clause = strings.Replace(
+		period_clause,
+		"submit_date",
+		"l.submit_date",
+		1,
+	)
+
+	for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		tc.Text = strings.Replace(
+			tc.Text,
+			order_by,
+			"\nAND " + period_clause + order_by,
+			1,
+		)
+	}
+
+	return tc
+}
+
+func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
+	for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		tc.Text = strings.Replace(
+			tc.Text,
+			order_by,
+			"\nAND " + "url LIKE ?" + order_by,
+			1,
+		)
+	} 
+
+	tc.Args = append(tc.Args, "%"+snippet+"%")
+
+	return tc
+}
+
 func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 	if len(opts.CatsFilter) > 0 {
 		tc.FromCats(opts.CatsFilter)
@@ -508,6 +556,12 @@ func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 	}
 	if opts.IncludeNSFW {
 		tc.NSFW()
+	}
+	if opts.Period != "" {
+		tc.DuringPeriod(opts.Period)
+	}
+	if opts.URLContains != "" {
+		tc.WithURLContaining(opts.URLContains)
 	}
 
 	return tc
@@ -571,7 +625,7 @@ var TAGGED_JOINS = strings.Replace(
 )
 
 const TAGGED_WHERE = `
-AND submitted_by != ?
+AND l.submitted_by != ?
 AND l.id NOT IN
 	(SELECT link_id FROM UserCopies)`
 
@@ -632,8 +686,8 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 	// Swap AND to WHERE in WHERE clause
 	tt.Text = strings.Replace(
 		tt.Text,
-		"AND submitted_by !=",
-		"WHERE submitted_by !=",
+		"AND l.submitted_by !=",
+		"WHERE l.submitted_by !=",
 		1,
 	)
 	return tt

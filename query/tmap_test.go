@@ -723,7 +723,9 @@ func TestNewTmapCopied(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
+			&l.EarliestLikers,
 			&l.CopyCount,
+			&l.EarliestCopiers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -750,7 +752,7 @@ func TestNewTmapCopied(t *testing.T) {
 	}
 }
 
-func TestNewTmapCopiedFromCats(t *testing.T) {
+func TestTmapCopiedFromCats(t *testing.T) {
 	copied_sql := NewTmapCopied(test_login_name).FromCats(test_cats)
 	if copied_sql.Error != nil {
 		t.Fatal(copied_sql.Error)
@@ -774,7 +776,9 @@ func TestNewTmapCopiedFromCats(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
+			&l.EarliestLikers,
 			&l.CopyCount,
+			&l.EarliestCopiers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -801,7 +805,7 @@ func TestNewTmapCopiedFromCats(t *testing.T) {
 	}
 }
 
-func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
+func TestTmapCopiedAsSignedInUser(t *testing.T) {
 	copied_sql := NewTmapCopied(test_login_name).AsSignedInUser(test_req_user_id)
 	if copied_sql.Error != nil {
 		t.Fatal(copied_sql.Error)
@@ -827,7 +831,9 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
+			&l.EarliestLikers,
 			&l.CopyCount,
+			&l.EarliestCopiers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -913,7 +919,9 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
+			&l.EarliestLikers,
 			&l.CopyCount,
+			&l.EarliestCopiers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -939,7 +947,7 @@ func TestNewTmapCopiedAsSignedInUser(t *testing.T) {
 	}
 }
 
-func TestNewTmapCopiedNSFW(t *testing.T) {
+func TestTmapCopiedNSFW(t *testing.T) {
 	// test_login_name (jlk) has copied 1 link with NSFW tag
 	copied_sql := NewTmapCopied(test_login_name).NSFW()
 	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
@@ -961,7 +969,9 @@ func TestNewTmapCopiedNSFW(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
+			&l.EarliestLikers,
 			&l.CopyCount,
+			&l.EarliestCopiers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -974,6 +984,169 @@ func TestNewTmapCopiedNSFW(t *testing.T) {
 
 	if !found_NSFW_link {
 		t.Fatal("jlk's tmap does not but should contain 1 copied link with NSFW tag")
+	}
+}
+
+func TestTmapCopiedDuringPeriod(t *testing.T) {
+	var copied_no_period, copied_period_all, copied_period_week []model.TmapLink
+	copied_sql := NewTmapCopied(test_login_name)
+	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		copied_no_period = append(copied_no_period, l)
+	}
+
+	copied_sql = NewTmapCopied(test_login_name).DuringPeriod("all")
+	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		copied_period_all = append(copied_period_all, l)
+	}
+
+	if len(copied_no_period) != len(copied_period_all) {
+		t.Fatal("copied_no_period != copied_period_all")
+	}
+
+	copied_sql = NewTmapCopied(test_login_name).DuringPeriod("week")
+	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		copied_period_week = append(copied_period_week, l)
+	}
+
+	if len(copied_period_week) != 0 {
+		t.Fatal("should be no links copied within last week")
+	}
+}
+
+func TestTmapCopiedWithURLContaining(t *testing.T) {
+	url_snippet := "coding" 
+	var expected_count int
+	expected_count_sql := `SELECT count(*) as copy_count
+		FROM "Link Copies" lc
+		LEFT JOIN Users u ON u.id = lc.user_id
+		LEFT JOIN Links l ON l.id = lc.link_id
+		WHERE l.url LIKE '%' || ? || '%'
+		AND lc.user_id = ?;`
+	err := TestClient.QueryRow(
+			expected_count_sql, 
+			url_snippet, 
+			test_login_name,
+		).Scan(&expected_count)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	copied_sql := NewTmapSubmitted(test_login_name).WithURLContaining(url_snippet)
+	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links []model.TmapLink
+	for rows.Next() {
+		link := model.TmapLink{}
+		err := rows.Scan(
+			&link.ID,
+			&link.URL,
+			&link.SubmittedBy,
+			&link.SubmitDate,
+			&link.Cats,
+			&link.CatsFromUser,
+			&link.Summary,
+			&link.SummaryCount,
+			&link.LikeCount,
+			&link.EarliestLikers,
+			&link.CopyCount,
+			&link.EarliestCopiers,
+			&link.ClickCount,
+			&link.TagCount,
+			&link.PreviewImgFilename,
+		)
+		if err != nil {
+			t.Fatal(err)
+		} 
+
+		links = append(links, link)
+	}
+
+	if len(links) != expected_count {
+		t.Fatal("len(links) != expected_count")
 	}
 }
 
@@ -1001,7 +1174,9 @@ func TestNewTmapTagged(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
+			&l.EarliestLikers,
 			&l.CopyCount,
+			&l.EarliestCopiers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
