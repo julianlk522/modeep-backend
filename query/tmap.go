@@ -178,6 +178,10 @@ func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 }
 
 func (tnlc *TmapNSFWLinksCount) DuringPeriod(period string) *TmapNSFWLinksCount {
+	if period == "all" {
+		return tnlc
+	}
+
 	period_clause, err := GetPeriodClause(period)
 	if err != nil {
 		tnlc.Error = err
@@ -228,12 +232,15 @@ func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOption
 			return tnlc
 		}
 	}
+
 	if len(opts.CatsFilter) > 0 {
 		tnlc.FromCats(opts.CatsFilter)
 	}
+
 	if opts.Period != "" {
 		tnlc.DuringPeriod(opts.Period)
 	}
+
 	if opts.URLContains != "" {
 		tnlc.WithURLContaining(opts.URLContains)
 	}
@@ -330,6 +337,10 @@ func (ts *TmapSubmitted) SortByNewest() *TmapSubmitted {
 }
 
 func (ts *TmapSubmitted) DuringPeriod(period string) *TmapSubmitted {
+	if period == "all" {
+		return ts
+	}
+	
 	period_clause, err := GetPeriodClause(period)
 	if err != nil {
 		ts.Error = err
@@ -380,18 +391,23 @@ func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 	if len(opts.CatsFilter) > 0 {
 		ts.FromCats(opts.CatsFilter)
 	}
+
 	if opts.AsSignedInUser != "" {
 		ts.AsSignedInUser(opts.AsSignedInUser)
 	}
+
 	if opts.SortByNewest {
 		ts.SortByNewest()
 	}
+
 	if opts.IncludeNSFW {
 		ts.NSFW()
 	}
+
 	if opts.Period != "" {
 		ts.DuringPeriod(opts.Period)
 	}
+
 	if opts.URLContains != "" {
 		ts.WithURLContaining(opts.URLContains)
 	}
@@ -498,6 +514,10 @@ func (tc *TmapCopied) SortByNewest() *TmapCopied {
 }
 
 func (tc *TmapCopied) DuringPeriod(period string) *TmapCopied {
+	if period == "all" {
+		return tc
+	}
+	
 	period_clause, err := GetPeriodClause(period)
 	if err != nil {
 		tc.Error = err
@@ -548,18 +568,23 @@ func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 	if len(opts.CatsFilter) > 0 {
 		tc.FromCats(opts.CatsFilter)
 	}
+
 	if opts.AsSignedInUser != "" {
 		tc.AsSignedInUser(opts.AsSignedInUser)
 	}
+
 	if opts.SortByNewest {
 		tc.SortByNewest()
 	}
+
 	if opts.IncludeNSFW {
 		tc.NSFW()
 	}
+
 	if opts.Period != "" {
 		tc.DuringPeriod(opts.Period)
 	}
+
 	if opts.URLContains != "" {
 		tc.WithURLContaining(opts.URLContains)
 	}
@@ -705,6 +730,10 @@ func (tt *TmapTagged) SortByNewest() *TmapTagged {
 }
 
 func (tt *TmapTagged) DuringPeriod(period string) *TmapTagged {
+	if period == "all" {
+		return tt
+	}
+	
 	period_clause, err := GetPeriodClause(period)
 	if err != nil {
 		tt.Error = err
@@ -755,18 +784,23 @@ func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 	if len(opts.CatsFilter) > 0 {
 		tt.FromCats(opts.CatsFilter)
 	}
+	
 	if opts.AsSignedInUser != "" {
 		tt.AsSignedInUser(opts.AsSignedInUser)
 	}
+	
 	if opts.SortByNewest {
 		tt.SortByNewest()
 	}
+	
 	if opts.IncludeNSFW {
 		tt.NSFW()
 	}
+	
 	if opts.Period != "" {
 		tt.DuringPeriod(opts.Period)
 	}
+	
 	if opts.URLContains != "" {
 		tt.WithURLContaining(opts.URLContains)
 	}

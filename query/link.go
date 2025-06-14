@@ -271,6 +271,10 @@ func (tl *TopLinks) WithURLContaining(snippet string) *TopLinks {
 }
 
 func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
+	if (period == "all") {
+		return tl
+	}
+	
 	period_clause, err := GetPeriodClause(period)
 	if err != nil {
 		tl.Error = err
