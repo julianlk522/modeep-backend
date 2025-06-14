@@ -704,6 +704,53 @@ func (tt *TmapTagged) SortByNewest() *TmapTagged {
 	return tt
 }
 
+func (tt *TmapTagged) DuringPeriod(period string) *TmapTagged {
+	period_clause, err := GetPeriodClause(period)
+	if err != nil {
+		tt.Error = err
+		return tt
+	}
+
+	period_clause = strings.Replace(
+		period_clause,
+		"submit_date",
+		"l.submit_date",
+		1,
+	)
+
+for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		tt.Text = strings.Replace(
+			tt.Text,
+			order_by,
+			"\nAND " + period_clause + order_by,
+			1,
+		)
+	}
+
+	return tt
+}
+
+func (tt *TmapTagged) WithURLContaining(snippet string) *TmapTagged {
+	for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		tt.Text = strings.Replace(
+			tt.Text,
+			order_by,
+			"\nAND " + "url LIKE ?" + order_by,
+			1,
+		)
+	} 
+
+	tt.Args = append(tt.Args, "%"+snippet+"%")
+
+	return tt
+}
+
 func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 	if len(opts.CatsFilter) > 0 {
 		tt.FromCats(opts.CatsFilter)
@@ -716,6 +763,12 @@ func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 	}
 	if opts.IncludeNSFW {
 		tt.NSFW()
+	}
+	if opts.Period != "" {
+		tt.DuringPeriod(opts.Period)
+	}
+	if opts.URLContains != "" {
+		tt.WithURLContaining(opts.URLContains)
 	}
 
 	return tt
