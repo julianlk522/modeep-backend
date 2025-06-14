@@ -22,7 +22,7 @@ import (
 	"github.com/julianlk522/fitm/query"
 )
 
-const TMAP_CATS_PAGE_LIMIT int = 20
+const TMAP_CATS_PAGE_LIMIT int = 50
 
 // DeleteProfilePic
 func UserWithIDHasProfilePic(user_id string) bool {
