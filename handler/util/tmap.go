@@ -36,10 +36,10 @@ func UserWithIDHasProfilePic(user_id string) bool {
 
 func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
 	var opts = &model.TmapOptions{}
+	var cats_params, period_params, url_contains_params, nsfw_params, sort_params, section_params, page_params string
 
-	cats_params := params.Get("cats")
+	cats_params = params.Get("cats")
 	if cats_params != "" {
-
 		// For GetCatCountsFromTmapLinks()
 		opts.RawCatsParams = cats_params
 
@@ -51,7 +51,16 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 		opts.CatsFilter = cats
 	}
 
-	var nsfw_params string
+	period_params = params.Get("period")
+	if period_params != "" {
+		opts.Period = period_params
+	}
+
+	url_contains_params = params.Get("url_contains")
+	if url_contains_params != "" {
+		opts.URLContains =  url_contains_params
+	}
+
 	if params.Get("nsfw") != "" {
 		nsfw_params = params.Get("nsfw")
 	} else if params.Get("NSFW") != "" {
@@ -63,14 +72,14 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 		return nil, e.ErrInvalidNSFWParams
 	}
 
-	sort_params := params.Get("sort_by")
+	sort_params = params.Get("sort_by")
 	if sort_params == "newest" {
 		opts.SortByNewest = true
 	} else if sort_params != "rating" && sort_params != "" {
 		return nil, e.ErrInvalidSortByParams
 	}
 
-	section_params := strings.ToLower(params.Get("section"))
+	section_params = strings.ToLower(params.Get("section"))
 	if section_params != "" {
 		switch section_params {
 		case "submitted", "copied", "tagged":
@@ -80,7 +89,7 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 		}
 	}
 
-	page_params := params.Get("page")
+	page_params = params.Get("page")
 	if page_params != "" && page_params != "0" {
 		page, err := strconv.Atoi(page_params)
 		if err != nil || page < 1 {
