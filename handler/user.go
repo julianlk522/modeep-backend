@@ -68,11 +68,11 @@ func LogIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	is_authenticated, err := util.AuthenticateUser(login_data.LoginName, login_data.Password)
-	if err != nil {
-		render.Render(w, r, e.Err500(err))
-		return
-	} else if !is_authenticated {
+	if !is_authenticated {
 		render.Render(w, r, e.ErrUnauthenticated(e.ErrInvalidLogin))
+		return
+	} else if err != nil {
+		render.Render(w, r, e.Err500(err))
 		return
 	}
 
