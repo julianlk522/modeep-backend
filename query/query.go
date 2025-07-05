@@ -33,43 +33,12 @@ func GetPeriodClause(period string) (clause string, err error) {
 
 func GetCatsWithEscapedReservedChars(cats []string) []string {
 	modified_cats := make([]string, len(cats))
-	for i := 0; i < len(cats); i++ {
-		modified_cats[i] = WithDoubleQuotesAroundReservedChars(cats[i])
+	for i := range cats {
+		modified_cats[i] = fmt.Sprintf(`"%s"`, cats[i])
 	}
 
 	return modified_cats
 }
-
-func WithDoubleQuotesAroundReservedChars(cat string) string {
-	return reserved_chars_double_quotes_surrounder.Replace(cat)
-}
-
-var reserved_chars_double_quotes_surrounder = strings.NewReplacer(
-	// ! seems to work already with no modifications
-	".", `"."`,
-	"-", `"-"`,
-	// + seems to work
-	"'", `"'"`,
-	// double quotes seems to work
-	"#", `"#"`,
-	"$", `"$"`,
-	"%", `"%"`,
-	"&", `"&"`,
-	"\\", `"\"`,
-	"/", `"/"`,
-	"(", `"("`,
-	")", `")"`,
-	"[", `"["`,
-	"]", `"]"`,
-	"{", `"{"`,
-	"}", `"}"`,
-	"|", `"|"`,
-	":", `":"`,
-	";", `";"`,
-	"=", `"="`,
-	"?", `"?"`,
-	"@", `"@"`,
-)
 
 func GetCatsOptionalPluralOrSingularForms(cats []string) []string {
 	modified_cats := make([]string, len(cats))

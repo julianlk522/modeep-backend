@@ -141,14 +141,12 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 		// And singular/plural variants are added after escaping
 		// reserved chars so that "(" and ")" are preserved
 		WithOptionalPluralOrSingularForm(
-			WithDoubleQuotesAroundReservedChars(
-				cats[0],
-			),
+			fmt.Sprintf(`"%s"`, cats[0]),
 		)
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " +
 			WithOptionalPluralOrSingularForm(
-				WithDoubleQuotesAroundReservedChars(cats[i]),
+				fmt.Sprintf(`"%s"`, cats[i]),
 			)
 	}
 	// Add optional singular/plural variants
