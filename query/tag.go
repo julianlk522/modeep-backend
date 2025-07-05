@@ -205,6 +205,10 @@ func (gcc *GlobalCatCounts) WithURLContaining(snippet string) *GlobalCatCounts {
 }
 
 func (gcc *GlobalCatCounts) DuringPeriod(period string) *GlobalCatCounts {
+	if period == "all" {
+		return gcc
+	}
+	
 	clause, err := GetPeriodClause(period)
 	if err != nil {
 		gcc.Error = err

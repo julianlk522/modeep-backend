@@ -108,6 +108,10 @@ func (c *Contributors) WithURLContaining(snippet string) *Contributors {
 }
 
 func (c *Contributors) DuringPeriod(period string) *Contributors {
+	if (period == "all") {
+		return c
+	}
+	
 	var clause_keyword string
 	// adapt keyword if .WithURLContaining was called first
 	if strings.Contains(c.Text, "WHERE url LIKE") {
