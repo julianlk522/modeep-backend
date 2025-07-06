@@ -214,8 +214,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 			new_link.LinkID,
 		)
 		if err != nil {
-			render.Render(w, r, e.Err500(err))
-			return
+			// skip - link won't have a preview image
 		}
 	}
 

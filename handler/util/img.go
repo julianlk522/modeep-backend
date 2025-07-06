@@ -2,7 +2,6 @@ package handler
 
 import (
 	"image"
-	"io"
 	"log"
 	"os"
 
@@ -71,19 +70,12 @@ func SaveUploadedImg(upload *model.ImgUpload) (string, error) {
 	// Scale down if needed	
 	// have not yet figured out how to encode as webp... skip for now
 	if img.Bounds().Max.X > THUMBNAIL_WIDTH_PX && file_type != "webp" {
-		if err = ScaleToThumbnailSize(
-			img, 
-			file_type, 
-			out_file,
-		); err != nil {
-			return "", err
-		}
-	} else {
-		// reset bytes to beginning
-		upload.Bytes.(io.Seeker).Seek(0, 0)
-		if _, err = io.Copy(out_file, upload.Bytes); err != nil {
-			return "", err
-		}
+		img = ScaleToThumbnailSize(img)
+	}
+
+	err = EncodeImg(img, file_type, out_file)
+	if err != nil {
+		return "", err
 	}
 
 	return file_name, nil
@@ -101,24 +93,26 @@ func HasAcceptableAspectRatio(img image.Image) bool {
 	return true
 }
 
-func ScaleToThumbnailSize(img image.Image, file_type string, out_file *os.File) error {
-	resized_img := resize.Resize(
+func ScaleToThumbnailSize(img image.Image) image.Image {
+	return resize.Resize(
 		uint(THUMBNAIL_WIDTH_PX), 
 		0, 
 		img, 
 		resize.Lanczos3,
 	)
+}
 
+func EncodeImg(img image.Image, file_type string, out_file *os.File) error {
 	var err error
 	switch file_type {
 		case "jpg":
-			err = jpeg.Encode(out_file, resized_img, nil)
+			err = jpeg.Encode(out_file, img, nil)
 		case "jpeg":
-			err = jpeg.Encode(out_file, resized_img, nil)
+			err = jpeg.Encode(out_file, img, nil)
 		case "png":
-			err = png.Encode(out_file, resized_img)
+			err = png.Encode(out_file, img)
 		case "gif":
-			err = gif.Encode(out_file, resized_img, nil)
+			err = gif.Encode(out_file, img, nil)
 		case "webp":
 			// there is no Encode function for .webp :(
 			// skip and use full sized image
