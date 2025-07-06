@@ -201,10 +201,7 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	tl.Args = tl.Args[:len(tl.Args)-1]
 
 	// Build and add match arg
-	cats = GetCatsOptionalPluralOrSingularForms(
-		GetCatsWithEscapedReservedChars(cats),
-	)
-
+	cats = GetCatsOptionalPluralOrSingularForms(cats)
 	var match_arg = cats[0]
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " + cats[i]

@@ -31,18 +31,9 @@ func GetPeriodClause(period string) (clause string, err error) {
 	return fmt.Sprintf("submit_date >= date('now', '-%d days')", days), nil
 }
 
-func GetCatsWithEscapedReservedChars(cats []string) []string {
-	modified_cats := make([]string, len(cats))
-	for i := range cats {
-		modified_cats[i] = fmt.Sprintf(`"%s"`, cats[i])
-	}
-
-	return modified_cats
-}
-
 func GetCatsOptionalPluralOrSingularForms(cats []string) []string {
 	modified_cats := make([]string, len(cats))
-	for i := 0; i < len(cats); i++ {
+	for i := range cats {
 		modified_cats[i] = WithOptionalPluralOrSingularForm(cats[i])
 	}
 
@@ -51,12 +42,38 @@ func GetCatsOptionalPluralOrSingularForms(cats []string) []string {
 
 func WithOptionalPluralOrSingularForm(cat string) string {
 	if strings.HasSuffix(cat, "ss") {
-		return fmt.Sprintf("(%s OR %s)", cat, cat+"es")
+		return fmt.Sprintf("(%s OR %s)", 
+			GetCatSurroundedInDoubleQuotes(cat), 
+			GetCatSurroundedInDoubleQuotes(cat+"es"),
+		)
 	} else if strings.HasSuffix(cat, "sses") {
-		return fmt.Sprintf("(%s OR %s)", cat, strings.TrimSuffix(cat, "es"))
+		return fmt.Sprintf("(%s OR %s)", 
+			GetCatSurroundedInDoubleQuotes(cat), 
+			GetCatSurroundedInDoubleQuotes(strings.TrimSuffix(cat, "es")),
+		)
 	} else if strings.HasSuffix(cat, "s") {
-		return fmt.Sprintf("(%s OR %s OR %s)", cat, cat+"es", strings.TrimSuffix(cat, "s"))
+		return fmt.Sprintf("(%s OR %s OR %s)", 
+			GetCatSurroundedInDoubleQuotes(cat), 
+			GetCatSurroundedInDoubleQuotes(cat+"es"), 
+			GetCatSurroundedInDoubleQuotes(strings.TrimSuffix(cat, "s")),
+		)
 	} else {
-		return fmt.Sprintf("(%s OR %s)", cat, cat+"s")
+		return fmt.Sprintf("(%s OR %s)", 
+			GetCatSurroundedInDoubleQuotes(cat), 
+			GetCatSurroundedInDoubleQuotes(cat+"s"),
+		)
 	}
+}
+
+func GetCatsSurroundedInDoubleQuotes(cats []string) []string {
+	modified_cats := make([]string, len(cats))
+	for i := range cats {
+		modified_cats[i] = GetCatSurroundedInDoubleQuotes(cats[i])
+	}
+
+	return modified_cats
+}
+
+func GetCatSurroundedInDoubleQuotes(cat string) string {
+	return fmt.Sprintf(`"%s"`, cat)
 }

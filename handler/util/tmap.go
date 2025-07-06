@@ -44,9 +44,7 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 		opts.RawCatsParams = cats_params
 
 		cats := query.GetCatsOptionalPluralOrSingularForms(
-			query.GetCatsWithEscapedReservedChars(
-				strings.Split(cats_params, ","),
-			),
+			strings.Split(cats_params, ","),
 		)
 		opts.CatsFilter = cats
 	}

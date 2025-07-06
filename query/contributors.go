@@ -52,11 +52,7 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 		return c
 	}
 
-	cats = GetCatsOptionalPluralOrSingularForms(
-		GetCatsWithEscapedReservedChars(cats),
-	)
-
-	match_clause := " WHERE global_cats MATCH ?"
+	cats = GetCatsOptionalPluralOrSingularForms(cats)
 	match_arg := cats[0]
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " + cats[i]
@@ -64,6 +60,7 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 	c.Args = append(c.Args, match_arg)
 
 	// Build CTE
+	match_clause := " WHERE global_cats MATCH ?"
 	cats_CTE := `WITH CatsFilter AS (
 	SELECT link_id
 	FROM global_cats_fts` + match_clause + `

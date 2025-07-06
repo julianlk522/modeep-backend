@@ -72,7 +72,7 @@ func TestGetCatsWithEscapedReservedChars(t *testing.T) {
 			`goober"@"mail`,
 		},
 	}
-	escaped_cats := GetCatsWithEscapedReservedChars(test_cats.Cats)
+	escaped_cats := GetCatsSurroundedInDoubleQuotes(test_cats.Cats)
 	for i, res := range escaped_cats {
 		if res != test_cats.ExpectedResults[i] {
 			t.Fatalf("got %s, want %s", test_cats.Cats[i], test_cats.ExpectedResults[i])
@@ -95,13 +95,13 @@ func TestWithOptionalPluralOrSingularForm(t *testing.T) {
 			"music",
 		},
 		ExpectedResults: []string{
-			"(cat OR cats)",
-			"(cats OR catses OR cat)",
-			"(dress OR dresses)",
-			"(dresses OR dress)",
-			"(iris OR irises OR iri)",
-			"(irises OR iriseses OR irise)",
-			"(music OR musics)",
+			`("cat" OR "cats")`,
+			`("cats" OR "catses" OR "cat")`,
+			`("dress" OR "dresses")`,
+			`("dresses" OR "dress")`,
+			`("iris" OR "irises" OR "iri")`,
+			`("irises" OR "iriseses" OR "irise")`,
+			`("music" OR "musics")`,
 		},
 	}
 

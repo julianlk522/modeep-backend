@@ -136,18 +136,9 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 		WHERE global_cats MATCH ?
 		)`
 
-	// With MATCH, reserved chars must be surrounded with ""
-	match_arg :=
-		// And singular/plural variants are added after escaping
-		// reserved chars so that "(" and ")" are preserved
-		WithOptionalPluralOrSingularForm(
-			fmt.Sprintf(`"%s"`, cats[0]),
-		)
+	match_arg := WithOptionalPluralOrSingularForm(cats[0])
 	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " +
-			WithOptionalPluralOrSingularForm(
-				fmt.Sprintf(`"%s"`, cats[i]),
-			)
+		match_arg += " AND " + WithOptionalPluralOrSingularForm(cats[i])
 	}
 	// Add optional singular/plural variants
 	// (skip for NOT IN clause otherwise subcats include filters)
