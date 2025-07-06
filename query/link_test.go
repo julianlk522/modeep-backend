@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/julianlk522/fitm/model"
+	mutil "github.com/julianlk522/fitm/model/util"
 )
 
 func TestNewTopLinks(t *testing.T) {
@@ -28,7 +29,7 @@ func TestNewTopLinks(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) < 13 {
+	} else if len(cols) < 15 {
 		t.Fatal("too few columns")
 	}
 
@@ -43,7 +44,9 @@ func TestNewTopLinks(t *testing.T) {
 		{"summary"},
 		{"summary_count"},
 		{"like_count"},
+		{"earliest_likers"},
 		{"copy_count"},
+		{"earliest_copiers"},
 		{"click_count"},
 		{"tag_count"},
 		{"img_file"},
@@ -98,7 +101,8 @@ func TestFromCats(t *testing.T) {
 			continue
 		}
 
-		if len(links_sql.Args) != 2 && links_sql.Args[0] != strings.Join(tc.Cats, " ") && links_sql.Args[1] != LINKS_PAGE_LIMIT {
+		if 
+		links_sql.Args[len(links_sql.Args)-2] != strings.Join(tc.Cats, " ") && links_sql.Args[len(links_sql.Args)-1] != LINKS_PAGE_LIMIT {
 			t.Fatalf("got %v, want %v (should be cat_match and limit in that order)", links_sql.Args, tc.Cats)
 		}
 
@@ -133,7 +137,9 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&link.Summary,
 			&link.SummaryCount,
 			&link.LikeCount,
+			&link.EarliestLikers,
 			&link.CopyCount,
+			&link.EarliestCopiers,
 			&link.ClickCount,
 			&link.TagCount,
 			&link.PreviewImgFilename,
@@ -178,7 +184,9 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&link.Summary,
 			&link.SummaryCount,
 			&link.LikeCount,
+			&link.EarliestLikers,
 			&link.CopyCount,
+			&link.EarliestCopiers,
 			&link.ClickCount,
 			&link.TagCount,
 			&link.PreviewImgFilename,
@@ -209,7 +217,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 		{"week", true},
 		{"month", true},
 		{"year", true},
-		{"all", false},
+		{"all", true},
 		{"gobblety gook", false},
 	}
 
@@ -283,7 +291,9 @@ func TestLinksSortBy(t *testing.T) {
 				&link.Summary,
 				&link.SummaryCount,
 				&link.LikeCount,
+				&link.EarliestLikers,
 				&link.CopyCount,
+				&link.EarliestCopiers,
 				&link.ClickCount,
 				&link.TagCount,
 				&link.PreviewImgFilename,
@@ -300,30 +310,31 @@ func TestLinksSortBy(t *testing.T) {
 		}
 
 		// Verify results correctly sorted
-		if ts.Sort == "rating" {
-			var last_like_count int64 = 999 // arbitrary high number
-			for _, link := range links {
-				if link.LikeCount > last_like_count {
-					t.Fatalf("link like count %d above previous min %d", link.LikeCount, last_like_count)
-				} else if link.LikeCount < last_like_count {
-					last_like_count = link.LikeCount
+		switch ts.Sort {
+			case "rating":
+				var last_like_count int64 = 999 // arbitrary high number
+				for _, link := range links {
+					if link.LikeCount > last_like_count {
+						t.Fatalf("link like count %d above previous min %d", link.LikeCount, last_like_count)
+					} else if link.LikeCount < last_like_count {
+						last_like_count = link.LikeCount
+					}
 				}
-			}
-		} else if ts.Sort == "newest" {
-			last_date := time.Now() // most recent
-			for _, link := range links {
-				sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
-				if err != nil {
-					t.Fatal(err)
-				}
+			case "newest":
+				last_date := time.Now() // most recent
+				for _, link := range links {
+					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+					if err != nil {
+						t.Fatal(err)
+					}
 
-				if sd.After(last_date) {
-					t.Fatalf("link date %s after last date %s", sd, last_date)
-				} else if sd.Before(last_date) {
-					last_date = sd
+					if sd.After(last_date) {
+						t.Fatalf("link date %s after last date %s", sd, last_date)
+					} else if sd.Before(last_date) {
+						last_date = sd
+					}
 				}
 			}
-		}
 	}
 }
 
@@ -346,7 +357,7 @@ func TestAsSignedInUser(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 15 {
+	} else if len(cols) != 17 {
 		t.Fatal("incorrect col count")
 	}
 
@@ -361,7 +372,9 @@ func TestAsSignedInUser(t *testing.T) {
 		{"summary"},
 		{"summary_count"},
 		{"like_count"},
+		{"earliest_likers"},
 		{"copy_count"},
+		{"earliest_copiers"},
 		{"click_count"},
 		{"tag_count"},
 		{"img_file"},
@@ -376,7 +389,13 @@ func TestAsSignedInUser(t *testing.T) {
 		}
 	}
 
-	var expected_args = []any{TEST_USER_ID, TEST_USER_ID, LINKS_PAGE_LIMIT}
+	var expected_args = []any{
+		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+		TEST_USER_ID, 
+		TEST_USER_ID, 
+		LINKS_PAGE_LIMIT,
+	}
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {
 			t.Fatalf("arg %d: got %v, want %v", i, arg, expected_args[i])
@@ -390,7 +409,14 @@ func TestAsSignedInUser(t *testing.T) {
 	}
 
 	// "go AND coding" modified to include plural/singular variations
-	expected_args = []any{TEST_USER_ID, TEST_USER_ID, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT}
+	expected_args = []any{
+		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+		TEST_USER_ID, 
+		TEST_USER_ID, 
+		WithOptionalPluralOrSingularForm("go") + " AND " + WithOptionalPluralOrSingularForm("coding"), 
+		LINKS_PAGE_LIMIT,
+	}
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {
 			t.Fatalf("arg %d: got %v, want %v", i, arg, expected_args[i])
@@ -436,7 +462,9 @@ func TestNSFW(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
+			&l.EarliestLikers,
 			&l.CopyCount,
+			&l.EarliestCopiers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -473,7 +501,9 @@ func TestNSFW(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.LikeCount,
+			&l.EarliestLikers,
 			&l.CopyCount,
+			&l.EarliestCopiers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -538,7 +568,15 @@ func TestPage(t *testing.T) {
 	}
 
 	// "go AND coding" modified to include plural/singular variations
-	var expected_args = []any{TEST_USER_ID, TEST_USER_ID, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT + 1, LINKS_PAGE_LIMIT}
+	var expected_args = []any{
+		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+		TEST_USER_ID, 
+		TEST_USER_ID, 
+		WithOptionalPluralOrSingularForm("go") + " AND " + WithOptionalPluralOrSingularForm("coding"), 
+		LINKS_PAGE_LIMIT + 1, 
+		LINKS_PAGE_LIMIT,
+	}
 
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {

@@ -36,14 +36,15 @@ func TestScanContributors(t *testing.T) {
 		err := TestClient.QueryRow(`SELECT count(*)
 				FROM Links
 				WHERE submitted_by = ?
-				AND ',' || global_cats || ',' LIKE '%,' || ? || ',%'`,
+				AND ',' || global_cats || ',' LIKE '%' || ? || '%'`,
 			contributor.LoginName,
 			test_cats_str).Scan(&ls)
 		if err != nil {
 			t.Fatal(err)
 		} else if ls != contributor.LinksSubmitted {
 			t.Fatalf(
-				"expected %d links submitted, got %d (contributor: %s)", contributor.LinksSubmitted,
+				"expected %d links submitted, got %d (contributor: %s)", 
+				contributor.LinksSubmitted,
 				ls,
 				contributor.LoginName,
 			)
@@ -67,8 +68,8 @@ func TestScanContributors(t *testing.T) {
 		err := TestClient.QueryRow(`SELECT count(*)
 				FROM Links
 				WHERE submitted_by = ?
-				AND ',' || global_cats || ',' LIKE '%,' || ? || ',%'
-				AND ',' || global_cats || ',' LIKE '%,' || ? || ',%';`,
+				AND ',' || global_cats || ',' LIKE '%' || ? || '%'
+				AND ',' || global_cats || ',' LIKE '%' || ? || '%';`,
 			contributor.LoginName,
 			test_multiple_cats[0],
 			test_multiple_cats[1]).Scan(&ls)
@@ -76,7 +77,8 @@ func TestScanContributors(t *testing.T) {
 			t.Fatal(err)
 		} else if ls != contributor.LinksSubmitted {
 			t.Fatalf(
-				"expected %d links submitted, got %d (contributor: %s)", contributor.LinksSubmitted,
+				"expected %d links submitted, got %d (contributor: %s)", 
+				contributor.LinksSubmitted,
 				ls,
 				contributor.LoginName,
 			)

@@ -131,7 +131,7 @@ func TestTopContributorsDuringPeriod(t *testing.T) {
 		{"week", true},
 		{"month", true},
 		{"year", true},
-		{"all", false},
+		{"all", true},
 		{"shouldfail", false},
 	}
 

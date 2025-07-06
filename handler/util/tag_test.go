@@ -188,7 +188,7 @@ func TestScanGlobalCatCounts(t *testing.T) {
 		{"week", true},
 		{"month", true},
 		{"year", true},
-		{"all", false},
+		{"all", true},
 		{"invalid_period", false},
 	}
 
@@ -229,18 +229,20 @@ func TestScanGlobalCatCounts(t *testing.T) {
 				t.Fatalf("cat %s returned count 0", c.Category)
 			}
 
-			period_clause, err := query.GetPeriodClause(tp.Period)
-			if err != nil {
-				t.Fatalf("unable to get period clause: %s", err)
+			counts_sql := `SELECT count(global_cats)
+				FROM Links
+				WHERE ',' || global_cats || ',' LIKE '%,' || ? || ',%'`
+
+			if tp.Period != "all" {
+				period_clause, err := query.GetPeriodClause(tp.Period)
+				if err != nil {
+					t.Fatalf("unable to get period clause: %s", err)
+				}
+
+				counts_sql += "AND "+period_clause+";"
 			}
 
-			err = TestClient.QueryRow(`SELECT count(global_cats)
-					FROM Links
-					WHERE ',' || global_cats || ',' LIKE '%,' || ? || ',%'
-					AND `+period_clause+";",
-				c.Category,
-				period_clause).Scan(&result_count)
-
+			err = TestClient.QueryRow(counts_sql, c.Category).Scan(&result_count)
 			if err != nil {
 				t.Fatal(err)
 			} else if c.Count != result_count {

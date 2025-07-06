@@ -27,7 +27,7 @@ func TestNewSummariesForLink(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 5 {
+	} else if len(cols) != 6 {
 		t.Fatalf("wrong column count (got %d, want 5)", len(cols))
 	}
 
@@ -39,6 +39,7 @@ func TestNewSummariesForLink(t *testing.T) {
 		{"ln"},
 		{"last_updated"},
 		{"like_count"},
+		{"earliest_likers"},
 	}
 
 	for i, col := range cols {
@@ -108,7 +109,7 @@ func TestNewSummariesAsSignedInUser(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 6 {
+	} else if len(cols) != 7 {
 		t.Fatalf("wrong column count (got %d, want 6)", len(cols))
 	}
 
@@ -121,6 +122,7 @@ func TestNewSummariesAsSignedInUser(t *testing.T) {
 			&s.SubmittedBy,
 			&s.LastUpdated,
 			&s.LikeCount,
+			&s.EarliestLikers,
 			&s.IsLiked,
 		); err != nil {
 			t.Fatal(err)

@@ -223,7 +223,7 @@ func TestNewTopGlobalCatCountsDuringPeriod(t *testing.T) {
 		{"week", true},
 		{"month", true},
 		{"year", true},
-		{"all", false},
+		{"all", true},
 		{"invalid_period", false},
 	}
 

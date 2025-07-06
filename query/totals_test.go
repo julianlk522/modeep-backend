@@ -11,7 +11,7 @@ func TestNewTotals(t *testing.T) {
 
 	totals_sql := NewTotals()
 	if err := TestClient.
-		QueryRow(totals_sql.Text).
+		QueryRow(totals_sql.Text, totals_sql.Args...).
 		Scan(&totals.Links,
 			&totals.Clicks,
 			&totals.Contributors,
