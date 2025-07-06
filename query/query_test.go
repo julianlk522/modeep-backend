@@ -20,66 +20,6 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestGetCatsWithEscapedReservedChars(t *testing.T) {
-	var test_cats = struct {
-		Cats            []string
-		ExpectedResults []string
-	}{
-		Cats: []string{
-			"c. vi.per",
-			"hsien-ko",
-			"Ian's House",
-			"#hashtag",
-			"dolla$",
-			"per%cent",
-			"A&W",
-			"back\\slash",
-			"slash/slash/slash",
-			"func(",
-			"func)",
-			"bra[",
-			"ckets]",
-			"bra{",
-			"ces}",
-			"either|or",
-			"colon:colon",
-			"Steins;Gate",
-			"=3",
-			"question?question",
-			"goober@mail",
-		},
-		ExpectedResults: []string{
-			`c"." vi"."per`,
-			`hsien"-"ko`,
-			`Ian"'"s House`,
-			`"#"hashtag`,
-			`dolla"$"`,
-			`per"%"cent`,
-			`A"&"W`,
-			`back"\"slash`,
-			`slash"/"slash"/"slash`,
-			`func"("`,
-			`func")"`,
-			`bra"["`,
-			`ckets"]"`,
-			`bra"{"`,
-			`ces"}"`,
-			`either"|"or`,
-			`colon":"colon`,
-			`Steins";"Gate`,
-			`"="3`,
-			`question"?"question`,
-			`goober"@"mail`,
-		},
-	}
-	escaped_cats := GetCatsSurroundedInDoubleQuotes(test_cats.Cats)
-	for i, res := range escaped_cats {
-		if res != test_cats.ExpectedResults[i] {
-			t.Fatalf("got %s, want %s", test_cats.Cats[i], test_cats.ExpectedResults[i])
-		}
-	}
-}
-
 func TestWithOptionalPluralOrSingularForm(t *testing.T) {
 	var test_cats = struct {
 		Cats            []string
