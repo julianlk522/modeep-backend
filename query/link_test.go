@@ -159,7 +159,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 	links_sql = NewTopLinks().
 		FromCats([]string{"umvc3"}).
 		WithURLContaining("google").
-		AsSignedInUser(test_user_id).
+		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
@@ -328,7 +328,7 @@ func TestLinksSortBy(t *testing.T) {
 }
 
 func TestAsSignedInUser(t *testing.T) {
-	links_sql := NewTopLinks().AsSignedInUser(test_user_id)
+	links_sql := NewTopLinks().AsSignedInUser(TEST_USER_ID)
 	if links_sql.Error != nil {
 		t.Fatal(links_sql.Error)
 	}
@@ -376,7 +376,7 @@ func TestAsSignedInUser(t *testing.T) {
 		}
 	}
 
-	var expected_args = []any{test_user_id, test_user_id, LINKS_PAGE_LIMIT}
+	var expected_args = []any{TEST_USER_ID, TEST_USER_ID, LINKS_PAGE_LIMIT}
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {
 			t.Fatalf("arg %d: got %v, want %v", i, arg, expected_args[i])
@@ -384,13 +384,13 @@ func TestAsSignedInUser(t *testing.T) {
 	}
 
 	// Verify no conflict with .FromCats()
-	links_sql = NewTopLinks().FromCats(test_cats).AsSignedInUser(test_user_id)
+	links_sql = NewTopLinks().FromCats(test_cats).AsSignedInUser(TEST_USER_ID)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
 		t.Fatal(err)
 	}
 
 	// "go AND coding" modified to include plural/singular variations
-	expected_args = []any{test_user_id, test_user_id, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT}
+	expected_args = []any{TEST_USER_ID, TEST_USER_ID, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT}
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {
 			t.Fatalf("arg %d: got %v, want %v", i, arg, expected_args[i])
@@ -412,7 +412,7 @@ func TestNSFW(t *testing.T) {
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
 		DuringPeriod("year").
-		AsSignedInUser(test_user_id).
+		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest").
 		Page(1).
 		NSFW()
@@ -454,7 +454,7 @@ func TestNSFW(t *testing.T) {
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
 		DuringPeriod("year").
-		AsSignedInUser(test_user_id).
+		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest").
 		Page(1)
 
@@ -530,7 +530,7 @@ func TestPage(t *testing.T) {
 		FromCats(test_cats).
 		DuringPeriod("year").
 		SortBy("newest").
-		AsSignedInUser(test_user_id).
+		AsSignedInUser(TEST_USER_ID).
 		NSFW().
 		Page(2)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
@@ -538,7 +538,7 @@ func TestPage(t *testing.T) {
 	}
 
 	// "go AND coding" modified to include plural/singular variations
-	var expected_args = []any{test_user_id, test_user_id, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT + 1, LINKS_PAGE_LIMIT}
+	var expected_args = []any{TEST_USER_ID, TEST_USER_ID, "(go OR gos) AND (coding OR codings)", LINKS_PAGE_LIMIT + 1, LINKS_PAGE_LIMIT}
 
 	for i, arg := range links_sql.Args {
 		if arg != expected_args[i] {

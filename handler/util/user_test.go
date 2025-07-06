@@ -93,7 +93,7 @@ func TestUserWithIDHasProfilePic(t *testing.T) {
 		HasProfilePic bool
 	}{
 		// test user jlk has profile pic
-		{test_user_id, true},
+		{TEST_USER_ID, true},
 		// test user nelson does not have profile pic
 		{"nelson", false},
 	}

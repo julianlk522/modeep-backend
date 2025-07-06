@@ -112,17 +112,17 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if "more" params passed, need to run through the results to check
+	// if "more" params passed: need to run through the results to check
 	// if any cat plural/singular spelling variations were merged
 
-	// (on pages with links it is more accurate to search the links, but
-	// there are none on the /more page so not possible under that condition)
+	// (on pages with links it's more accurate to search the links, but
+	// there are none on the /more page so not possible)
 
-	// it is more accurate to check links because that way you know for sure
-	// whether a seemingly merged cat was actually merged or just a subcat
+	// it's more accurate to check links because you know for sure
+	// whether a seemingly merged cat was truly merged (not part of the tag
+	// but close enough to be counted) or actually a subcat (part of the tag)
 
-	// this approach is not 100% reliable but for now I can't think of a better
-	// way to do it
+	// this approach isn't 100% reliable but good enough for now
 	more_params := query_params.Get("more")
 	cats_params := query_params.Get("cats")
 

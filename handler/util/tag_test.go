@@ -15,7 +15,7 @@ func TestGetUserTagForLink(t *testing.T) {
 		LinkID    string
 		Cats      string
 	}{
-		LoginName: test_login_name,
+		LoginName: TEST_LOGIN_NAME,
 		LinkID:    "22",
 		Cats:      "barbie,magic,wow",
 	}
@@ -92,7 +92,7 @@ func TestScanTagRankings(t *testing.T) {
 			SubmittedBy: "jlk",
 		},
 	}
-	tag_rankings_sql := query.NewTagRankings(test_link_id).Public()
+	tag_rankings_sql := query.NewTagRankings(TEST_LINK_ID).Public()
 	// NewTagRankings(link_id).Public().Error already tested in query/tag_test.go
 
 	rankings, err := ScanPublicTagRankings(tag_rankings_sql)
@@ -269,7 +269,7 @@ func TestUserHasTaggedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		got, err := UserHasTaggedLink(test_login_name, l.ID)
+		got, err := UserHasTaggedLink(TEST_LOGIN_NAME, l.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
 		} else if l.TaggedByTestUser != got {
@@ -292,7 +292,7 @@ func TestUserSubmittedTagWithID(t *testing.T) {
 	}
 
 	for _, tag := range test_tags {
-		got, err := UserSubmittedTagWithID(test_login_name, tag.ID)
+		got, err := UserSubmittedTagWithID(TEST_LOGIN_NAME, tag.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
 		} else if tag.SubmittedByTestUser != got {

@@ -13,13 +13,13 @@ import (
 func TestBuildSummaryPageForLink(t *testing.T) {
 	ctx := context.Background()
 	jwt_claims := map[string]any{
-		"user_id":    test_user_id,
-		"login_name": test_login_name,
+		"user_id":    TEST_USER_ID,
+		"login_name": TEST_LOGIN_NAME,
 	}
 	ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 	r := (&http.Request{}).WithContext(ctx)
 
-	summary_page, err := BuildSummaryPageForLink(test_link_id, r)
+	summary_page, err := BuildSummaryPageForLink(TEST_LINK_ID, r)
 	if err != nil {
 		t.Fatalf("could not get summary page: %s", err)
 	}
@@ -40,11 +40,11 @@ func TestBuildSummaryPageForLink(t *testing.T) {
 					err,
 					summary.ID,
 				)
-			} else if link_id != test_link_id {
+			} else if link_id != TEST_LINK_ID {
 				t.Fatalf(
 					"summary %s does not belong to link %s",
 					summary.ID,
-					test_link_id,
+					TEST_LINK_ID,
 				)
 			}
 		}
@@ -57,7 +57,7 @@ func TestBuildSummaryPageForLink(t *testing.T) {
 			SELECT count(*)
 			FROM "Link Likes"
 			WHERE link_id = ?`,
-			test_link_id).Scan(&lc)
+			TEST_LINK_ID).Scan(&lc)
 
 		if err != nil {
 			t.Fatalf("failed to get link LikeCount: %s", err)
@@ -70,7 +70,7 @@ func TestBuildSummaryPageForLink(t *testing.T) {
 			SELECT count(*)
 			FROM Tags
 			WHERE link_id = ?`,
-			test_link_id).Scan(&tc)
+			TEST_LINK_ID).Scan(&tc)
 
 		if err != nil {
 			t.Fatalf("failed to get link tag count: %s", err)
@@ -84,7 +84,7 @@ func TestBuildSummaryPageForLink(t *testing.T) {
 			SELECT count(*)
 			FROM Summaries
 			WHERE link_id = ?`,
-			test_link_id).Scan(&sc)
+			TEST_LINK_ID).Scan(&sc)
 		if err != nil {
 			t.Fatalf("failed to get link summary count: %s", err)
 		} else if sc != summary_page.Link.SummaryCount {
@@ -121,7 +121,7 @@ func TestLinkExists(t *testing.T) {
 func TestGetSummaryIDForLink(t *testing.T) {
 	var test_summary_id, test_link_id = "84", "99"
 
-	summary_id, err := GetIDOfUserSummaryForLink(test_user_id, test_link_id)
+	summary_id, err := GetIDOfUserSummaryForLink(TEST_USER_ID, test_link_id)
 	if err != nil {
 		t.Fatalf("failed with error: %s", err)
 	} else if summary_id != test_summary_id {
@@ -180,7 +180,7 @@ func TestSummarySubmittedByUser(t *testing.T) {
 	}
 
 	for _, l := range test_summary_ids {
-		got, err := SummarySubmittedByUser(l.ID, test_user_id)
+		got, err := SummarySubmittedByUser(l.ID, TEST_USER_ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
 		} else if l.SubmittedByTestUser != got {
@@ -203,7 +203,7 @@ func TestUserHasLikedSummary(t *testing.T) {
 	}
 
 	for _, l := range test_summary_ids {
-		got, err := UserHasLikedSummary(test_user_id, l.ID)
+		got, err := UserHasLikedSummary(TEST_USER_ID, l.ID)
 		if err != nil {
 			t.Fatalf("failed with error: %s", err)
 		} else if l.LikedByTestUser != got {

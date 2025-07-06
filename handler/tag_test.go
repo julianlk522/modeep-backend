@@ -97,8 +97,8 @@ func TestAddTag(t *testing.T) {
 	}
 
 	const (
-		test_user_id    = "3"
-		test_login_name = "jlk"
+		TEST_USER_ID    = "3"
+		TEST_LOGIN_NAME = "jlk"
 	)
 
 	for _, tr := range test_tag_requests {
@@ -112,8 +112,8 @@ func TestAddTag(t *testing.T) {
 
 		ctx := context.Background()
 		jwt_claims := map[string]any{
-			"user_id":    test_user_id,
-			"login_name": test_login_name,
+			"user_id":    TEST_USER_ID,
+			"login_name": TEST_LOGIN_NAME,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)
@@ -205,8 +205,8 @@ func TestEditTag(t *testing.T) {
 	}
 
 	const (
-		test_user_id    = "3"
-		test_login_name = "jlk"
+		TEST_USER_ID    = "3"
+		TEST_LOGIN_NAME = "jlk"
 	)
 
 	for _, tr := range test_tag_requests {
@@ -220,8 +220,8 @@ func TestEditTag(t *testing.T) {
 
 		ctx := context.Background()
 		jwt_claims := map[string]any{
-			"user_id":    test_user_id,
-			"login_name": test_login_name,
+			"user_id":    TEST_USER_ID,
+			"login_name": TEST_LOGIN_NAME,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)
@@ -303,7 +303,7 @@ func TestDeleteTag(t *testing.T) {
 
 		ctx := context.Background()
 		jwt_claims := map[string]any{
-			"login_name": test_login_name,
+			"login_name": TEST_LOGIN_NAME,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)

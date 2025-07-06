@@ -10,16 +10,17 @@ import (
 	"github.com/julianlk522/fitm/model"
 )
 
-var (
-	test_login_name     = "jlk"
-	test_user_id        = "3"
-	test_req_login_name = "bradley"
-	test_req_user_id    = "13"
-	test_cats           = []string{"go", "coding"}
+const (
+	TEST_LOGIN_NAME     = "jlk"
+	TEST_USER_ID        = "3"
+	TEST_REQ_LOGIN_NAME = "bradley"
+	TEST_REQ_USER_ID    = "13"
 )
 
+var test_cats = []string{"go", "coding"}
+
 func TestNewTmapProfile(t *testing.T) {
-	profile_sql := NewTmapProfile(test_login_name)
+	profile_sql := NewTmapProfile(TEST_LOGIN_NAME)
 
 	var profile model.Profile
 	if err := TestClient.QueryRow(profile_sql.Text, profile_sql.Args...).Scan(
@@ -34,7 +35,7 @@ func TestNewTmapProfile(t *testing.T) {
 }
 
 func TestNewTmapNSFWLinksCount(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(test_login_name)
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME)
 	var count int
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 		t.Fatal(err)
@@ -65,7 +66,7 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 	}
 
 	// Submitted
-	sql = NewTmapNSFWLinksCount(test_req_login_name)
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +79,7 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 }
 
 func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(test_req_login_name).SubmittedOnly()
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).SubmittedOnly()
 	var count int
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 		t.Fatal(err)
@@ -91,7 +92,7 @@ func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
 		AND global_cats LIKE '%' || 'NSFW' || '%';`
 	if err := TestClient.QueryRow(
 		nsfw_submitted_links_sql, 
-		test_req_login_name,
+		TEST_REQ_LOGIN_NAME,
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)	
 	}
@@ -102,7 +103,7 @@ func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
 }
 
 func TestTmapNSFWLinksCountCopiedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(test_req_login_name).CopiedOnly()
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).CopiedOnly()
 	var count int
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 		t.Fatal(err)
@@ -117,7 +118,7 @@ func TestTmapNSFWLinksCountCopiedOnly(t *testing.T) {
 		AND l.global_cats LIKE '%' || 'NSFW' || '%';`
 	if err := TestClient.QueryRow(
 		nsfw_copied_links_sql, 
-		test_req_login_name,
+		TEST_REQ_LOGIN_NAME,
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +129,7 @@ func TestTmapNSFWLinksCountCopiedOnly(t *testing.T) {
 }
 
 func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(test_req_login_name).TaggedOnly()
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).TaggedOnly()
 	var count int
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 		t.Fatal(err)
@@ -143,8 +144,8 @@ func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
 		AND t.cats LIKE '%' || 'NSFW' || '%';`
 	if err := TestClient.QueryRow(
 		nsfw_tagged_links_sql, 
-		test_req_login_name,
-		test_req_login_name,
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +157,7 @@ func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
 
 func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
 	// get NSFW links count overall first:
-	sql := NewTmapNSFWLinksCount(test_req_login_name)
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
 	var total_countut int
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&total_countut); err != nil {
 		t.Fatal(err)
@@ -164,7 +165,7 @@ func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
 
 	// should equal "all" period
 	var count_during_all_period int
-	sql = NewTmapNSFWLinksCount(test_req_login_name).DuringPeriod("all")
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).DuringPeriod("all")
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_during_all_period); err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +176,7 @@ func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
 
 	// last week (none)
 	var count_during_last_week int
-	sql = NewTmapNSFWLinksCount(test_req_login_name).DuringPeriod("week")
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).DuringPeriod("week")
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_during_last_week); err != nil {
 		t.Fatal(err)
 	}
@@ -190,13 +191,13 @@ func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
 	// count should be 1 overall and 0 with URL contains: {anything not in that}
 
 	var overall_count int
-	sql := NewTmapNSFWLinksCount(test_req_login_name)
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&overall_count); err != nil {
 		t.Fatal(err)
 	}
 
 	var count_with_url_containing int
-	sql = NewTmapNSFWLinksCount(test_req_login_name).WithURLContaining("googler")
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).WithURLContaining("googler")
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_with_url_containing); err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +207,7 @@ func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
 	}
 
 	var count_with_url_not_containing int
-	sql = NewTmapNSFWLinksCount(test_req_login_name).WithURLContaining("not_googler")
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).WithURLContaining("not_googler")
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_with_url_not_containing); err != nil {
 		t.Fatal(err)
 	}
@@ -304,7 +305,7 @@ func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
 	}
 
 	for _, test := range test_options_and_expected_counts {
-		sql := NewTmapNSFWLinksCount(test_req_login_name).FromOptions(&test.Options)
+		sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).FromOptions(&test.Options)
 		var count int
 		if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 			t.Fatal(err)
@@ -334,7 +335,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 		FROM Links 
 		WHERE submitted_by = ?
 		AND global_cats NOT LIKE '%' || 'NSFW' || '%';`, // exclude NSFW in base query
-		test_req_login_name)
+		TEST_REQ_LOGIN_NAME)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +350,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 	}
 
 	// Verify all submitted links are present after executing query
-	submitted_sql := NewTmapSubmitted(test_req_login_name)
+	submitted_sql := NewTmapSubmitted(TEST_REQ_LOGIN_NAME)
 	if submitted_sql.Error != nil {
 		t.Fatal(submitted_sql.Error)
 	}
@@ -378,8 +379,8 @@ func TestNewTmapSubmitted(t *testing.T) {
 			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
-		} else if l.SubmittedBy != test_req_login_name {
-			t.Fatalf("SubmittedBy != test login_name (%s)", test_req_login_name)
+		} else if l.SubmittedBy != TEST_REQ_LOGIN_NAME {
+			t.Fatalf("SubmittedBy != test login_name (%s)", TEST_REQ_LOGIN_NAME)
 		} else if l.TagCount == 0 {
 			t.Fatalf("TagCount == 0: %+v", l)
 		} else if strings.Contains(l.Cats, "NSFW") {
@@ -403,7 +404,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 }
 
 func TestTmapSubmittedFromCats(t *testing.T) {
-	submitted_sql := NewTmapSubmitted(test_login_name).FromCats(test_cats)
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).FromCats(test_cats)
 	if submitted_sql.Error != nil {
 		t.Fatal(submitted_sql.Error)
 	}
@@ -441,7 +442,7 @@ func TestTmapSubmittedFromCats(t *testing.T) {
 }
 
 func TestTmapSubmittedAsSignedInUser(t *testing.T) {
-	submitted_sql := NewTmapSubmitted(test_login_name).AsSignedInUser(test_req_user_id)
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).AsSignedInUser(TEST_REQ_USER_ID)
 	if submitted_sql.Error != nil {
 		t.Fatal(submitted_sql.Error)
 	}
@@ -484,7 +485,7 @@ func TestTmapSubmittedNSFW(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Verify test_login_name's tmap contains link with NSFW tag
+	// Verify TEST_LOGIN_NAME's tmap contains link with NSFW tag
 	var found_NSFW_link bool
 	for rows.Next() {
 		var l model.TmapLink
@@ -520,7 +521,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 		submitted_links_with_all_period, 
 		submittted_links_with_week_period []model.TmapLink
 
-	submitted_sql := NewTmapSubmitted(test_login_name).SortByNewest()
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).SortByNewest()
 	rows, _ := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
 
 	for rows.Next() {
@@ -548,7 +549,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 		}
 	}
 
-	all_period_sql := NewTmapSubmitted(test_login_name).DuringPeriod("all")
+	all_period_sql := NewTmapSubmitted(TEST_LOGIN_NAME).DuringPeriod("all")
 	rows, _ = TestClient.Query(all_period_sql.Text, all_period_sql.Args...)
 	defer rows.Close()
 
@@ -604,7 +605,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 		}
 	}
 
-	week_period_sql := NewTmapSubmitted(test_login_name).DuringPeriod("week")
+	week_period_sql := NewTmapSubmitted(TEST_LOGIN_NAME).DuringPeriod("week")
 	rows, err := TestClient.Query(week_period_sql.Text, week_period_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -653,13 +654,13 @@ func TestTmapSubmittedWithURLContaining(t *testing.T) {
 	err := TestClient.QueryRow(
 		expected_count_sql, 
 		url_snippet, 
-		test_login_name,
+		TEST_LOGIN_NAME,
 		).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	submitted_sql := NewTmapSubmitted(test_login_name).WithURLContaining(url_snippet)
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).WithURLContaining(url_snippet)
 	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -700,7 +701,7 @@ func TestTmapSubmittedWithURLContaining(t *testing.T) {
 
 // Copied
 func TestNewTmapCopied(t *testing.T) {
-	copied_sql := NewTmapCopied(test_login_name)
+	copied_sql := NewTmapCopied(TEST_LOGIN_NAME)
 	if copied_sql.Error != nil {
 		t.Fatal(copied_sql.Error)
 	}
@@ -744,7 +745,7 @@ func TestNewTmapCopied(t *testing.T) {
 				WHERE link_id = ?
 				AND user_id = ?`,
 			l.ID,
-			test_user_id).Scan(&link_id)
+			TEST_USER_ID).Scan(&link_id)
 
 		if err != nil {
 			t.Fatal(err)
@@ -753,7 +754,7 @@ func TestNewTmapCopied(t *testing.T) {
 }
 
 func TestTmapCopiedFromCats(t *testing.T) {
-	copied_sql := NewTmapCopied(test_login_name).FromCats(test_cats)
+	copied_sql := NewTmapCopied(TEST_LOGIN_NAME).FromCats(test_cats)
 	if copied_sql.Error != nil {
 		t.Fatal(copied_sql.Error)
 	}
@@ -797,7 +798,7 @@ func TestTmapCopiedFromCats(t *testing.T) {
 				WHERE link_id = ?
 				AND user_id = ?`,
 			l.ID,
-			test_user_id).Scan(&link_id)
+			TEST_USER_ID).Scan(&link_id)
 
 		if err != nil {
 			t.Fatal(err)
@@ -806,7 +807,7 @@ func TestTmapCopiedFromCats(t *testing.T) {
 }
 
 func TestTmapCopiedAsSignedInUser(t *testing.T) {
-	copied_sql := NewTmapCopied(test_login_name).AsSignedInUser(test_req_user_id)
+	copied_sql := NewTmapCopied(TEST_LOGIN_NAME).AsSignedInUser(TEST_REQ_USER_ID)
 	if copied_sql.Error != nil {
 		t.Fatal(copied_sql.Error)
 	}
@@ -851,7 +852,7 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 	var all_copied_link_ids []string
 	rows, err = TestClient.Query(`SELECT link_id
 		FROM "Link Copies"
-		WHERE user_id = ?`, test_user_id)
+		WHERE user_id = ?`, TEST_USER_ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -899,7 +900,7 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 
 	// Retry with .NSFW() and verify that _all_ links from all_copied_link_ids
 	// are returned
-	copied_sql = NewTmapCopied(test_login_name).AsSignedInUser(test_req_user_id).NSFW()
+	copied_sql = NewTmapCopied(TEST_LOGIN_NAME).AsSignedInUser(TEST_REQ_USER_ID).NSFW()
 	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -948,8 +949,8 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 }
 
 func TestTmapCopiedNSFW(t *testing.T) {
-	// test_login_name (jlk) has copied 1 link with NSFW tag
-	copied_sql := NewTmapCopied(test_login_name).NSFW()
+	// TEST_LOGIN_NAME (jlk) has copied 1 link with NSFW tag
+	copied_sql := NewTmapCopied(TEST_LOGIN_NAME).NSFW()
 	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -989,7 +990,7 @@ func TestTmapCopiedNSFW(t *testing.T) {
 
 func TestTmapCopiedDuringPeriod(t *testing.T) {
 	var copied_no_period, copied_period_all, copied_period_week []model.TmapLink
-	copied_sql := NewTmapCopied(test_login_name)
+	copied_sql := NewTmapCopied(TEST_LOGIN_NAME)
 	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1021,7 +1022,7 @@ func TestTmapCopiedDuringPeriod(t *testing.T) {
 		copied_no_period = append(copied_no_period, l)
 	}
 
-	copied_sql = NewTmapCopied(test_login_name).DuringPeriod("all")
+	copied_sql = NewTmapCopied(TEST_LOGIN_NAME).DuringPeriod("all")
 	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1057,7 +1058,7 @@ func TestTmapCopiedDuringPeriod(t *testing.T) {
 		t.Fatal("copied_no_period != copied_period_all")
 	}
 
-	copied_sql = NewTmapCopied(test_login_name).DuringPeriod("week")
+	copied_sql = NewTmapCopied(TEST_LOGIN_NAME).DuringPeriod("week")
 	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1105,13 +1106,13 @@ func TestTmapCopiedWithURLContaining(t *testing.T) {
 	err := TestClient.QueryRow(
 			expected_count_sql, 
 			url_snippet, 
-			test_login_name,
+			TEST_LOGIN_NAME,
 		).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	copied_sql := NewTmapSubmitted(test_login_name).WithURLContaining(url_snippet)
+	copied_sql := NewTmapSubmitted(TEST_LOGIN_NAME).WithURLContaining(url_snippet)
 	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1151,7 +1152,7 @@ func TestTmapCopiedWithURLContaining(t *testing.T) {
 }
 
 func TestNewTmapTagged(t *testing.T) {
-	tagged_sql := NewTmapTagged(test_login_name)
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME)
 	if tagged_sql.Error != nil {
 		t.Fatal(tagged_sql.Error)
 	}
@@ -1193,7 +1194,7 @@ func TestNewTmapTagged(t *testing.T) {
 				WHERE link_id = ?
 				AND submitted_by = ?;`,
 			l.ID,
-			test_login_name).Scan(&link_id)
+			TEST_LOGIN_NAME).Scan(&link_id)
 
 		if err != nil {
 			t.Fatal(err)
@@ -1202,7 +1203,7 @@ func TestNewTmapTagged(t *testing.T) {
 }
 
 func TestTmapTaggedFromCats(t *testing.T) {
-	tagged_sql := NewTmapTagged(test_login_name).FromCats(test_cats)
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).FromCats(test_cats)
 	if tagged_sql.Error != nil {
 		t.Fatal(tagged_sql.Error)
 	}
@@ -1244,7 +1245,7 @@ func TestTmapTaggedFromCats(t *testing.T) {
 			WHERE link_id = ?
 			AND submitted_by = ?`,
 			l.ID,
-			test_login_name,
+			TEST_LOGIN_NAME,
 		).Scan(&link_id)
 
 		if err != nil {
@@ -1254,7 +1255,7 @@ func TestTmapTaggedFromCats(t *testing.T) {
 }
 
 func TestTmapTaggedAsSignedInUser(t *testing.T) {
-	tagged_sql := NewTmapTagged(test_login_name).AsSignedInUser(test_req_user_id)
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).AsSignedInUser(TEST_REQ_USER_ID)
 	if tagged_sql.Error != nil {
 		t.Fatal(tagged_sql.Error)
 	}
@@ -1291,8 +1292,8 @@ func TestTmapTaggedAsSignedInUser(t *testing.T) {
 }
 
 func TestTmapTaggedNSFW(t *testing.T) {
-	// test_login_name (jlk) has tagged 1 link with NSFW tag
-	copied_sql := NewTmapTagged(test_login_name).NSFW()
+	// TEST_LOGIN_NAME (jlk) has tagged 1 link with NSFW tag
+	copied_sql := NewTmapTagged(TEST_LOGIN_NAME).NSFW()
 	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1330,7 +1331,7 @@ func TestTmapTaggedNSFW(t *testing.T) {
 
 func TestTmapTaggedDuringPeriod(t *testing.T) {
 	var tagged_no_period, tagged_period_all, tagged_period_week []model.TmapLink
-	tagged_sql := NewTmapTagged(test_login_name)
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME)
 	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1362,7 +1363,7 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 		tagged_no_period = append(tagged_no_period, l)
 	}
 
-	tagged_sql = NewTmapTagged(test_login_name).DuringPeriod("all")
+	tagged_sql = NewTmapTagged(TEST_LOGIN_NAME).DuringPeriod("all")
 	rows, err = TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1398,7 +1399,7 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 		t.Fatal("tagged_no_period != tagged_period_all")
 	}
 
-	tagged_sql = NewTmapTagged(test_login_name).DuringPeriod("week")
+	tagged_sql = NewTmapTagged(TEST_LOGIN_NAME).DuringPeriod("week")
 	rows, err = TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1462,16 +1463,16 @@ func TestTmapTaggedWithURLContaining(t *testing.T) {
 	ORDER BY l.id DESC;`
 	err := TestClient.QueryRow(
 			expected_count_sql, 
-			test_login_name,
-			test_login_name,
-			test_login_name,
+			TEST_LOGIN_NAME,
+			TEST_LOGIN_NAME,
+			TEST_LOGIN_NAME,
 			url_snippet,
 		).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tagged_sql := NewTmapTagged(test_login_name).WithURLContaining(url_snippet)
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).WithURLContaining(url_snippet)
 	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1511,7 +1512,7 @@ func TestTmapTaggedWithURLContaining(t *testing.T) {
 }
 
 func TestFromUserOrGlobalCats(t *testing.T) {
-	tmap_submitted := NewTmapSubmitted(test_login_name)
+	tmap_submitted := NewTmapSubmitted(TEST_LOGIN_NAME)
 	_, err := TestClient.Query(tmap_submitted.Text, tmap_submitted.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1550,7 +1551,7 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 		}
 	}
 
-	tmap_copied := NewTmapCopied(test_login_name)
+	tmap_copied := NewTmapCopied(TEST_LOGIN_NAME)
 	_, err = TestClient.Query(tmap_copied.Text, tmap_copied.Args...)
 	if err != nil {
 		t.Fatal(err)

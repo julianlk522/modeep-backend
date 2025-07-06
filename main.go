@@ -16,10 +16,12 @@ import (
 	m "github.com/julianlk522/fitm/middleware"
 )
 
-var (
-	token_auth *jwtauth.JWTAuth
-	api_url = "api.fitm.online:1999"
+const (
+	API_URL = "api.fitm.online:1999"
+	// TEST_API_URL = "localhost:1999"
 )
+
+var token_auth *jwtauth.JWTAuth
 
 func init() {
 	token_auth = jwtauth.New("HS256", []byte(os.Getenv("FITM_JWT_SECRET")), nil)
@@ -29,7 +31,7 @@ func main() {
 	r := chi.NewRouter()
 	defer func() {
 		if err := http.ListenAndServeTLS(
-		api_url,
+		API_URL,
 			"/etc/letsencrypt/live/api.fitm.online/fullchain.pem",
 			"/etc/letsencrypt/live/api.fitm.online/privkey.pem",
 			r,

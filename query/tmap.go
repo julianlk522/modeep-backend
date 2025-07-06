@@ -388,8 +388,8 @@ func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
 }
 
 func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
-	if len(opts.CatsFilter) > 0 {
-		ts.FromCats(opts.CatsFilter)
+	if len(opts.Cats) > 0 {
+		ts.FromCats(opts.Cats)
 	}
 
 	if opts.AsSignedInUser != "" {
@@ -565,8 +565,8 @@ func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
 }
 
 func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
-	if len(opts.CatsFilter) > 0 {
-		tc.FromCats(opts.CatsFilter)
+	if len(opts.Cats) > 0 {
+		tc.FromCats(opts.Cats)
 	}
 
 	if opts.AsSignedInUser != "" {
@@ -781,8 +781,8 @@ func (tt *TmapTagged) WithURLContaining(snippet string) *TmapTagged {
 }
 
 func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
-	if len(opts.CatsFilter) > 0 {
-		tt.FromCats(opts.CatsFilter)
+	if len(opts.Cats) > 0 {
+		tt.FromCats(opts.Cats)
 	}
 	
 	if opts.AsSignedInUser != "" {

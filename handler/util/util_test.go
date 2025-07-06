@@ -10,15 +10,17 @@ import (
 )
 
 // shared across handler/util tests
+const (
+	TEST_LOGIN_NAME    = "jlk"
+	TEST_USER_ID       = "3"
+	TEST_REQ_USER_ID   = "13"
+	TEST_LINK_ID       = "1"
+)
 var (
 	TestClient *sql.DB
-
-	test_login_name    = "jlk"
-	test_user_id       = "3"
-	test_req_user_id   = "13"
+	
 	test_single_cat    = []string{"umvc3"}
 	test_multiple_cats = []string{"umvc3", "flowers"}
-	test_link_id       = "1"
 )
 
 func TestMain(m *testing.M) {

@@ -267,8 +267,8 @@ func TestAddLink(t *testing.T) {
 
 		ctx := context.Background()
 		jwt_claims := map[string]any{
-			"user_id":    test_user_id,
-			"login_name": test_login_name,
+			"user_id":    TEST_USER_ID,
+			"login_name": TEST_LOGIN_NAME,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)
@@ -332,7 +332,7 @@ func TestDeleteLink(t *testing.T) {
 
 		ctx := context.Background()
 		jwt_claims := map[string]any{
-			"login_name": test_login_name,
+			"login_name": TEST_LOGIN_NAME,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)
@@ -368,13 +368,13 @@ func TestClickLink(t *testing.T) {
 	}{
 		{
 			LinkID: "0",
-			UserID: test_user_id,
+			UserID: TEST_USER_ID,
 			Valid:  true,
 		},
 		// not a real link
 		{
 			LinkID: "-1",
-			UserID: test_user_id,
+			UserID: TEST_USER_ID,
 			Valid:  false,
 		},
 		// not a real user

@@ -16,6 +16,6 @@ func TestMain(m *testing.M) {
 }
 
 const (
-	test_user_id    = "3"
-	test_login_name = "jlk"
+	TEST_USER_ID    = "3"
+	TEST_LOGIN_NAME = "jlk"
 )

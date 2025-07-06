@@ -55,8 +55,8 @@ func TestEditAbout(t *testing.T) {
 
 		ctx := context.Background()
 		jwt_claims := map[string]any{
-			"user_id":    test_user_id,
-			"login_name": test_login_name,
+			"user_id":    TEST_USER_ID,
+			"login_name": TEST_LOGIN_NAME,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)
@@ -91,7 +91,7 @@ func TestDeleteProfilePic(t *testing.T) {
 	}{
 		{
 			// test user jlk has a profile pic: should be able to delete it
-			UserID:             test_user_id,
+			UserID:             TEST_USER_ID,
 			Valid:              true,
 			ExpectedStatusCode: 204,
 		},
@@ -112,7 +112,7 @@ func TestDeleteProfilePic(t *testing.T) {
 
 		ctx := context.Background()
 		jwt_claims := map[string]any{
-			"user_id": test_user_id,
+			"user_id": TEST_USER_ID,
 		}
 		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
 		r = r.WithContext(ctx)

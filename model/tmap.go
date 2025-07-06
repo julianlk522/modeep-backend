@@ -85,7 +85,7 @@ type TmapOptions struct {
 	// GetCatCountsFromTmapLinks can know the exact values passed in
 	// the request and not count them
 	RawCatsParams  string
-	CatsFilter     []string
+	Cats     []string
 	Period         string
 	SortByNewest   bool
 	IncludeNSFW    bool

@@ -46,7 +46,7 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 		cats := query.GetCatsOptionalPluralOrSingularForms(
 			strings.Split(cats_params, ","),
 		)
-		opts.CatsFilter = cats
+		opts.Cats = cats
 	}
 
 	period_params = params.Get("period")
@@ -109,7 +109,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	var cat_counts *[]model.CatCount
 	var cat_counts_opts *model.TmapCatCountsOptions
 
-	has_cat_filter := len(opts.CatsFilter) > 0
+	has_cat_filter := len(opts.Cats) > 0
 	if has_cat_filter {
 		cat_counts_opts = &model.TmapCatCountsOptions{
 			RawCatsParams: opts.RawCatsParams,
@@ -127,7 +127,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	var nsfw_links_count int
 	nsfw_links_count_opts := &model.TmapNSFWLinksCountOptions{
 		OnlySection: opts.Section,
-		CatsFilter: opts.CatsFilter,
+		CatsFilter: opts.Cats,
 		Period: opts.Period,
 		URLContains: opts.URLContains,
 	}

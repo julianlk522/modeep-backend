@@ -65,7 +65,7 @@ func TestScanLinks(t *testing.T) {
 	}
 
 	// signed in
-	links_sql = links_sql.AsSignedInUser(test_req_user_id)
+	links_sql = links_sql.AsSignedInUser(TEST_REQ_USER_ID)
 	signed_in_links_page, err := ScanLinks[model.LinkSignedIn](links_sql)
 	if err != nil {
 		t.Fatal(err)
@@ -433,7 +433,7 @@ func TestUserSubmittedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		if got := UserSubmittedLink(test_login_name, l.ID); got != l.SubmittedByTestUser {
+		if got := UserSubmittedLink(TEST_LOGIN_NAME, l.ID); got != l.SubmittedByTestUser {
 			t.Fatalf("expected %t, got %t for link %s", l.SubmittedByTestUser, got, l.ID)
 		}
 	}
@@ -455,7 +455,7 @@ func TestUserHasLikedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		if got := UserHasLikedLink(test_user_id, l.ID); got != l.LikedByTestUser {
+		if got := UserHasLikedLink(TEST_USER_ID, l.ID); got != l.LikedByTestUser {
 			t.Fatalf("expected %t, got %t", l.LikedByTestUser, got)
 		}
 	}
@@ -478,7 +478,7 @@ func TestUserHasCopiedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		if got := UserHasCopiedLink(test_user_id, l.ID); got != l.CopiedByTestUser {
+		if got := UserHasCopiedLink(TEST_USER_ID, l.ID); got != l.CopiedByTestUser {
 			t.Fatalf("expected %t, got %t", l.CopiedByTestUser, got)
 		}
 	}

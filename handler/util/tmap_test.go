@@ -16,7 +16,7 @@ func TestUserExists(t *testing.T) {
 	}{
 		{"johndoe", false},
 		{"janedoe", false},
-		{test_login_name, true},
+		{TEST_LOGIN_NAME, true},
 	}
 
 	for _, l := range test_login_names {
@@ -40,21 +40,21 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		PageParams       int
 		Valid            bool
 	}{
-		{test_login_name, test_user_id, "", false, false, "", 1, true},
-		{test_login_name, test_req_user_id, "", false, true, "", 1, true},
-		{test_login_name, "", "", false, true, "", 1, true},
-		{test_login_name, test_user_id, "umvc3", true, true, "", 1, true},
-		{test_login_name, test_req_user_id, "", true, false, "", 0, true},
-		{test_login_name, "", "", false, false, "", 10, true},
-		{test_login_name, test_user_id, "umvc3,flowers", true, true, "", 1, true},
-		{test_login_name, "", "umvc3,flowers", true, false, "", 2, true},
-		{test_login_name, "", "umvc3,flowers", false, true, "", 1, true},
-		{test_login_name, "", "umvc3,flowers", false, true, "submitted", 4, true},
-		{test_login_name, "", "umvc3,flowers", false, true, "copied", 0, true},
+		{TEST_LOGIN_NAME, TEST_USER_ID, "", false, false, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", false, true, "", 1, true},
+		{TEST_LOGIN_NAME, "", "", false, true, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3", true, true, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", true, false, "", 0, true},
+		{TEST_LOGIN_NAME, "", "", false, false, "", 10, true},
+		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3,flowers", true, true, "", 1, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", true, false, "", 2, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", false, true, "", 1, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", false, true, "submitted", 4, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", false, true, "copied", 0, true},
 		// "notasection" is invalid
-		{test_login_name, "", "umvc3,flowers", false, true, "notasection", 1, false},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", false, true, "notasection", 1, false},
 		// negative page is invalid
-		{test_login_name, "", "", false, true, "submitted", -1, false},
+		{TEST_LOGIN_NAME, "", "", false, true, "submitted", -1, false},
 	}
 
 	for _, td := range test_data {
@@ -72,7 +72,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 			cats := query.GetCatsOptionalPluralOrSingularForms(
 				strings.Split(td.CatsParams, ","),
 			)
-			opts.CatsFilter = cats
+			opts.Cats = cats
 		}
 
 		var tmap any
@@ -112,7 +112,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 }
 
 func TestScanTmapProfile(t *testing.T) {
-	profile_sql := query.NewTmapProfile(test_login_name)
+	profile_sql := query.NewTmapProfile(TEST_LOGIN_NAME)
 	// NewTmapProfile() tested in query/tmap_test.go
 
 	profile, err := ScanTmapProfile(profile_sql)
@@ -120,9 +120,9 @@ func TestScanTmapProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if profile.LoginName != test_login_name {
+	if profile.LoginName != TEST_LOGIN_NAME {
 		t.Fatalf(
-			"expected %s, got %s", test_login_name,
+			"expected %s, got %s", TEST_LOGIN_NAME,
 			profile.LoginName,
 		)
 	}
@@ -140,9 +140,9 @@ func TestScanTmapLinks(t *testing.T) {
 		LoginName        string
 		RequestingUserID string
 	}{
-		{test_login_name, test_user_id},
-		{test_login_name, test_req_user_id},
-		{test_login_name, ""},
+		{TEST_LOGIN_NAME, TEST_USER_ID},
+		{TEST_LOGIN_NAME, TEST_REQ_USER_ID},
+		{TEST_LOGIN_NAME, ""},
 	}
 
 	for _, r := range test_requests {
