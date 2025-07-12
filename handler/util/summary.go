@@ -188,12 +188,23 @@ func UserHasLikedSummary(user_id string, summary_id string) (bool, error) {
 }
 
 func CalculateAndSetGlobalSummary(link_id string) error {
+	// If there are no summaries then should just be empty string
+	var summaries_count_for_link sql.NullInt32
+	err := db.Client.QueryRow("SELECT COUNT(id) FROM Summaries WHERE link_id = ?", link_id).Scan(&summaries_count_for_link)
+	if err != nil {
+		return err
+	}
 
-	// Summary with the most upvotes is the global summary
-	// UNLESS 1st is auto summary and tied with 2nd place,
-	// then use 2nd place
+	if summaries_count_for_link.Int32 == 0 {
+		_, err = db.Client.Exec(`UPDATE Links SET global_summary = '' WHERE id = ?`, link_id)
+		return err
+	}
+
+	// Otherwise global summary is set to summary with most upvotes
+	// UNLESS 1st is auto summary and is tied with 2nd place
+	// in that case use 2nd place summary
 	var top_summary_text string
-	err := db.Client.QueryRow(`WITH RankedSummaries AS (
+	err = db.Client.QueryRow(`WITH RankedSummaries AS (
 		SELECT 
 			s.text,
 			s.submitted_by,
