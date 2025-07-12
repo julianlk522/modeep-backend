@@ -135,6 +135,13 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		NewTmapNSFWLinksCount(tmap_owner).
 		FromOptions(nsfw_links_count_opts)
 
+	if err := db.Client.QueryRow(
+		nsfw_links_count_sql.Text, 
+		nsfw_links_count_sql.Args...,
+	).Scan(&nsfw_links_count); err != nil {
+		return nil, err
+	}
+
 	// Single section
 	if opts.Section != "" {
 		var links *[]T
@@ -180,7 +187,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return model.TmapSectionPage[T]{
 				Links:          &[]T{},
 				Cats:           &[]model.CatCount{},
-				NSFWLinksCount: 0,
+				NSFWLinksCount: nsfw_links_count,
 				PageCount:       -1,
 			}, nil
 		}
@@ -208,13 +215,6 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : ]
 		} else {
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : query.LINKS_PAGE_LIMIT*page]
-		}
-
-		if err := db.Client.QueryRow(
-			nsfw_links_count_sql.Text, 
-			nsfw_links_count_sql.Args...,
-		).Scan(&nsfw_links_count); err != nil {
-			return nil, err
 		}
 
 		return model.TmapSectionPage[T]{
@@ -266,7 +266,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		if len(links_from_all_sections) == 0 {
 			return model.FilteredTmap[T]{
 				TmapSections:   &model.TmapSections[T]{},
-				NSFWLinksCount: 0,
+				NSFWLinksCount: nsfw_links_count,
 			}, nil
 		}
 
@@ -297,13 +297,6 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			Tagged:           tagged,
 			SectionsWithMore: sections_with_more,
 			Cats:             cat_counts,
-		}
-
-		if err := db.Client.QueryRow(
-			nsfw_links_count_sql.Text, 
-			nsfw_links_count_sql.Args...,
-		).Scan(&nsfw_links_count); err != nil {
-			return nil, err
 		}
 
 		if has_cat_filter {
