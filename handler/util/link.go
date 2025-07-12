@@ -80,9 +80,9 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*m
 	defer rows.Close()
 
 	// NOTE: this both scans the links and creates the LinksPage struct
-	// because page_count must be taken here from the query result rows
+	// because number of pages must be taken here from the query result rows
 	var links any
-	var page_count int
+	var pages int
 
 	switch any(new(T)).(type) {
 	case *model.Link:
@@ -105,7 +105,7 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*m
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
-				&page_count,
+				&pages,
 			)
 			if err != nil {
 				return nil, err
@@ -135,7 +135,7 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*m
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
-				&page_count,
+				&pages,
 				&l.IsLiked,
 				&l.IsCopied,
 			); err != nil {
@@ -149,12 +149,12 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*m
 	}
 
 	if links == nil || len(*links.(*[]T)) == 0 {
-		return &model.LinksPage[T]{PageCount: -1}, nil
+		return &model.LinksPage[T]{Pages: -1}, nil
 	}
 
 	return &model.LinksPage[T]{
 		Links: links.(*[]T),
-		PageCount: page_count,
+		Pages: pages,
 	}, nil
 }
 

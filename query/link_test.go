@@ -50,7 +50,7 @@ func TestNewTopLinks(t *testing.T) {
 		{"click_count"},
 		{"tag_count"},
 		{"img_file"},
-		{"page_count"},
+		{"pages"},
 	}
 
 	for i, col := range cols {
@@ -124,7 +124,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 	defer rows.Close()
 
 	var links []model.Link
-	var page_count int
+	var pages int
 
 	for rows.Next() {
 		link := model.Link{}
@@ -143,7 +143,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&link.ClickCount,
 			&link.TagCount,
 			&link.PreviewImgFilename,
-			&page_count,
+			&pages,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -190,7 +190,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&link.ClickCount,
 			&link.TagCount,
 			&link.PreviewImgFilename,
-			&page_count,
+			&pages,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -262,7 +262,7 @@ func TestLinksSortBy(t *testing.T) {
 		{"invalid", false},
 	}
 
-	var page_count int
+	var pages int
 
 	for _, ts := range test_sorts {
 		links_sql := NewTopLinks().SortBy(ts.Sort)
@@ -297,7 +297,7 @@ func TestLinksSortBy(t *testing.T) {
 				&link.ClickCount,
 				&link.TagCount,
 				&link.PreviewImgFilename,
-				&page_count,
+				&pages,
 			)
 			if err != nil {
 				t.Fatal(err)
@@ -378,7 +378,7 @@ func TestAsSignedInUser(t *testing.T) {
 		{"click_count"},
 		{"tag_count"},
 		{"img_file"},
-		{"page_count"},
+		{"pages"},
 		{"is_liked"},
 		{"is_copied"},
 	}
@@ -450,7 +450,7 @@ func TestNSFW(t *testing.T) {
 
 	id_of_test_link_having_nsfw_cats := "76"
 	var l model.LinkSignedIn
-	var page_count int
+	var pages int
 	// there is 
 	for rows.Next() {
 		if err := rows.Scan(
@@ -468,7 +468,7 @@ func TestNSFW(t *testing.T) {
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
-			&page_count,
+			&pages,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {
@@ -507,7 +507,7 @@ func TestNSFW(t *testing.T) {
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
-			&page_count,
+			&pages,
 			&l.IsLiked,
 			&l.IsCopied,
 		); err != nil {

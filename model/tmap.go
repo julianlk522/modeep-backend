@@ -74,7 +74,7 @@ type TmapSectionPage[T TmapLink | TmapLinkSignedIn] struct {
 	Links          *[]T
 	Cats           *[]CatCount
 	NSFWLinksCount int
-	PageCount       int
+	Pages       int
 }
 
 type TmapOptions struct {
@@ -95,8 +95,7 @@ type TmapOptions struct {
 }
 
 type TmapNSFWLinksCountOptions struct {
-	// "Submitted", "Copied", "Tagged"
-	OnlySection string
+	OnlySection string // "Submitted", "Copied", "Tagged"
 	CatsFilter []string
 	Period string
 	URLContains string

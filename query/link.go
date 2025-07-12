@@ -108,7 +108,7 @@ SELECT
 	COALESCE(clc.click_count, 0) AS click_count, 
     COALESCE(tc.tag_count, 0) AS tag_count,
     COALESCE(l.img_file, '') AS img_file,
-	(COUNT(*) OVER() + %d - 1) / %d AS page_count`, 
+	(COUNT(*) OVER() + %d - 1) / %d AS pages`, 
 LINKS_PAGE_LIMIT,
 LINKS_PAGE_LIMIT)
 

@@ -188,7 +188,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 				Links:          &[]T{},
 				Cats:           &[]model.CatCount{},
 				NSFWLinksCount: nsfw_links_count,
-				PageCount:       -1,
+				Pages:       -1,
 			}, nil
 		}
 
@@ -208,10 +208,10 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			page = opts.Page
 		}
 
-		page_count := int(math.Ceil(float64(len(*links)) / float64(query.LINKS_PAGE_LIMIT)))
-		if page > page_count {
+		pages := int(math.Ceil(float64(len(*links)) / float64(query.LINKS_PAGE_LIMIT)))
+		if page > pages {
 			links = &[]T{}
-		} else if page == page_count {
+		} else if page == pages {
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : ]
 		} else {
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : query.LINKS_PAGE_LIMIT*page]
@@ -220,7 +220,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		return model.TmapSectionPage[T]{
 			Links:          links,
 			Cats:           cat_counts,
-			PageCount:      page_count,
+			Pages:      pages,
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 
