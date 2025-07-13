@@ -424,6 +424,70 @@ func (tl *TopLinks) Page(page int) *TopLinks {
 	return tl
 }
 
+func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
+	count_select := `
+	SELECT count(l.id)`
+
+	// attempt to replace both base and auth-enabled fields
+	// it should be one or the other
+	tl.Text = strings.Replace(
+		tl.Text,
+		LINKS_BASE_FIELDS + LINKS_AUTH_FIELDS,
+		count_select,
+		1,
+	)
+
+	tl.Text = strings.Replace(
+		tl.Text,
+		LINKS_BASE_FIELDS,
+		count_select,
+		1,
+	)
+
+	// invert NSFW clause
+	if nsfw_params {
+		// insert in front of both LINKS_ORDER_BY and LINKS_ORDER_BY_NEWEST
+		// (one should be no-op)
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_ORDER_BY,
+			NSFW_CLAUSE,
+			1,
+		)
+
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_ORDER_BY_NEWEST,
+			NSFW_CLAUSE,
+			1,
+		)
+	} else {
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_NO_NSFW_CATS_WHERE,
+			`
+			WHERE l.id IN (
+				SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
+			)`,
+			1,
+		)
+	}
+
+	// remove LIMIT and OFFET clause
+	tl.Text = strings.Replace(
+		tl.Text,
+		"\nLIMIT ? OFFSET ?",
+		"",
+		1,
+	)
+
+	return tl
+}
+
+const NSFW_CLAUSE = `WHERE l.id IN (
+	SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
+)`
+
 type SingleLink struct {
 	Query
 }

@@ -51,21 +51,32 @@ func UserHasSubmittedMaxDailyLinks(login_name string) (bool, error) {
 	return count >= MAX_DAILY_LINKS, nil
 }
 
-func PrepareLinksResponse[T model.HasCats](links_sql *query.TopLinks, cats_params string) (*model.LinksPage[T], error) {
-	links_page, err := ScanLinks[T](links_sql)
+func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model.LinksPageOptions) (*model.LinksPage[T], error) {
+	links_page, err := ScanRawLinksPageData[T](links_sql)
 	if err != nil {
 		return nil, err
 	}
 	
 	PaginateLinks(links_page.Links)
+
+	cats_params, nsfw_params := options.Cats, options.NSFW
+
 	if cats_params != "" {
 		CountMergedCatSpellingVariants(links_page, cats_params)
 	}
+	
+	hidden_links, err := CountNSFWLinks[T](links_sql, nsfw_params)
+	if err != nil {
+		return nil, err
+	}
+
+	links_page.NSFWLinks = hidden_links
+	
 
 	return links_page, nil
 }
 
-func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*model.LinksPage[T], error) {
+func ScanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*model.LinksPage[T], error) {
 	if links_sql.Error != nil {
 		return nil, links_sql.Error
 	}
@@ -158,14 +169,14 @@ func ScanLinks[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*m
 	}, nil
 }
 
-func ScanSingleLink[T model.Link | model.LinkSignedIn](link_sql *query.SingleLink) (*T, error) {
+func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.SingleLink) (*T, error) {
 	var link any
 
 	switch any(new(T)).(type) {
 	case *model.LinkSignedIn:
 		var l = &model.LinkSignedIn{}
 		if err := db.Client.
-			QueryRow(link_sql.Text, link_sql.Args...).
+			QueryRow(single_link_sql.Text, single_link_sql.Args...).
 			Scan(
 				&l.ID,
 				&l.URL,
@@ -191,7 +202,7 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](link_sql *query.SingleLin
 	case *model.Link:
 		var l = &model.Link{}
 		if err := db.Client.
-			QueryRow(link_sql.Text, link_sql.Args...).
+			QueryRow(single_link_sql.Text, single_link_sql.Args...).
 			Scan(
 				&l.ID,
 				&l.URL,
@@ -247,6 +258,19 @@ func CountMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cat
 			}
 		}
 	}
+}
+
+func CountNSFWLinks[T model.HasCats](links_sql *query.TopLinks, nsfw_params bool) (int, error) {
+	hidden_links_count_sql := links_sql.NSFWLinks(nsfw_params)
+	var hidden_links sql.NullInt32
+	if err := db.Client.QueryRow(
+		hidden_links_count_sql.Text, 
+		hidden_links_count_sql.Args...,
+	).Scan(&hidden_links); err != nil {
+		return 0, err
+	}
+	
+	return int(hidden_links.Int32), nil
 }
 
 // Add link (non-YT)

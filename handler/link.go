@@ -43,12 +43,19 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 
 	var resp any
 	var err error
-	cats_params := r.URL.Query().Get("cats")
+
+	page_opts := &model.LinksPageOptions{
+		Cats: r.URL.Query().Get("cats"),
+		NSFW: r.URL.Query().Get("nsfw") == "true",
+	}
 
 	if req_user_id != "" {
-		resp, err = util.PrepareLinksResponse[model.LinkSignedIn](links_sql, cats_params)
+		resp, err = util.PrepareLinksPage[model.LinkSignedIn](
+			links_sql, 
+			page_opts,
+		)
 	} else {
-		resp, err = util.PrepareLinksResponse[model.Link](links_sql, cats_params)
+		resp, err = util.PrepareLinksPage[model.Link](links_sql, page_opts)
 	}
 	if err != nil {
 		render.Render(w, r, e.Err500(err))

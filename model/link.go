@@ -48,8 +48,14 @@ func (lsi LinkSignedIn) GetCats() string {
 	return lsi.Cats
 }
 
+type LinksPageOptions struct {
+	Cats string
+	NSFW bool
+}
+
 type LinksPage[T Link | LinkSignedIn] struct {
 	Links      *[]T
+	NSFWLinks int
 	MergedCats []string
 	Pages   int
 }
