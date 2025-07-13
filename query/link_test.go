@@ -88,7 +88,7 @@ func TestFromCats(t *testing.T) {
 		defer rows.Close()
 
 		// With period
-		links_sql = links_sql.DuringPeriod("month")
+		links_sql = links_sql.DuringPeriod("month", "rating")
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tc.Valid && links_sql.Error == nil {
@@ -115,7 +115,7 @@ func TestFromCats(t *testing.T) {
 }
 
 func TestLinksWithURLContaining(t *testing.T) {
-	links_sql := NewTopLinks().WithURLContaining("google")
+	links_sql := NewTopLinks().WithURLContaining("google", "newest")
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
@@ -164,7 +164,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 	// combined with other methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"umvc3"}).
-		WithURLContaining("google").
+		WithURLContaining("google", "rating").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -223,7 +223,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 
 	for _, tp := range test_periods {
 		// Period only
-		links_sql := NewTopLinks().DuringPeriod(tp.Period)
+		links_sql := NewTopLinks().DuringPeriod(tp.Period, "newest")
 		if tp.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tp.Valid && links_sql.Error == nil {
@@ -437,7 +437,7 @@ func TestNSFW(t *testing.T) {
 	// Verify no conflict with other filter methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
-		DuringPeriod("year").
+		DuringPeriod("year", "rating").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest").
 		Page(1).
@@ -481,7 +481,7 @@ func TestNSFW(t *testing.T) {
 	// Verify link not present using same query without .NSFW()
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
-		DuringPeriod("year").
+		DuringPeriod("year", "newest").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest").
 		Page(1)
@@ -558,7 +558,7 @@ func TestPage(t *testing.T) {
 	// Verify no conflict with other methods
 	links_sql = NewTopLinks().
 		FromCats(test_cats).
-		DuringPeriod("year").
+		DuringPeriod("year", "rating").
 		SortBy("newest").
 		AsSignedInUser(TEST_USER_ID).
 		NSFW().

@@ -155,6 +155,15 @@ const LINKS_LIMIT = `
 LIMIT ?;`
 
 func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
+	// this first because using sort_params value helps with
+	// later text replaces since ORDER BY goes at the end
+	// (hence the methods below with a "sort_params" arg - it is
+	// not the prettiest solution but it works)
+	sort_params := params.Get("sort_by")
+	if sort_params != "" {
+		tl = tl.SortBy(sort_params)
+	}
+
 	cats_params := params.Get("cats")
 	if cats_params != "" {
 		cats := strings.Split(cats_params, ",")
@@ -163,17 +172,12 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
-		tl = tl.WithURLContaining(url_contains_params)
+		tl = tl.WithURLContaining(url_contains_params, sort_params)
 	}
 
 	period_params := params.Get("period")
 	if period_params != "" {
-		tl = tl.DuringPeriod(period_params)
-	}
-
-	sort_params := params.Get("sort_by")
-	if sort_params != "" {
-		tl = tl.SortBy(sort_params)
+		tl = tl.DuringPeriod(period_params, sort_params)
 	}
 
 	var nsfw_params string
@@ -240,9 +244,12 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) WithURLContaining(snippet string) *TopLinks {
+// EarliestLikers/Copiers row nums + default NSFW clause makes 3
+const NUM_WHERES_IN_BASE_QUERY = 3
+
+func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks {
 	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") > 1 {
+	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_BASE_QUERY {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
@@ -251,23 +258,28 @@ func (tl *TopLinks) WithURLContaining(snippet string) *TopLinks {
 	and_clause := `
 	url LIKE ?`
 
+	order_by_clause := LINKS_ORDER_BY
+	if sort_by == "newest" {
+		order_by_clause = LINKS_ORDER_BY_NEWEST
+	}
+
 	tl.Text = strings.Replace(
 		tl.Text,
-		LINKS_ORDER_BY,
-		"\n"+clause_keyword+" "+and_clause+LINKS_ORDER_BY,
+		order_by_clause,
+		"\n" + clause_keyword + " " + and_clause + order_by_clause,
 		1,
 	)
 
 	// insert into args in 2nd-to-last position
-	last_arg := tl.Args[len(tl.Args)-1]
-	tl.Args = tl.Args[:len(tl.Args)-1]
-	tl.Args = append(tl.Args, "%"+snippet+"%")
+	last_arg := tl.Args[len(tl.Args) - 1]
+	tl.Args = tl.Args[:len(tl.Args) - 1]
+	tl.Args = append(tl.Args, "%" + snippet + "%")
 	tl.Args = append(tl.Args, last_arg)
 
 	return tl
 }
 
-func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
+func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 	if (period == "all") {
 		return tl
 	}
@@ -279,16 +291,21 @@ func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
 	}
 
 	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") > 1 {
+	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_BASE_QUERY {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
 	}
 
+	order_by_clause := LINKS_ORDER_BY
+	if sort_by == "newest" {
+		order_by_clause = LINKS_ORDER_BY_NEWEST
+	}
+
 	tl.Text = strings.Replace(
 		tl.Text,
-		LINKS_ORDER_BY,
-		"\n"+clause_keyword+" "+period_clause+LINKS_ORDER_BY,
+		order_by_clause,
+		"\n" + clause_keyword + " " + period_clause + order_by_clause,
 		1,
 	)
 
@@ -296,24 +313,15 @@ func (tl *TopLinks) DuringPeriod(period string) *TopLinks {
 }
 
 func (tl *TopLinks) SortBy(order_by string) *TopLinks {
-	switch order_by {
-	case "rating":
-		tl.Text = strings.Replace(
-			tl.Text,
-			LINKS_ORDER_BY_NEWEST,
-			LINKS_ORDER_BY,
-			1,
-		)
-	case "newest":
+	if order_by == "newest" {
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_ORDER_BY,
 			LINKS_ORDER_BY_NEWEST,
 			1,
 		)
-	default:
+	} else if order_by != "rating" {
 		tl.Error = fmt.Errorf("invalid order_by value")
-		return tl
 	}
 
 	return tl
@@ -367,7 +375,10 @@ const LINKS_AUTH_JOINS = `
 	LEFT JOIN IsCopied ic ON l.id = ic.link_id`
 
 func (tl *TopLinks) NSFW() *TopLinks {
-	has_subsequent_clause := strings.Contains(tl.Text, LINKS_NO_NSFW_CATS_WHERE+"\nAND")
+	has_subsequent_clause := strings.Contains(
+		tl.Text, 
+		LINKS_NO_NSFW_CATS_WHERE + "\nAND",
+	)
 	if has_subsequent_clause {
 		tl.Text = strings.Replace(
 			tl.Text,
