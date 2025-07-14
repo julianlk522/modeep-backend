@@ -146,8 +146,13 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		x_md = util.GetLinkExtraMetadataFromResponse(resp)
 	}
 	if x_md != nil {
-		new_link.AutoSummary = x_md.AutoSummary
-		new_link.PreviewImgURL = x_md.PreviewImgURL
+		if x_md.AutoSummary != "" {
+			new_link.AutoSummary = x_md.AutoSummary
+		}
+
+		if x_md.PreviewImgURL != "" {
+			new_link.PreviewImgURL = x_md.PreviewImgURL
+		}
 	}
 
 	// Verified: add link

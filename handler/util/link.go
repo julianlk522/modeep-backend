@@ -346,8 +346,7 @@ func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata
 	}
 
 	if html_md.OGImage != "" {
-		resp, err := http.Get(html_md.OGImage)
-		if err == nil && resp.StatusCode != 404 && !IsRedirect(resp.StatusCode) {
+		if _, err := GetResolvedURLResponse(html_md.OGImage); err == nil {
 			x_md.PreviewImgURL = html_md.OGImage
 		}
 	}
