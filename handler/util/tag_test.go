@@ -66,7 +66,7 @@ func TestGetUserTagForLink(t *testing.T) {
 	}
 }
 
-func TestScanTagRankings(t *testing.T) {
+func TestScanPublicTagRankings(t *testing.T) {
 	var test_rankings = []struct {
 		Cats        string
 		SubmittedBy string

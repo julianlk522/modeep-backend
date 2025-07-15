@@ -36,6 +36,30 @@ func GetUserTagForLink(login_name string, link_id string) (*model.Tag, error) {
 	}, nil
 }
 
+func ScanTagRankings(tag_rankings_sql *query.TagRankings) (*[]model.TagRanking, error) {
+	rows, err := db.Client.Query(tag_rankings_sql.Text, tag_rankings_sql.Args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tag_rankings := []model.TagRanking{}
+
+	for rows.Next() {
+		var tag model.TagRanking
+		err = rows.Scan(
+			&tag.LifeSpanOverlap,
+			&tag.Cats,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tag_rankings = append(tag_rankings, tag)
+	}
+
+	return &tag_rankings, nil
+}
+
 func ScanPublicTagRankings(tag_rankings_sql *query.TagRankings) (*[]model.TagRankingPublic, error) {
 	rows, err := db.Client.Query(tag_rankings_sql.Text, tag_rankings_sql.Args...)
 	if err != nil {
@@ -192,26 +216,15 @@ func CalculateAndSetGlobalCats(link_id string) error {
 		return tag_rankings_sql.Error
 	}
 
-	rows, err := db.Client.Query(tag_rankings_sql.Text, tag_rankings_sql.Args...)
+	tags_for_link, err := ScanTagRankings(tag_rankings_sql)
 	if err != nil {
 		return err
-	}
-	defer rows.Close()
-
-	tags_for_link := []model.TagRanking{}
-	for rows.Next() {
-		var tr model.TagRanking
-		err = rows.Scan(&tr.LifeSpanOverlap, &tr.Cats)
-		if err != nil {
-			return err
-		}
-		tags_for_link = append(tags_for_link, tr)
 	}
 
 	cat_rankings := make(map[string]float32)
 	var max_cat_score float32
 
-	for _, tag := range tags_for_link {
+	for _, tag := range *tags_for_link {
 		// multiple cats
 		if strings.Contains(tag.Cats, ",") {
 			cats := strings.Split(tag.Cats, ",")
