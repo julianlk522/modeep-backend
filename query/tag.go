@@ -9,12 +9,13 @@ import (
 )
 
 const (
+	TAG_RANKINGS_CALC_LIMIT     = 1000
 	TAG_RANKINGS_PAGE_LIMIT     = 20
 	GLOBAL_CATS_PAGE_LIMIT      = 50
 	MORE_GLOBAL_CATS_PAGE_LIMIT = 200
 
-	SPELLFIX_DISTANCE_LIMIT = 100
-	SPELLFIX_MATCHES_LIMIT  = 3
+	SPELLFIX_DISTANCE_LIMIT     = 100
+	SPELLFIX_MATCHES_LIMIT      = 3
 )
 
 type TagRankings struct {
@@ -22,10 +23,11 @@ type TagRankings struct {
 }
 
 func NewTagRankings(link_id string) *TagRankings {
-	return (&TagRankings{Query: &Query{
-		Text: TAG_RANKINGS_BASE,
-		Args: []any{link_id, TAG_RANKINGS_PAGE_LIMIT},
-	},
+	return (&TagRankings{Query: 
+		&Query{
+			Text: TAG_RANKINGS_BASE,
+			Args: []any{link_id, TAG_RANKINGS_CALC_LIMIT},
+		},
 	})
 }
 
@@ -39,7 +41,7 @@ INNER JOIN Links
 ON Links.id = Tags.link_id
 WHERE link_id = ?
 ORDER BY lifespan_overlap DESC
-LIMIT ?`
+LIMIT ?;`
 
 func (tr *TagRankings) Public() *TagRankings {
 	tr.Text = strings.Replace(
@@ -48,6 +50,8 @@ func (tr *TagRankings) Public() *TagRankings {
 		TAG_RANKINGS_BASE_FIELDS+TAG_RANKINGS_PUBLIC_FIELDS,
 		1,
 	)
+
+	tr.Args[1] = TAG_RANKINGS_PAGE_LIMIT
 
 	return tr
 }

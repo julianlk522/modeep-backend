@@ -9,8 +9,10 @@ import (
 	"github.com/julianlk522/fitm/model"
 	"github.com/julianlk522/fitm/query"
 
-	modelutil "github.com/julianlk522/fitm/model/util"
+	mutil "github.com/julianlk522/fitm/model/util"
 )
+
+const MIN_PERCENT_OF_MAX_CAT_SCORE float32 = 25
 
 func GetUserTagForLink(login_name string, link_id string) (*model.Tag, error) {
 	var id, cats, last_updated sql.NullString
@@ -196,60 +198,55 @@ func CalculateAndSetGlobalCats(link_id string) error {
 	}
 	defer rows.Close()
 
-	tag_rankings := []model.TagRanking{}
+	tags_for_link := []model.TagRanking{}
 	for rows.Next() {
-		var t model.TagRanking
-		err = rows.Scan(&t.LifeSpanOverlap, &t.Cats)
+		var tr model.TagRanking
+		err = rows.Scan(&tr.LifeSpanOverlap, &tr.Cats)
 		if err != nil {
 			return err
 		}
-		tag_rankings = append(tag_rankings, t)
+		tags_for_link = append(tags_for_link, tr)
 	}
 
 	cat_rankings := make(map[string]float32)
 	var max_cat_score float32
 
-	for _, tag := range tag_rankings {
-
+	for _, tag := range tags_for_link {
 		// multiple cats
 		if strings.Contains(tag.Cats, ",") {
 			cats := strings.Split(tag.Cats, ",")
 			for _, cat := range cats {
 				cat_rankings[cat] += tag.LifeSpanOverlap
-
 				if cat_rankings[cat] > max_cat_score {
 					max_cat_score = cat_rankings[cat]
 				}
 			}
-
-			// single cat
+		// single cat
 		} else {
 			cat_rankings[tag.Cats] += tag.LifeSpanOverlap
-
 			if cat_rankings[tag.Cats] > max_cat_score {
 				max_cat_score = cat_rankings[tag.Cats]
 			}
 		}
 	}
 
-	if len(cat_rankings) > modelutil.NUM_CATS_LIMIT {
+	if len(cat_rankings) > mutil.NUM_CATS_LIMIT {
 		cat_rankings = LimitToTopCatRankings(cat_rankings)
 	}
 
-	// Assign to global cats if >= 25% of max category score
-	var global_cats string
-	// Alphabetize so global cats are assigned in order
+	var new_global_cats string
 	for _, cat := range AlphabetizeCatRankings(cat_rankings) {
-		if cat_rankings[cat] >= max_cat_score*0.25 {
-			global_cats += cat + ","
+		if cat_rankings[cat] >= max_cat_score * (MIN_PERCENT_OF_MAX_CAT_SCORE / 100) {
+			new_global_cats += cat + ","
 		}
 	}
-	if len(global_cats) > 0 {
-		global_cats = global_cats[:len(global_cats)-1]
+
+	// remove trailing comma
+	if len(new_global_cats) > 0 {
+		new_global_cats = new_global_cats[:len(new_global_cats)-1]
 	}
 
-	err = SetGlobalCats(link_id, global_cats)
-	if err != nil {
+	if err = SetGlobalCats(link_id, new_global_cats); err != nil {
 		return err
 	}
 
@@ -258,7 +255,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 
 func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 	// should never happen but just in case...
-	if len(cat_rankings) <= modelutil.NUM_CATS_LIMIT {
+	if len(cat_rankings) <= mutil.NUM_CATS_LIMIT {
 		return cat_rankings
 	}
 
@@ -279,8 +276,8 @@ func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
 		return 1
 	})
 
-	limited_rankings := make(map[string]float32, modelutil.NUM_CATS_LIMIT)
-	for i := 0; i < modelutil.NUM_CATS_LIMIT; i++ {
+	limited_rankings := make(map[string]float32, mutil.NUM_CATS_LIMIT)
+	for i := 0; i < mutil.NUM_CATS_LIMIT; i++ {
 		limited_rankings[sorted_rankings[i].Cat] = sorted_rankings[i].Score
 	}
 
