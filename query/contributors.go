@@ -39,6 +39,11 @@ func (c *Contributors) FromRequestParams(params url.Values) *Contributors {
 		c = c.WithURLContaining(url_contains_params)
 	}
 
+	url_lacks_params := params.Get("url_lacks")
+	if url_lacks_params != "" {
+		c = c.WithURLLacking(url_lacks_params)
+	}
+
 	period_params := params.Get("period")
 	if period_params != "" {
 		c = c.DuringPeriod(period_params)
@@ -95,7 +100,24 @@ func (c *Contributors) WithURLContaining(snippet string) *Contributors {
 		1,
 	)
 
-	// insert into args in 2nd-to-last position
+	// insert into arg in 2nd-to-last position
+	last_arg := c.Args[len(c.Args)-1]
+	c.Args = c.Args[:len(c.Args)-1]
+	c.Args = append(c.Args, "%"+snippet+"%")
+	c.Args = append(c.Args, last_arg)
+
+	return c
+}
+
+func (c *Contributors) WithURLLacking(snippet string) *Contributors {
+	c.Text = strings.Replace(
+		c.Text,
+		"GROUP BY l.submitted_by",
+		"WHERE url NOT LIKE ?\nGROUP BY l.submitted_by",
+		1,
+	)
+
+	// insert into arg in 2nd-to-last position
 	last_arg := c.Args[len(c.Args)-1]
 	c.Args = c.Args[:len(c.Args)-1]
 	c.Args = append(c.Args, "%"+snippet+"%")

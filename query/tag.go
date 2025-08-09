@@ -102,6 +102,11 @@ func (gcc *GlobalCatCounts) FromRequestParams(params url.Values) *GlobalCatCount
 		gcc = gcc.WithURLContaining(url_contains_params)
 	}
 
+	url_lacks_params := params.Get("url_lacks")
+	if url_lacks_params != "" {
+		gcc = gcc.WithURLLacking(url_lacks_params)
+	}
+
 	period_params := params.Get("period")
 	if period_params != "" {
 		gcc = gcc.DuringPeriod(period_params)
@@ -185,6 +190,60 @@ func (gcc *GlobalCatCounts) WithURLContaining(snippet string) *GlobalCatCounts {
 		gcc.Text,
 		"GROUP BY LOWER(global_cat)",
 		"\nAND url LIKE ?\nGROUP BY LOWER(global_cat)",
+		1,
+	)
+
+	// insert into args in 2nd-to-last position
+	last_arg := gcc.Args[len(gcc.Args)-1]
+	gcc.Args = gcc.Args[:len(gcc.Args)-1]
+	gcc.Args = append(gcc.Args, "%"+snippet+"%")
+	gcc.Args = append(gcc.Args, last_arg)
+
+	return gcc
+}
+
+func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
+
+	// check if WithURLContaining was already run
+	// (avoid double string replacement)
+	has_url_contains := strings.Contains(
+		gcc.Text,
+		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
+	) &&
+		strings.Contains(
+		gcc.Text,
+		"SELECT id, '', global_cats||',', url",
+	) &&
+		strings.Contains(
+		gcc.Text,
+		"substr(str, instr(str, ',') + 1),\nurl",
+	)
+
+	if !has_url_contains {
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str)",
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
+			1,
+		)
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"SELECT id, '', global_cats||','",
+			"SELECT id, '', global_cats||',', url",
+			1,
+		)
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"substr(str, instr(str, ',') + 1)",
+			"substr(str, instr(str, ',') + 1),\nurl",
+			1,
+		)
+	}
+	
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"GROUP BY LOWER(global_cat)",
+		"\nAND url NOT LIKE ?\nGROUP BY LOWER(global_cat)",
 		1,
 	)
 

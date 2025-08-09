@@ -175,6 +175,11 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 		tl = tl.WithURLContaining(url_contains_params, sort_params)
 	}
 
+	url_lacks_params := params.Get("url_lacks")
+	if url_lacks_params != "" {
+		tl = tl.WithURLLacking(url_lacks_params, sort_params)
+	}
+
 	period_params := params.Get("period")
 	if period_params != "" {
 		tl = tl.DuringPeriod(period_params, sort_params)
@@ -259,9 +264,53 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 	url LIKE ?`
 
 	order_by_clause := LINKS_ORDER_BY
-	if sort_by == "newest" {
-		order_by_clause = LINKS_ORDER_BY_NEWEST
+	switch sort_by {
+		case "newest":
+			order_by_clause = LINKS_ORDER_BY_NEWEST
+		case "":
+		case "rating":
+		default:
+			tl.Error = fmt.Errorf("invalid sort_by value")
+			return tl
+		}
+
+	tl.Text = strings.Replace(
+		tl.Text,
+		order_by_clause,
+		"\n" + clause_keyword + " " + and_clause + order_by_clause,
+		1,
+	)
+
+	// insert into args in 2nd-to-last position
+	last_arg := tl.Args[len(tl.Args) - 1]
+	tl.Args = tl.Args[:len(tl.Args) - 1]
+	tl.Args = append(tl.Args, "%" + snippet + "%")
+	tl.Args = append(tl.Args, last_arg)
+
+	return tl
+}
+
+func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
+	var clause_keyword string
+	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_BASE_QUERY {
+		clause_keyword = "AND"
+	} else {
+		clause_keyword = "WHERE"
 	}
+
+	and_clause := `
+	url NOT LIKE ?`
+
+	order_by_clause := LINKS_ORDER_BY
+	switch sort_by {
+		case "newest":
+			order_by_clause = LINKS_ORDER_BY_NEWEST
+		case "":
+		case "rating":
+		default:
+			tl.Error = fmt.Errorf("invalid sort_by value")
+			return tl
+		}
 
 	tl.Text = strings.Replace(
 		tl.Text,
