@@ -218,6 +218,19 @@ func (tnlc *TmapNSFWLinksCount) WithURLContaining(snippet string) *TmapNSFWLinks
 	return tnlc
 }
 
+func (tnlc *TmapNSFWLinksCount) WithURLLacking(snippet string) *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		";",
+		"\nAND url NOT LIKE ?;",
+		1,
+	)
+
+	tnlc.Args = append(tnlc.Args, "%"+snippet+"%")
+
+	return tnlc
+}
+
 func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOptions) *TmapNSFWLinksCount {
 	if opts.OnlySection != "" {
 		switch opts.OnlySection {
@@ -243,6 +256,10 @@ func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOption
 
 	if opts.URLContains != "" {
 		tnlc.WithURLContaining(opts.URLContains)
+	}
+
+	if opts.URLLacks != "" {
+		tnlc.WithURLLacking(opts.URLLacks)
 	}
 
 	return tnlc
@@ -387,6 +404,24 @@ func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
 	return ts
 }
 
+func (ts *TmapSubmitted) WithURLLacking(snippet string) *TmapSubmitted {
+	for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		ts.Text = strings.Replace(
+			ts.Text,
+			order_by,
+			"\nAND " + "url NOT LIKE ?" + order_by,
+			1,
+		)
+	} 
+
+	ts.Args = append(ts.Args, "%"+snippet+"%")
+
+	return ts
+}
+
 func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 	if len(opts.Cats) > 0 {
 		ts.FromCats(opts.Cats)
@@ -410,6 +445,10 @@ func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 
 	if opts.URLContains != "" {
 		ts.WithURLContaining(opts.URLContains)
+	}
+
+	if opts.URLLacks != "" {
+		ts.WithURLLacking(opts.URLLacks)
 	}
 
 	return ts
@@ -564,6 +603,24 @@ func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
 	return tc
 }
 
+func (tc *TmapCopied) WithURLLacking(snippet string) *TmapCopied {
+	for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		tc.Text = strings.Replace(
+			tc.Text,
+			order_by,
+			"\nAND " + "url NOT LIKE ?" + order_by,
+			1,
+		)
+	} 
+
+	tc.Args = append(tc.Args, "%"+snippet+"%")
+
+	return tc
+}
+
 func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 	if len(opts.Cats) > 0 {
 		tc.FromCats(opts.Cats)
@@ -587,6 +644,10 @@ func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 
 	if opts.URLContains != "" {
 		tc.WithURLContaining(opts.URLContains)
+	}
+
+	if opts.URLLacks != "" {
+		tc.WithURLLacking(opts.URLLacks)
 	}
 
 	return tc
@@ -780,6 +841,24 @@ func (tt *TmapTagged) WithURLContaining(snippet string) *TmapTagged {
 	return tt
 }
 
+func (tt *TmapTagged) WithURLLacking(snippet string) *TmapTagged {
+	for _, order_by := range []string{
+		TMAP_DEFAULT_ORDER_BY, 
+		TMAP_ORDER_BY_NEWEST,
+	} {
+		tt.Text = strings.Replace(
+			tt.Text,
+			order_by,
+			"\nAND " + "url NOT LIKE ?" + order_by,
+			1,
+		)
+	} 
+
+	tt.Args = append(tt.Args, "%"+snippet+"%")
+
+	return tt
+}
+
 func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 	if len(opts.Cats) > 0 {
 		tt.FromCats(opts.Cats)
@@ -803,6 +882,10 @@ func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 	
 	if opts.URLContains != "" {
 		tt.WithURLContaining(opts.URLContains)
+	}
+
+	if opts.URLLacks != "" {
+		tt.WithURLLacking(opts.URLLacks)
 	}
 
 	return tt

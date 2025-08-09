@@ -36,7 +36,14 @@ func UserWithIDHasProfilePic(user_id string) bool {
 
 func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
 	var opts = &model.TmapOptions{}
-	var cats_params, period_params, url_contains_params, nsfw_params, sort_params, section_params, page_params string
+	var cats_params, 
+		period_params, 
+		url_contains_params, 
+		url_lacks_params, 
+		nsfw_params, 
+		sort_params, 
+		section_params, 
+		page_params string
 
 	cats_params = params.Get("cats")
 	if cats_params != "" {
@@ -57,6 +64,11 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	url_contains_params = params.Get("url_contains")
 	if url_contains_params != "" {
 		opts.URLContains =  url_contains_params
+	}
+
+	url_lacks_params = params.Get("url_lacks")
+	if url_lacks_params != "" {
+		opts.URLLacks = url_lacks_params
 	}
 
 	if params.Get("nsfw") != "" {

@@ -90,6 +90,7 @@ type TmapOptions struct {
 	SortByNewest   bool
 	IncludeNSFW    bool
 	URLContains    string
+	URLLacks       string
 	Section        string
 	Page           int
 }
@@ -99,6 +100,7 @@ type TmapNSFWLinksCountOptions struct {
 	CatsFilter []string
 	Period string
 	URLContains string
+	URLLacks string
 }
 
 type TmapCatCountsOptions struct {
