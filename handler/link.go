@@ -134,24 +134,25 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 	var x_md *model.LinkExtraMetadata
 
+	has_yt_video_metadata := false
 	if util.IsYTVideo(final_url) {
 		if yt_md, err := util.GetYTVideoMetadata(final_url); err == nil {
 			new_link.URL = "https://www.youtube.com/watch?v=" + yt_md.ID
 			new_link.AutoSummary = yt_md.Items[0].Snippet.Title
 			new_link.PreviewImgURL = yt_md.Items[0].Snippet.Thumbnails.Default.URL
-		} else {
-			x_md = util.GetLinkExtraMetadataFromResponse(resp)
-		}
-	} else {
-		x_md = util.GetLinkExtraMetadataFromResponse(resp)
-	}
-	if x_md != nil {
-		if x_md.AutoSummary != "" {
-			new_link.AutoSummary = x_md.AutoSummary
-		}
 
-		if x_md.PreviewImgURL != "" {
-			new_link.PreviewImgURL = x_md.PreviewImgURL
+			has_yt_video_metadata = true
+		}
+	}
+	if !has_yt_video_metadata {
+		if x_md = util.GetLinkExtraMetadataFromResponse(resp); x_md != nil {
+			if x_md.AutoSummary != "" {
+				new_link.AutoSummary = x_md.AutoSummary
+			}
+
+			if x_md.PreviewImgURL != "" {
+				new_link.PreviewImgURL = x_md.PreviewImgURL
+			}
 		}
 	}
 

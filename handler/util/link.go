@@ -59,12 +59,12 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 	
 	PaginateLinks(links_page.Links)
 
-	cats_params, nsfw_params := options.Cats, options.NSFW
-
+	cats_params := options.Cats
 	if cats_params != "" {
 		CountMergedCatSpellingVariants(links_page, cats_params)
 	}
 	
+	nsfw_params := options.NSFW
 	hidden_links, err := CountNSFWLinks[T](links_sql, nsfw_params)
 	if err != nil {
 		return nil, err
@@ -159,14 +159,13 @@ func ScanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 		links = &signed_in_links
 	}
 
-	if links == nil || len(*links.(*[]T)) == 0 {
-		return &model.LinksPage[T]{Pages: -1}, nil
+	lp := &model.LinksPage[T]{Pages: -1}
+	if links != nil && len(*links.(*[]T)) > 0 {
+		lp.Links = links.(*[]T)
+		lp.Pages = pages
 	}
 
-	return &model.LinksPage[T]{
-		Links: links.(*[]T),
-		Pages: pages,
-	}, nil
+	return lp, nil
 }
 
 func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.SingleLink) (*T, error) {

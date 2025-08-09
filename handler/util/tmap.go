@@ -196,7 +196,6 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		// because merging all the links SQL queries together is a headache
 		// and doesn't make perf thattt much better since tmap contains <= 60
 		// links at a time (single section contains <= 20 links)
-		// and looping over <= 60 links is trivial
 		cat_counts = GetCatCountsFromTmapLinks(links, cat_counts_opts)
 
 		// Pagination
@@ -220,7 +219,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		return model.TmapSectionPage[T]{
 			Links:          links,
 			Cats:           cat_counts,
-			Pages:      pages,
+			Pages:          pages,
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 

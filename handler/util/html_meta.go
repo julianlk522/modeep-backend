@@ -26,24 +26,24 @@ func ExtractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
 	for {
 		token_type := z.Next()
 		switch token_type {
-		case html.ErrorToken:
-			return
-		case html.SelfClosingTagToken, html.StartTagToken:
-			t := z.Token()
-			if t.Data == "title" && !title_found {
-				title_tag = true
-			} else if t.Data == "meta" {
-				AssignTokenPropertyToHTMLMeta(t, &html_md)
-			}
-		case html.TextToken:
-			if title_tag {
+			case html.ErrorToken:
+				return
+			case html.SelfClosingTagToken, html.StartTagToken:
 				t := z.Token()
-				html_md.Title = t.Data
+				if t.Data == "title" && !title_found {
+					title_tag = true
+				} else if t.Data == "meta" {
+					AssignTokenPropertyToHTMLMeta(t, &html_md)
+				}
+			case html.TextToken:
+				if title_tag {
+					t := z.Token()
+					html_md.Title = t.Data
 
-				title_tag = false
-				title_found = true
+					title_tag = false
+					title_found = true
+				}
 			}
-		}
 	}
 }
 
