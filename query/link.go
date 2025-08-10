@@ -259,18 +259,17 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 }
 
 // EarliestLikers/Copiers row nums + default NSFW clause makes 3
-const NUM_WHERES_IN_BASE_QUERY = 3
+const NUM_WHERES_IN_LINKS_BASE_QUERY = 3
 
 func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks {
 	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_BASE_QUERY {
+	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_LINKS_BASE_QUERY {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
 	}
 
-	and_clause := `
-	url LIKE ?`
+	like_clause := "url LIKE ?"
 
 	order_by_clause := LINKS_ORDER_BY
 	switch sort_by {
@@ -288,7 +287,7 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 	tl.Text = strings.Replace(
 		tl.Text,
 		order_by_clause,
-		"\n" + clause_keyword + " " + and_clause + order_by_clause,
+		"\n" + clause_keyword + " " + like_clause + order_by_clause,
 		1,
 	)
 
@@ -303,14 +302,13 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 
 func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_BASE_QUERY {
+	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_LINKS_BASE_QUERY {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
 	}
 
-	and_clause := `
-	url NOT LIKE ?`
+	like_clause := "url NOT LIKE ?"
 
 	order_by_clause := LINKS_ORDER_BY
 	switch sort_by {
@@ -328,7 +326,7 @@ func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		order_by_clause,
-		"\n" + clause_keyword + " " + and_clause + order_by_clause,
+		"\n" + clause_keyword + " " + like_clause + order_by_clause,
 		1,
 	)
 
@@ -353,7 +351,7 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 	}
 
 	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_BASE_QUERY {
+	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_LINKS_BASE_QUERY {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
@@ -508,7 +506,7 @@ func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
 	count_select := `
 	SELECT count(l.id)`
 
-	// attempt to replace both base and auth-enabled fields
+	// replace either base or auth-enabled fields
 	// it should be one or the other
 	tl.Text = strings.Replace(
 		tl.Text,
@@ -525,37 +523,48 @@ func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
 	)
 
 	// invert NSFW clause
+	var nsfw_clause = `
+	WHERE l.id IN (
+		SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
+	)`
+
+	if strings.Contains(tl.Text, "WHERE url LIKE") || strings.Contains(tl.Text, "WHERE url NOT LIKE") {
+		nsfw_clause = strings.Replace(
+			nsfw_clause,
+			"WHERE",
+			"AND",
+			1,
+		)
+	}
+
 	if nsfw_params {
 		// insert in front of all LINKS_ORDER_BY variants
 		// (all except one should be no-op)
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_ORDER_BY,
-			NSFW_CLAUSE,
+			nsfw_clause,
 			1,
 		)
 
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_ORDER_BY_NEWEST,
-			NSFW_CLAUSE,
+			nsfw_clause,
 			1,
 		)
 
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_ORDER_BY_OLDEST,
-			NSFW_CLAUSE,
+			nsfw_clause,
 			1,
 		)
 	} else {
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_NO_NSFW_CATS_WHERE,
-			`
-			WHERE l.id IN (
-				SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
-			)`,
+			nsfw_clause,
 			1,
 		)
 	}
@@ -570,10 +579,6 @@ func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
 
 	return tl
 }
-
-const NSFW_CLAUSE = `WHERE l.id IN (
-	SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
-)`
 
 type SingleLink struct {
 	Query

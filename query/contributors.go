@@ -110,10 +110,14 @@ func (c *Contributors) WithURLContaining(snippet string) *Contributors {
 }
 
 func (c *Contributors) WithURLLacking(snippet string) *Contributors {
+	clause_keyword := "WHERE"
+	if strings.Contains(c.Text, "WHERE url LIKE") {
+		clause_keyword = "AND"
+	}
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		"WHERE url NOT LIKE ?\nGROUP BY l.submitted_by",
+		clause_keyword + " url NOT LIKE ?\nGROUP BY l.submitted_by",
 		1,
 	)
 

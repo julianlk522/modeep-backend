@@ -425,7 +425,7 @@ func (ts *TmapSubmitted) WithURLLacking(snippet string) *TmapSubmitted {
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by,
-			"\nAND " + "url NOT LIKE ?" + order_by,
+			"AND url NOT LIKE ?" + order_by,
 			1,
 		)
 	} 
@@ -637,7 +637,7 @@ func (tc *TmapCopied) WithURLLacking(snippet string) *TmapCopied {
 		tc.Text = strings.Replace(
 			tc.Text,
 			order_by,
-			"\nAND " + "url NOT LIKE ?" + order_by,
+			"AND url NOT LIKE ?" + order_by,
 			1,
 		)
 	} 
@@ -888,7 +888,7 @@ func (tt *TmapTagged) WithURLLacking(snippet string) *TmapTagged {
 		tt.Text = strings.Replace(
 			tt.Text,
 			order_by,
-			"\nAND " + "url NOT LIKE ?" + order_by,
+			"AND url NOT LIKE ?" + order_by,
 			1,
 		)
 	} 

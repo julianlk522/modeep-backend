@@ -243,7 +243,7 @@ func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"GROUP BY LOWER(global_cat)",
-		"\nAND url NOT LIKE ?\nGROUP BY LOWER(global_cat)",
+		"AND url NOT LIKE ?\nGROUP BY LOWER(global_cat)",
 		1,
 	)
 

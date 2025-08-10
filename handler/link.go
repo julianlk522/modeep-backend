@@ -50,10 +50,7 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req_user_id != "" {
-		resp, err = util.PrepareLinksPage[model.LinkSignedIn](
-			links_sql, 
-			page_opts,
-		)
+		resp, err = util.PrepareLinksPage[model.LinkSignedIn](links_sql, page_opts)
 	} else {
 		resp, err = util.PrepareLinksPage[model.Link](links_sql, page_opts)
 	}
