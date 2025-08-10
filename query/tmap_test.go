@@ -529,7 +529,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 		submitted_links_with_all_period, 
 		submittted_links_with_week_period []model.TmapLink
 
-	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).SortByNewest()
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).SortBy("newest")
 	rows, _ := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
 
 	for rows.Next() {
@@ -590,8 +590,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 		t.Fatal("submitted_links_no_period != submitted_links_with_all_period")
 	}
 
-	// verify has all the same link IDs (though order will differ due to 
-	// no period SQL having .SortByNewest() applied)
+	// verify has all the same link IDs
 	var no_period_links_ids, all_period_links_ids []string
 	for _, l := range submitted_links_no_period {
 		no_period_links_ids = append(no_period_links_ids, l.ID)

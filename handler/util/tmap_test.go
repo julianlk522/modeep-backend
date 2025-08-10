@@ -34,27 +34,27 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		LoginName        string
 		RequestingUserID string
 		CatsParams       string
-		SortByNewest     bool
+		SortBy     	     string
 		IncludeNSFW      bool
 		SectionParams    string
 		PageParams       int
 		Valid            bool
 	}{
-		{TEST_LOGIN_NAME, TEST_USER_ID, "", false, false, "", 1, true},
-		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", false, true, "", 1, true},
-		{TEST_LOGIN_NAME, "", "", false, true, "", 1, true},
-		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3", true, true, "", 1, true},
-		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", true, false, "", 0, true},
-		{TEST_LOGIN_NAME, "", "", false, false, "", 10, true},
-		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3,flowers", true, true, "", 1, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", true, false, "", 2, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", false, true, "", 1, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", false, true, "submitted", 4, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", false, true, "copied", 0, true},
+		{TEST_LOGIN_NAME, TEST_USER_ID, "", "rating", false, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "rating", true, "", 1, true},
+		{TEST_LOGIN_NAME, "", "", "newest", true, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3", "newest", true, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "oldest", false, "", 0, true},
+		{TEST_LOGIN_NAME, "", "", "rating", false, "", 10, true},
+		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3,flowers", "oldest", true, "", 1, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "rating", false, "", 2, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "", 1, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "submitted", 4, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "copied", 0, true},
 		// "notasection" is invalid
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", false, true, "notasection", 1, false},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "notasection", 1, false},
 		// negative page is invalid
-		{TEST_LOGIN_NAME, "", "", false, true, "submitted", -1, false},
+		{TEST_LOGIN_NAME, "", "", "newest", true, "submitted", -1, false},
 	}
 
 	for _, td := range test_data {
@@ -62,7 +62,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 			OwnerLoginName: td.LoginName,
 			RawCatsParams:  td.CatsParams,
 			AsSignedInUser: td.RequestingUserID,
-			SortByNewest:   td.SortByNewest,
+			SortBy:   		td.SortBy,
 			IncludeNSFW:    td.IncludeNSFW,
 			Section:        td.SectionParams,
 			Page:           td.PageParams,

@@ -150,6 +150,15 @@ ORDER BY
 	tag_count DESC, 
 	summary_count DESC, 
 	l.id DESC`
+const LINKS_ORDER_BY_OLDEST = `
+ORDER BY 
+	submit_date ASC, 
+	like_count DESC, 
+	copy_count DESC,
+	click_count DESC, 
+	tag_count DESC, 
+	summary_count DESC, 
+	l.id DESC`
 
 const LINKS_LIMIT = `
 LIMIT ?;`
@@ -267,6 +276,8 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 	switch sort_by {
 		case "newest":
 			order_by_clause = LINKS_ORDER_BY_NEWEST
+		case "oldest":
+			order_by_clause = LINKS_ORDER_BY_OLDEST
 		case "":
 		case "rating":
 		default:
@@ -305,6 +316,8 @@ func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 	switch sort_by {
 		case "newest":
 			order_by_clause = LINKS_ORDER_BY_NEWEST
+		case "oldest":
+			order_by_clause = LINKS_ORDER_BY_OLDEST
 		case "":
 		case "rating":
 		default:
@@ -347,8 +360,16 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 	}
 
 	order_by_clause := LINKS_ORDER_BY
-	if sort_by == "newest" {
-		order_by_clause = LINKS_ORDER_BY_NEWEST
+	switch sort_by {
+		case "newest":
+			order_by_clause = LINKS_ORDER_BY_NEWEST
+		case "oldest":
+			order_by_clause = LINKS_ORDER_BY_OLDEST
+		case "":
+		case "rating":
+		default:
+			tl.Error = fmt.Errorf("invalid sort_by value")
+			return tl
 	}
 
 	tl.Text = strings.Replace(
@@ -362,15 +383,25 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 }
 
 func (tl *TopLinks) SortBy(order_by string) *TopLinks {
-	if order_by == "newest" {
-		tl.Text = strings.Replace(
-			tl.Text,
-			LINKS_ORDER_BY,
-			LINKS_ORDER_BY_NEWEST,
-			1,
-		)
-	} else if order_by != "rating" {
-		tl.Error = fmt.Errorf("invalid order_by value")
+	switch order_by {
+		case "newest":
+			tl.Text = strings.Replace(
+				tl.Text,
+				LINKS_ORDER_BY,
+				LINKS_ORDER_BY_NEWEST,
+				1,
+			)
+		case "oldest":
+			tl.Text = strings.Replace(
+				tl.Text,
+				LINKS_ORDER_BY,
+				LINKS_ORDER_BY_OLDEST,
+				1,
+			)
+		case "rating", "":
+		default:
+			tl.Error = fmt.Errorf("invalid order_by value")
+			return tl
 	}
 
 	return tl
@@ -495,8 +526,8 @@ func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
 
 	// invert NSFW clause
 	if nsfw_params {
-		// insert in front of both LINKS_ORDER_BY and LINKS_ORDER_BY_NEWEST
-		// (one should be no-op)
+		// insert in front of all LINKS_ORDER_BY variants
+		// (all except one should be no-op)
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_ORDER_BY,
@@ -507,6 +538,13 @@ func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_ORDER_BY_NEWEST,
+			NSFW_CLAUSE,
+			1,
+		)
+
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_ORDER_BY_OLDEST,
 			NSFW_CLAUSE,
 			1,
 		)

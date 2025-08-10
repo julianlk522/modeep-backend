@@ -115,7 +115,7 @@ func TestFromCats(t *testing.T) {
 }
 
 func TestLinksWithURLContaining(t *testing.T) {
-	links_sql := NewTopLinks().WithURLContaining("google", "newest")
+	links_sql := NewTopLinks().WithURLContaining("google", "")
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
@@ -223,7 +223,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 
 	for _, tp := range test_periods {
 		// Period only
-		links_sql := NewTopLinks().DuringPeriod(tp.Period, "newest")
+		links_sql := NewTopLinks().DuringPeriod(tp.Period, "")
 		if tp.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tp.Valid && links_sql.Error == nil {
@@ -259,6 +259,7 @@ func TestLinksSortBy(t *testing.T) {
 	}{
 		{"newest", true},
 		{"rating", true},
+		{"oldest", true},
 		{"invalid", false},
 	}
 
@@ -483,7 +484,7 @@ func TestNSFW(t *testing.T) {
 		FromCats([]string{"search", "engine", "NSFW"}).
 		DuringPeriod("year", "newest").
 		AsSignedInUser(TEST_USER_ID).
-		SortBy("newest").
+		SortBy("oldest").
 		Page(1)
 
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)

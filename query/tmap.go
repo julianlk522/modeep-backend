@@ -342,11 +342,21 @@ func (ts *TmapSubmitted) NSFW() *TmapSubmitted {
 	return ts
 }
 
-func (ts *TmapSubmitted) SortByNewest() *TmapSubmitted {
+func (ts *TmapSubmitted) SortBy(metric string) *TmapSubmitted {
+	var order_by string
+	switch metric {
+		case "newest": order_by = TMAP_ORDER_BY_NEWEST
+		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
+		case "rating", "": return ts
+		default: 
+			ts.Error = e.ErrInvalidSortByParams
+			return ts
+	}
+
 	ts.Text = strings.Replace(
 		ts.Text,
 		TMAP_DEFAULT_ORDER_BY,
-		TMAP_ORDER_BY_NEWEST,
+		order_by,
 		1,
 	)
 
@@ -374,6 +384,7 @@ func (ts *TmapSubmitted) DuringPeriod(period string) *TmapSubmitted {
 	for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -390,6 +401,7 @@ func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
 	for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -408,6 +420,7 @@ func (ts *TmapSubmitted) WithURLLacking(snippet string) *TmapSubmitted {
 	for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -431,8 +444,8 @@ func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 		ts.AsSignedInUser(opts.AsSignedInUser)
 	}
 
-	if opts.SortByNewest {
-		ts.SortByNewest()
+	if opts.SortBy != "" {
+		ts.SortBy(opts.SortBy)
 	}
 
 	if opts.IncludeNSFW {
@@ -541,11 +554,21 @@ func (tc *TmapCopied) NSFW() *TmapCopied {
 	return tc
 }
 
-func (tc *TmapCopied) SortByNewest() *TmapCopied {
+func (tc *TmapCopied) SortBy(metric string) *TmapCopied {
+	var order_by string
+	switch metric {
+		case "newest": order_by = TMAP_ORDER_BY_NEWEST
+		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
+		case "rating", "": return tc
+		default: 
+			tc.Error = e.ErrInvalidSortByParams
+			return tc
+	}
+
 	tc.Text = strings.Replace(
 		tc.Text,
 		TMAP_DEFAULT_ORDER_BY,
-		TMAP_ORDER_BY_NEWEST,
+		order_by,
 		1,
 	)
 
@@ -573,6 +596,7 @@ func (tc *TmapCopied) DuringPeriod(period string) *TmapCopied {
 	for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		tc.Text = strings.Replace(
 			tc.Text,
@@ -589,6 +613,7 @@ func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
 	for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		tc.Text = strings.Replace(
 			tc.Text,
@@ -607,6 +632,7 @@ func (tc *TmapCopied) WithURLLacking(snippet string) *TmapCopied {
 	for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		tc.Text = strings.Replace(
 			tc.Text,
@@ -630,8 +656,8 @@ func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 		tc.AsSignedInUser(opts.AsSignedInUser)
 	}
 
-	if opts.SortByNewest {
-		tc.SortByNewest()
+	if opts.SortBy != "" {
+		tc.SortBy(opts.SortBy)
 	}
 
 	if opts.IncludeNSFW {
@@ -779,11 +805,21 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 	return tt
 }
 
-func (tt *TmapTagged) SortByNewest() *TmapTagged {
+func (tt *TmapTagged) SortBy(metric string) *TmapTagged {
+	var order_by string
+	switch metric {
+		case "newest": order_by = TMAP_ORDER_BY_NEWEST
+		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
+		case "rating", "": return tt
+		default: 
+			tt.Error = e.ErrInvalidSortByParams
+			return tt
+	}
+
 	tt.Text = strings.Replace(
 		tt.Text,
 		TMAP_DEFAULT_ORDER_BY,
-		TMAP_ORDER_BY_NEWEST,
+		order_by,
 		1,
 	)
 
@@ -811,6 +847,7 @@ func (tt *TmapTagged) DuringPeriod(period string) *TmapTagged {
 for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		tt.Text = strings.Replace(
 			tt.Text,
@@ -827,6 +864,7 @@ func (tt *TmapTagged) WithURLContaining(snippet string) *TmapTagged {
 	for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		tt.Text = strings.Replace(
 			tt.Text,
@@ -845,6 +883,7 @@ func (tt *TmapTagged) WithURLLacking(snippet string) *TmapTagged {
 	for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
+		TMAP_ORDER_BY_OLDEST,
 	} {
 		tt.Text = strings.Replace(
 			tt.Text,
@@ -868,8 +907,8 @@ func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 		tt.AsSignedInUser(opts.AsSignedInUser)
 	}
 	
-	if opts.SortByNewest {
-		tt.SortByNewest()
+	if opts.SortBy != "" {
+		tt.SortBy(opts.SortBy)
 	}
 	
 	if opts.IncludeNSFW {
@@ -1132,6 +1171,16 @@ ORDER BY
 const TMAP_ORDER_BY_NEWEST = `
 ORDER BY 
 	l.submit_date DESC, 
+	lc.like_count DESC, 
+	cpc.copy_count DESC,
+	clc.click_count DESC,
+	tc.tag_count DESC,
+	sc.summary_count DESC, 
+	l.id DESC;`
+
+const TMAP_ORDER_BY_OLDEST = `
+ORDER BY 
+	l.submit_date ASC, 
 	lc.like_count DESC, 
 	cpc.copy_count DESC,
 	clc.click_count DESC,
