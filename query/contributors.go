@@ -132,8 +132,8 @@ func (c *Contributors) DuringPeriod(period string) *Contributors {
 	}
 	
 	var clause_keyword string
-	// adapt keyword if .WithURLContaining was called first
-	if strings.Contains(c.Text, "WHERE url LIKE") {
+	// adapt keyword if .WithURLContaining / .WithURLLacking was called first
+	if strings.Contains(c.Text, "WHERE url") {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
