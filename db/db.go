@@ -29,7 +29,7 @@ func Connect() error {
 	LoadSpellfix()
 
 	var err error
-	Client, err = sql.Open("sqlite-spellfix1", db_dir+"/fitm.db?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000&_cache_size=100000000")
+	Client, err = sql.Open("sqlite-spellfix1", db_dir+"/modeep.db?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000&_cache_size=100000000")
 	if err != nil {
 		return err
 	}

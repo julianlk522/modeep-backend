@@ -32,7 +32,7 @@ func SetupTestDB() error {
 		log.Print("using $FITM_TEST_DATA_PATH")
 		db_dir = test_data_path
 	}
-	sql_dump_path = filepath.Join(db_dir, "fitm_test.db.sql")
+	sql_dump_path = filepath.Join(db_dir, "modeep_test.db.sql")
 
 	sql_dump, err := os.ReadFile(sql_dump_path)
 	if err != nil {

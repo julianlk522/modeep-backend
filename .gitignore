@@ -1,10 +1,10 @@
 db/img/*
 db/backup
 !db/backup/backup_now.sh
-db/fitm*.db
-db/fitm.db-shm
-db/fitm.db-wal
-db/fitm_test*
+db/modeep*.db
+db/modeep.db-shm
+db/modeep.db-wal
+db/modeep_test*
 db/source
 db/spellfix.dll
 _*
