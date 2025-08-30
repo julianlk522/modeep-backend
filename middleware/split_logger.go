@@ -42,9 +42,9 @@ func (slf *SplitLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
 }
 
 func NewSplitLogFormatter(logger middleware.LoggerInterface) (*SplitLogFormatter, error) {
-	err_log_file_path := os.Getenv("FITM_ERR_LOG_FILE")
+	err_log_file_path := os.Getenv("MODEEP_ERR_LOG_FILE")
 	if err_log_file_path == "" {
-		return nil, fmt.Errorf("FITM_ERR_LOG_FILE not set")
+		return nil, fmt.Errorf("MODEEP_ERR_LOG_FILE not set")
 	}
 	log_file, err := os.OpenFile(err_log_file_path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

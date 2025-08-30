@@ -68,7 +68,7 @@ func GetJWTFromLoginName(login_name string) (string, error) {
 	jwtauth.SetIssuedNow(claims)
 	jwtauth.SetExpiry(claims, time.Now().Add(4*time.Hour))
 
-	secret := os.Getenv("FITM_JWT_SECRET")
+	secret := os.Getenv("MODEEP_JWT_SECRET")
 	if secret == "" {
 		return "", e.ErrNoJWTSecretEnv
 	}

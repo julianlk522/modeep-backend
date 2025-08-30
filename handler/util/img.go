@@ -25,12 +25,12 @@ var (
 )
 
 func init() {
-	fitm_root_path := os.Getenv("FITM_BACKEND_ROOT")
-	if fitm_root_path == "" {
-		log.Panic("$FITM_BACKEND_ROOT not set")
+	modeep_root_path := os.Getenv("MODEEP_BACKEND_ROOT")
+	if modeep_root_path == "" {
+		log.Panic("$MODEEP_BACKEND_ROOT not set")
 	}
-	Profile_pic_dir = fitm_root_path + "/db/img/profile"
-	preview_pic_dir = fitm_root_path + "/db/img/preview"
+	Profile_pic_dir = modeep_root_path + "/db/img/profile"
+	preview_pic_dir = modeep_root_path + "/db/img/preview"
 }
 
 // First return value is file name of saved image

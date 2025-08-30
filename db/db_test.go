@@ -26,7 +26,7 @@ func TestLoadSpellfix(t *testing.T) {
 
 	var sql_dump_path, db_dir string
 
-	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
+	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
 	if test_data_path == "" {
 		_, dbtest_file, _, _ := runtime.Caller(0)
 		db_dir = filepath.Dir(dbtest_file)

@@ -40,7 +40,7 @@ func GeneratePasswordResetToken(login_name, email string) (string, error) {
 	}
 	encoded_payload := base64.URLEncoding.EncodeToString(payload_bytes)
 
-	secret := os.Getenv("FITM_PW_RESET_SECRET")
+	secret := os.Getenv("MODEEP_PW_RESET_SECRET")
 	if secret == "" {
 		return "", e.ErrNoPasswordResetSecretEnv
 	}
@@ -67,10 +67,10 @@ func EmailPasswordResetLink(login_name string, email string) error {
 	m.SetBody("text/plain", fmt.Sprintf("Someone, hopefully you, requested a password reset for %s on modeep.org. Your password has not yet changed. To change it, please go to %s. If you don't want to update your password, you can ignore this email.", login_name, reset_URL))
 
 	d := gomail.NewDialer(
-		os.Getenv("FITM_SMTP_HOST"),
+		os.Getenv("MODEEP_SMTP_HOST"),
 		587,
 		"no-reply@modeep.org",
-		os.Getenv("FITM_SMTP_PASS"),
+		os.Getenv("MODEEP_SMTP_PASS"),
 	)
 	if err := d.DialAndSend(m); err != nil {
 		return err
@@ -79,7 +79,7 @@ func EmailPasswordResetLink(login_name string, email string) error {
 }
 
 func ValidatePasswordResetToken(token string) (*model.PasswordResetPayload, error) {
-	secret := os.Getenv("FITM_PW_RESET_SECRET")
+	secret := os.Getenv("MODEEP_PW_RESET_SECRET")
 	if secret == "" {
 		return nil, e.ErrNoPasswordResetSecretEnv
 	}

@@ -16,7 +16,7 @@ import (
 )
 
 func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
-	signkey_secret := os.Getenv("FITM_WEBHOOK_SECRET")
+	signkey_secret := os.Getenv("MODEEP_WEBHOOK_SECRET")
 	if signkey_secret == "" {
 		render.Render(w, r, e.Err500(e.ErrNoWebhookSecret))
 		return
@@ -61,11 +61,11 @@ func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Authenticated webhook: updating FITM backend")
+	log.Println("Authenticated webhook: updating Modeep backend")
 
-	fitm_root_path := os.Getenv("FITM_BACKEND_ROOT")
+	modeep_root_path := os.Getenv("MODEEP_BACKEND_ROOT")
 	cmd := exec.Command("./update_and_restart_backend.sh")
-	cmd.Dir = fitm_root_path
+	cmd.Dir = modeep_root_path
 	err = cmd.Run()
 	if err != nil {
 		log.Println(err)

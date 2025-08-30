@@ -14,11 +14,11 @@ exec >> "$LOG_FILE" 2>&1
 # "2>&1" redirects stderr (file descriptor 2) to stdout (1)
 
 # pull changes
-if [ -z "$FITM_BACKEND_ROOT" ]; then
-    log "error: FITM_BACKEND_ROOT is not set"
+if [ -z "$MODEEP_BACKEND_ROOT" ]; then
+    log "error: MODEEP_BACKEND_ROOT is not set"
     exit 1
 fi
-cd "$FITM_BACKEND_ROOT" || { log "error: could not navigate to $FITM_BACKEND_ROOT"; exit 1; }
+cd "$MODEEP_BACKEND_ROOT" || { log "error: could not navigate to $MODEEP_BACKEND_ROOT"; exit 1; }
 git pull
 
 # update dependencies, rebuild
@@ -54,7 +54,7 @@ if ! tmux has-session -t fitm-backend 2>/dev/null; then
 fi
 
 # run fresh binary in tmux session
-tmux send-keys -t fitm-backend "cd $FITM_BACKEND_ROOT && ./fitm" ENTER
+tmux send-keys -t fitm-backend "cd $MODEEP_BACKEND_ROOT && ./fitm" ENTER
 
 # detach
 tmux detach -s fitm-backend

@@ -46,13 +46,13 @@ func Connect() error {
 func LoadSpellfix() {
 	var spellfix_path string
 
-	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
+	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
 	if test_data_path == "" {
-		log.Print("$FITM_TEST_DATA_PATH not set, attempting find spellfix at default path")
+		log.Print("$MODEEP_TEST_DATA_PATH not set, attempting find spellfix at default path")
 		spellfix_path = filepath.Join(db_dir, "spellfix")
 
 	} else {
-		log.Print("Attempting to find spellfix at $FITM_TEST_DATA_PATH")
+		log.Print("Attempting to find spellfix at $MODEEP_TEST_DATA_PATH")
 		spellfix_path = filepath.Join(test_data_path, "spellfix")
 	}
 	sql.Register(

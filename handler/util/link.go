@@ -29,9 +29,9 @@ const (
 )
 
 func init() {
-	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
+	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
 	if test_data_path == "" {
-		log.Panic("$FITM_TEST_DATA_PATH not set")
+		log.Panic("$MODEEP_TEST_DATA_PATH not set")
 	}
 	Preview_img_dir = test_data_path + "/img/preview"
 }

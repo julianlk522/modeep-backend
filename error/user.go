@@ -13,7 +13,7 @@ var (
 	ErrInvalidPassword               error = errors.New("invalid password")
 	ErrLoginNameTaken                error = errors.New("login name taken")
 	ErrLoginNameContainsInvalidChars error = errors.New("name contains invalid characters ([a-zA-Z0-9_] allowed)")
-	ErrNoJWTSecretEnv                error = errors.New("FITM_JWT_SECRET env var not set")
+	ErrNoJWTSecretEnv                error = errors.New("MODEEP_JWT_SECRET env var not set")
 )
 
 func LoginNameExceedsLowerLimit(limit int) error {

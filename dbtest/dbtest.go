@@ -22,14 +22,14 @@ func SetupTestDB() error {
 
 	var sql_dump_path, db_dir string
 
-	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
+	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
 	if test_data_path == "" {
-		log.Printf("$FITM_TEST_DATA_PATH not set, using default path")
+		log.Printf("$MODEEP_TEST_DATA_PATH not set, using default path")
 		_, dbtest_file, _, _ := runtime.Caller(0)
 		dbtest_dir := filepath.Dir(dbtest_file)
 		db_dir = filepath.Join(dbtest_dir, "../db")
 	} else {
-		log.Print("using $FITM_TEST_DATA_PATH")
+		log.Print("using $MODEEP_TEST_DATA_PATH")
 		db_dir = test_data_path
 	}
 	sql_dump_path = filepath.Join(db_dir, "modeep_test.db.sql")

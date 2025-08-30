@@ -24,7 +24,7 @@ const (
 var token_auth *jwtauth.JWTAuth
 
 func init() {
-	token_auth = jwtauth.New("HS256", []byte(os.Getenv("FITM_JWT_SECRET")), nil)
+	token_auth = jwtauth.New("HS256", []byte(os.Getenv("MODEEP_JWT_SECRET")), nil)
 }
 
 func main() {

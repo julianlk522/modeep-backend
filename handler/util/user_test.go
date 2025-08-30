@@ -62,9 +62,9 @@ func TestHasAcceptableAspectRatio(t *testing.T) {
 		{"test3.webp", true},
 	}
 
-	test_data_path := os.Getenv("FITM_TEST_DATA_PATH")
+	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
 	if test_data_path == "" {
-		t.Fatal("$FITM_TEST_DATA_PATH not set")
+		t.Fatal("$MODEEP_TEST_DATA_PATH not set")
 	}
 	pic_dir := test_data_path + "/img/profile"
 

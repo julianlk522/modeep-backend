@@ -26,7 +26,7 @@ func GetYTVideoMetadata(url string) (*model.YTVideoMetadata, error) {
 		return nil, e.ErrInvalidURL
 	}
 
-	API_KEY := os.Getenv("FITM_GOOGLE_API_KEY")
+	API_KEY := os.Getenv("MODEEP_GOOGLE_API_KEY")
 	if API_KEY == "" {
 		log.Printf("Could not find API_KEY")
 		return nil, e.ErrGoogleAPIsKeyNotFound

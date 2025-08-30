@@ -28,10 +28,10 @@ jobs:
                   echo "mounting ${{ github.workspace }} to /backend"
                   docker run --rm \
                     -v ${{ github.workspace }}:/backend \
-                    -v ${{ env.FITM_TEST_DATA_PATH }}:/test_data \
-                    -e FITM_TEST_DATA_PATH=/test_data \
-                    -e FITM_ERR_LOG_FILE=/test_data/err.log \
-                    -e FITM_JWT_SECRET=${{ env.FITM_JWT_SECRET }} \
+                    -v ${{ env.MODEEP_TEST_DATA_PATH }}:/test_data \
+                    -e MODEEP_TEST_DATA_PATH=/test_data \
+                    -e MODEEP_ERR_LOG_FILE=/test_data/err.log \
+                    -e MODEEP_JWT_SECRET=${{ env.MODEEP_JWT_SECRET }} \
                     fitm-backend-test:latest
 
             - name: Clean up
