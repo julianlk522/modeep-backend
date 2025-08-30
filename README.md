@@ -2,4 +2,4 @@
 
 Simple, effective social bookmarking and search.
 
-Share and discover the best web's best gems.
+Share and discover the web's best gems.
