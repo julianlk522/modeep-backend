@@ -54,22 +54,22 @@ func GeneratePasswordResetToken(login_name, email string) (string, error) {
 
 func EmailPasswordResetLink(login_name string, email string) error {
 	m := gomail.NewMessage()
-	m.SetHeader("From", "FITM Mail Bot <mailbot@fitm.online>")
+	m.SetHeader("From", "Modeep Notification <no-reply@modeep.org>")
 	m.SetHeader("To", email)
-	m.SetHeader("Subject", "FITM Password Reset Request")
+	m.SetHeader("Subject", "Modeep Password Reset Request")
 
 	token, err := GeneratePasswordResetToken(login_name, email)
 	if err != nil {
 		return err
 	}
-	reset_URL := "https://fitm.online/reset-password?token=" + token
+	reset_URL := "https://modeep.org/reset-password?token=" + token
 
-	m.SetBody("text/plain", fmt.Sprintf("Someone, hopefully you, requested a password reset for %s on FITM.online. Your password has not yet changed. To change it, please go to %s. If you don't want to update your password, you can ignore this email.", login_name, reset_URL))
+	m.SetBody("text/plain", fmt.Sprintf("Someone, hopefully you, requested a password reset for %s on modeep.org. Your password has not yet changed. To change it, please go to %s. If you don't want to update your password, you can ignore this email.", login_name, reset_URL))
 
 	d := gomail.NewDialer(
 		os.Getenv("FITM_SMTP_HOST"),
 		587,
-		"mailbot@fitm.online",
+		"no-reply@modeep.org",
 		os.Getenv("FITM_SMTP_PASS"),
 	)
 	if err := d.DialAndSend(m); err != nil {
