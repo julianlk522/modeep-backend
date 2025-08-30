@@ -3,9 +3,9 @@ package query
 import (
 	"strings"
 
-	e "github.com/julianlk522/fitm/error"
-	"github.com/julianlk522/fitm/model"
-	mutil "github.com/julianlk522/fitm/model/util"
+	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
+	mutil "github.com/julianlk522/modeep/model/util"
 )
 
 type TmapProfile struct {

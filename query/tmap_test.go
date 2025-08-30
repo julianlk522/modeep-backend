@@ -7,7 +7,7 @@ import (
 
 	"slices"
 
-	"github.com/julianlk522/fitm/model"
+	"github.com/julianlk522/modeep/model"
 )
 
 const (

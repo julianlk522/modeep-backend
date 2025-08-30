@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/render"
-	e "github.com/julianlk522/fitm/error"
+	e "github.com/julianlk522/modeep/error"
 )
 
 func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {

@@ -3,8 +3,8 @@ package model
 import (
 	"net/http"
 
-	e "github.com/julianlk522/fitm/error"
-	util "github.com/julianlk522/fitm/model/util"
+	e "github.com/julianlk522/modeep/error"
+	util "github.com/julianlk522/modeep/model/util"
 
 	"github.com/google/uuid"
 )

@@ -3,7 +3,7 @@ package query
 import (
 	"strings"
 
-	mutil "github.com/julianlk522/fitm/model/util"
+	mutil "github.com/julianlk522/modeep/model/util"
 )
 
 const SUMMARIES_PAGE_LIMIT = 20

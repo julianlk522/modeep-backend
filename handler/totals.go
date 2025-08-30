@@ -4,10 +4,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
-	"github.com/julianlk522/fitm/db"
-	e "github.com/julianlk522/fitm/error"
-	"github.com/julianlk522/fitm/model"
-	"github.com/julianlk522/fitm/query"
+	"github.com/julianlk522/modeep/db"
+	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
+	"github.com/julianlk522/modeep/query"
 )
 
 func GetTotals(w http.ResponseWriter, r *http.Request) {

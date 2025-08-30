@@ -12,8 +12,8 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/go-chi/jwtauth/v5"
 
-	h "github.com/julianlk522/fitm/handler"
-	m "github.com/julianlk522/fitm/middleware"
+	h "github.com/julianlk522/modeep/handler"
+	m "github.com/julianlk522/modeep/middleware"
 )
 
 const (

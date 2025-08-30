@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	m "github.com/julianlk522/fitm/middleware"
-	"github.com/julianlk522/fitm/model"
+	m "github.com/julianlk522/modeep/middleware"
+	"github.com/julianlk522/modeep/model"
 )
 
 func TestAddTag(t *testing.T) {

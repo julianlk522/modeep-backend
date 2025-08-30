@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"strings"
 
-	e "github.com/julianlk522/fitm/error"
-	mutil "github.com/julianlk522/fitm/model/util"
+	e "github.com/julianlk522/modeep/error"
+	mutil "github.com/julianlk522/modeep/model/util"
 )
 
 const LINKS_PAGE_LIMIT = 20

@@ -5,8 +5,8 @@ import (
 	"log"
 	"testing"
 
-	"github.com/julianlk522/fitm/db"
-	"github.com/julianlk522/fitm/dbtest"
+	"github.com/julianlk522/modeep/db"
+	"github.com/julianlk522/modeep/dbtest"
 )
 
 var TestClient *sql.DB

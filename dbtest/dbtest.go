@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/julianlk522/fitm/db"
+	"github.com/julianlk522/modeep/db"
 	_ "github.com/mattn/go-sqlite3"
 )
 

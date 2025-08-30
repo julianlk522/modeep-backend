@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	e "github.com/julianlk522/fitm/error"
+	e "github.com/julianlk522/modeep/error"
 )
 
 func TestLoginNameTaken(t *testing.T) {

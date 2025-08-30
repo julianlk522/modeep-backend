@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	e "github.com/julianlk522/fitm/error"
-	"github.com/julianlk522/fitm/model"
+	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
 
 	"image/gif"
 	"image/jpeg"

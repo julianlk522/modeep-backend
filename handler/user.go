@@ -4,16 +4,16 @@ import (
 	"log"
 	"net/http"
 
-	util "github.com/julianlk522/fitm/handler/util"
+	util "github.com/julianlk522/modeep/handler/util"
 
 	"github.com/go-chi/render"
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/julianlk522/fitm/db"
-	e "github.com/julianlk522/fitm/error"
-	m "github.com/julianlk522/fitm/middleware"
-	"github.com/julianlk522/fitm/model"
+	"github.com/julianlk522/modeep/db"
+	e "github.com/julianlk522/modeep/error"
+	m "github.com/julianlk522/modeep/middleware"
+	"github.com/julianlk522/modeep/model"
 )
 
 // Auth

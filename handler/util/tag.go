@@ -5,11 +5,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/julianlk522/fitm/db"
-	"github.com/julianlk522/fitm/model"
-	"github.com/julianlk522/fitm/query"
+	"github.com/julianlk522/modeep/db"
+	"github.com/julianlk522/modeep/model"
+	"github.com/julianlk522/modeep/query"
 
-	mutil "github.com/julianlk522/fitm/model/util"
+	mutil "github.com/julianlk522/modeep/model/util"
 )
 
 const MIN_PERCENT_OF_MAX_CAT_SCORE float32 = 25

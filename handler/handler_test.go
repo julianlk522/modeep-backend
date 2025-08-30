@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/julianlk522/fitm/dbtest"
+	"github.com/julianlk522/modeep/dbtest"
 )
 
 func TestMain(m *testing.M) {

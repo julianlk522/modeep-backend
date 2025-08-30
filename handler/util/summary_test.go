@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	m "github.com/julianlk522/fitm/middleware"
-	"github.com/julianlk522/fitm/model"
+	m "github.com/julianlk522/modeep/middleware"
+	"github.com/julianlk522/modeep/model"
 )
 
 // Get summaries

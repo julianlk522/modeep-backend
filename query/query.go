@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	e "github.com/julianlk522/fitm/error"
+	e "github.com/julianlk522/modeep/error"
 )
 
 type Query struct {

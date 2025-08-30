@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/julianlk522/fitm/db"
-	e "github.com/julianlk522/fitm/error"
-	"github.com/julianlk522/fitm/model"
+	"github.com/julianlk522/modeep/db"
+	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
 	gomail "gopkg.in/mail.v2"
 )
 

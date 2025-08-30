@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/julianlk522/fitm/model"
+	"github.com/julianlk522/modeep/model"
 )
 
 func TestNewTagRankings(t *testing.T) {

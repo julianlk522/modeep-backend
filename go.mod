@@ -1,4 +1,4 @@
-module github.com/julianlk522/fitm
+module github.com/julianlk522/modeep
 
 go 1.22.2
 

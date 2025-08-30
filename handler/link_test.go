@@ -11,7 +11,7 @@ import (
 
 	"testing"
 
-	m "github.com/julianlk522/fitm/middleware"
+	m "github.com/julianlk522/modeep/middleware"
 )
 
 func TestGetLinks(t *testing.T) {

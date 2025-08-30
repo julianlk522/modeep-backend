@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	e "github.com/julianlk522/fitm/error"
-	"github.com/julianlk522/fitm/model"
+	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
 )
 
 const YT_VID_URL_REGEX = `^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+`

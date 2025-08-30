@@ -8,11 +8,11 @@ import (
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 
-	"github.com/julianlk522/fitm/db"
-	e "github.com/julianlk522/fitm/error"
-	util "github.com/julianlk522/fitm/handler/util"
-	m "github.com/julianlk522/fitm/middleware"
-	"github.com/julianlk522/fitm/model"
+	"github.com/julianlk522/modeep/db"
+	e "github.com/julianlk522/modeep/error"
+	util "github.com/julianlk522/modeep/handler/util"
+	m "github.com/julianlk522/modeep/middleware"
+	"github.com/julianlk522/modeep/model"
 )
 
 func GetSummaryPage(w http.ResponseWriter, r *http.Request) {

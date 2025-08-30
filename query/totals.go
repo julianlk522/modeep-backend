@@ -1,6 +1,6 @@
 package query
 
-import "github.com/julianlk522/fitm/db"
+import "github.com/julianlk522/modeep/db"
 
 func NewTotals() *Query {
 	return &Query{

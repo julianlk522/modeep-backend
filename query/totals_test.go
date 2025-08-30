@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/julianlk522/fitm/model"
+	"github.com/julianlk522/modeep/model"
 )
 
 func TestNewTotals(t *testing.T) {

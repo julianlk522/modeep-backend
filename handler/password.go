@@ -7,10 +7,10 @@ import (
 	"github.com/go-chi/render"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/julianlk522/fitm/db"
-	e "github.com/julianlk522/fitm/error"
-	util "github.com/julianlk522/fitm/handler/util"
-	"github.com/julianlk522/fitm/model"
+	"github.com/julianlk522/modeep/db"
+	e "github.com/julianlk522/modeep/error"
+	util "github.com/julianlk522/modeep/handler/util"
+	"github.com/julianlk522/modeep/model"
 )
 
 func AttemptPasswordReset(w http.ResponseWriter, r *http.Request) {

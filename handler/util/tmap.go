@@ -12,14 +12,14 @@ import (
 
 	_ "golang.org/x/image/webp"
 
-	"github.com/julianlk522/fitm/db"
+	"github.com/julianlk522/modeep/db"
 
 	"slices"
 	"strings"
 
-	e "github.com/julianlk522/fitm/error"
-	"github.com/julianlk522/fitm/model"
-	"github.com/julianlk522/fitm/query"
+	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
+	"github.com/julianlk522/modeep/query"
 )
 
 const TMAP_CATS_PAGE_LIMIT int = 50

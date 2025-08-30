@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	m "github.com/julianlk522/fitm/middleware"
+	m "github.com/julianlk522/modeep/middleware"
 )
 
 func TestEditAbout(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
-	e "github.com/julianlk522/fitm/error"
-	util "github.com/julianlk522/fitm/handler/util"
-	"github.com/julianlk522/fitm/query"
+	e "github.com/julianlk522/modeep/error"
+	util "github.com/julianlk522/modeep/handler/util"
+	"github.com/julianlk522/modeep/query"
 )
 
 func GetTopContributors(w http.ResponseWriter, r *http.Request) {

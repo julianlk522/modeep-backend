@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julianlk522/fitm/model"
-	mutil "github.com/julianlk522/fitm/model/util"
+	"github.com/julianlk522/modeep/model"
+	mutil "github.com/julianlk522/modeep/model/util"
 )
 
 func TestNewTopLinks(t *testing.T) {

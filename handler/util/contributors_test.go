@@ -3,7 +3,7 @@ package handler
 import (
 	"testing"
 
-	"github.com/julianlk522/fitm/query"
+	"github.com/julianlk522/modeep/query"
 )
 
 func TestScanContributors(t *testing.T) {

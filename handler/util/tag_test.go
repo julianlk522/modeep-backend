@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	modelutil "github.com/julianlk522/fitm/model/util"
-	"github.com/julianlk522/fitm/query"
+	modelutil "github.com/julianlk522/modeep/model/util"
+	"github.com/julianlk522/modeep/query"
 )
 
 func TestGetUserTagForLink(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/julianlk522/fitm/db"
-	e "github.com/julianlk522/fitm/error"
+	"github.com/julianlk522/modeep/db"
+	e "github.com/julianlk522/modeep/error"
 
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
