@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	API_URL = "api.fitm.online:1999"
+	API_URL = "api.modeep.org:1999"
 	// TEST_API_URL = "localhost:1999"
 )
 
@@ -32,12 +32,18 @@ func main() {
 	defer func() {
 		if err := http.ListenAndServeTLS(
 		API_URL,
-			"/etc/letsencrypt/live/api.fitm.online/fullchain.pem",
-			"/etc/letsencrypt/live/api.fitm.online/privkey.pem",
+			"/etc/letsencrypt/live/modeep.org/fullchain.pem",
+			"/etc/letsencrypt/live/modeep.org/privkey.pem",
 			r,
 		); err != nil {
 			log.Fatal(err)
 		}
+		// if err := http.ListenAndServe(
+		// 	TEST_API_URL,
+		// 	r,
+		// ); err != nil {
+		// 	log.Fatal(err)
+		// }
 	}()
 
 	// ROUTER-WIDE MIDDLEWARE

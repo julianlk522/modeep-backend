@@ -295,7 +295,7 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 		}
 
 		req.Header.Set("Accept", "*/*")
-		req.Header.Set("User-Agent", "FITM-Bot (https://fitm.online/about/how#retrieving-metadata)")
+		req.Header.Set("User-Agent", "Modeep-Bot (https://modeep.org/about/how#retrieving-metadata)")
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
