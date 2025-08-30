@@ -23,7 +23,7 @@ git pull
 
 # update dependencies, rebuild
 go mod tidy
-go build --tags 'fts5' .
+./build.sh
 log "build complete"
 
 # identify running server process
