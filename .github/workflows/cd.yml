@@ -1,5 +1,5 @@
-name: FITM backend
-run-name: FITM backend tests
+name: Modeep backend
+run-name: Modeep backend tests
 on:
     push:
         branches: [main]
@@ -7,7 +7,7 @@ on:
     workflow_dispatch: # Run manually from Actions tab
 
 jobs:
-    fitm-backend-tests:
+    modeep-backend-tests:
         runs-on: self-hosted
         steps:
             - name: Checkout code
@@ -15,12 +15,12 @@ jobs:
 
             - name: Build Docker image
               run: |
-                  docker build -t fitm-backend-test -f .github/workflows/Dockerfile .
+                  docker build -t modeep-backend-test -f .github/workflows/Dockerfile .
 
             - name: Run tests in Docker
               env:
-                  FITM_TEST_DATA_PATH: ${{ secrets.FITM_TEST_DATA_PATH }}
-                  FITM_JWT_SECRET: ${{ secrets.FITM_JWT_SECRET }}
+                  MODEEP_TEST_DATA_PATH: ${{ secrets.MODEEP_TEST_DATA_PATH }}
+                  MODEEP_JWT_SECRET: ${{ secrets.MODEEP_JWT_SECRET }}
               # docker run --rm: remove container after running
               # docker run -v: mount volume
               # docker run -e: set environment variable
@@ -32,8 +32,8 @@ jobs:
                     -e MODEEP_TEST_DATA_PATH=/test_data \
                     -e MODEEP_ERR_LOG_FILE=/test_data/err.log \
                     -e MODEEP_JWT_SECRET=${{ env.MODEEP_JWT_SECRET }} \
-                    fitm-backend-test:latest
+                    modeep-backend-test:latest
 
             - name: Clean up
               if: always() # run even if previous steps fail
-              run: docker rmi fitm-backend-test # docker rmi = docker image rm
+              run: docker rmi modeep-backend-test # docker rmi = docker image rm

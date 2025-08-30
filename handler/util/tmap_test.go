@@ -309,15 +309,15 @@ func TestMergeCatCountsCapitalizationVariants(t *testing.T) {
 		{Category: "music", Count: 1},
 		{Category: "musica", Count: 1},
 		{Category: "musics", Count: 1},
-		{Category: "FITM", Count: 5},
-		{Category: "fitm", Count: 5},
+		{Category: "MODEEP", Count: 5},
+		{Category: "modeep", Count: 5},
 	}
 	MergeCatCountsCapitalizationVariants(&counts, nil)
 	if counts[0].Count != 2 {
 		t.Fatalf("expected count 2, got %d", counts[0].Count)
 	}
 
-	if counts[3].Category != "FITM" {
-		t.Fatalf("expected FITM to have moved up to index 3 because Music and music were combined, got %s", counts[3].Category)
+	if counts[3].Category != "MODEEP" {
+		t.Fatalf("expected MODEEP to have moved up to index 3 because Music and music were combined, got %s", counts[3].Category)
 	}
 }

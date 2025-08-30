@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-LOG_FILE="/var/log/fitm/update.log"
+LOG_FILE="/var/log/modeep/update.log"
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
@@ -27,7 +27,7 @@ go build --tags 'fts5' .
 log "build complete"
 
 # identify running server process
-PID=$(pgrep -f fitm)
+PID=$(pgrep -f modeep)
 
 # send SIGTERM signal to gracefully stop
 kill $PID
@@ -48,15 +48,15 @@ done
 log "stopped process $PID"
 
 # start tmux session if one doesn't already exist
-if ! tmux has-session -t fitm-backend 2>/dev/null; then
-    log "creating new fitm-backend tmux session"
-    tmux new-session -d -s fitm-backend
+if ! tmux has-session -t modeep-backend 2>/dev/null; then
+    log "creating new modeep-backend tmux session"
+    tmux new-session -d -s modeep-backend
 fi
 
 # run fresh binary in tmux session
-tmux send-keys -t fitm-backend "cd $MODEEP_BACKEND_ROOT && ./fitm" ENTER
+tmux send-keys -t modeep-backend "cd $MODEEP_BACKEND_ROOT && ./modeep" ENTER
 
 # detach
-tmux detach -s fitm-backend
+tmux detach -s modeep-backend
 
 log "update complete and server restarted"

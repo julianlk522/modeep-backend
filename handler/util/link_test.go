@@ -325,7 +325,7 @@ func TestLinkAlreadyAdded(t *testing.T) {
 	}{
 		{"https://stackoverflow.co/", true},
 		{"https://www.ronjarzombek.com", true},
-		{"https://somethingnotonfitm", false},
+		{"https://somethingnotonmodeep", false},
 		{"jimminy jillickers", false},
 	}
 
