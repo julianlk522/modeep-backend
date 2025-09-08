@@ -18,13 +18,7 @@ type TopLinks struct {
 func NewTopLinks() *TopLinks {
 	return (&TopLinks{
 		Query: Query{
-			Text: LINKS_BASE_CTES +
-				LINKS_BASE_FIELDS +
-				LINKS_FROM +
-				LINKS_BASE_JOINS +
-				LINKS_NO_NSFW_CATS_WHERE +
-				LINKS_ORDER_BY +
-				LINKS_LIMIT,
+			Text: links_base_query,
 			Args: []any{
 				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
 				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
@@ -163,6 +157,14 @@ ORDER BY
 const LINKS_LIMIT = `
 LIMIT ?;`
 
+var links_base_query = LINKS_BASE_CTES +
+	LINKS_BASE_FIELDS +
+	LINKS_FROM +
+	LINKS_BASE_JOINS +
+	LINKS_NO_NSFW_CATS_WHERE +
+	LINKS_ORDER_BY +
+	LINKS_LIMIT
+
 func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 	// this first because using sort_params value helps with
 	// later text replaces since ORDER BY goes at the end
@@ -258,12 +260,11 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	return tl
 }
 
-// EarliestLikers/Copiers row nums + default NSFW clause makes 3
-const NUM_WHERES_IN_LINKS_BASE_QUERY = 3
+var num_wheres_in_links_base_query = strings.Count(links_base_query, "WHERE")
 
 func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks {
 	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_LINKS_BASE_QUERY {
+	if strings.Count(tl.Text, "WHERE") >= num_wheres_in_links_base_query {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
@@ -302,7 +303,7 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 
 func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_LINKS_BASE_QUERY {
+	if strings.Count(tl.Text, "WHERE") >= num_wheres_in_links_base_query {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
@@ -351,7 +352,7 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 	}
 
 	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") > NUM_WHERES_IN_LINKS_BASE_QUERY {
+	if strings.Count(tl.Text, "WHERE") >= num_wheres_in_links_base_query {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
