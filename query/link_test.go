@@ -260,6 +260,8 @@ func TestLinksSortBy(t *testing.T) {
 		{"newest", true},
 		{"rating", true},
 		{"oldest", true},
+		{"clicks", true},
+		{"random", false},
 		{"invalid", false},
 	}
 
@@ -335,7 +337,17 @@ func TestLinksSortBy(t *testing.T) {
 						last_date = sd
 					}
 				}
-			}
+			case "clicks":
+				var last_click_count int64 = 999 // arbitrary high number
+				for _, link := range links {
+					if link.ClickCount > last_click_count {
+						t.Fatalf("link click count %d above previous min %d", link.ClickCount, last_click_count)
+					} else if link.ClickCount < last_click_count {
+						last_click_count = link.ClickCount
+					}
+				}
+		}
+
 	}
 }
 

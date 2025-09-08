@@ -144,12 +144,22 @@ ORDER BY
 	tag_count DESC, 
 	summary_count DESC, 
 	l.id DESC`
+
 const LINKS_ORDER_BY_OLDEST = `
 ORDER BY 
 	submit_date ASC, 
 	like_count DESC, 
 	copy_count DESC,
 	click_count DESC, 
+	tag_count DESC, 
+	summary_count DESC, 
+	l.id DESC`
+
+const LINKS_ORDER_BY_CLICKS = `
+ORDER BY 
+	click_count DESC, 
+	like_count DESC, 
+	copy_count DESC,
 	tag_count DESC, 
 	summary_count DESC, 
 	l.id DESC`
@@ -278,8 +288,9 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 			order_by_clause = LINKS_ORDER_BY_NEWEST
 		case "oldest":
 			order_by_clause = LINKS_ORDER_BY_OLDEST
-		case "":
-		case "rating":
+		case "clicks":
+			order_by_clause = LINKS_ORDER_BY_CLICKS
+		case "rating", "":
 		default:
 			tl.Error = fmt.Errorf("invalid sort_by value")
 			return tl
@@ -317,8 +328,9 @@ func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 			order_by_clause = LINKS_ORDER_BY_NEWEST
 		case "oldest":
 			order_by_clause = LINKS_ORDER_BY_OLDEST
-		case "":
-		case "rating":
+		case "clicks":
+			order_by_clause = LINKS_ORDER_BY_CLICKS
+		case "rating", "":
 		default:
 			tl.Error = fmt.Errorf("invalid sort_by value")
 			return tl
@@ -364,8 +376,9 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 			order_by_clause = LINKS_ORDER_BY_NEWEST
 		case "oldest":
 			order_by_clause = LINKS_ORDER_BY_OLDEST
-		case "":
-		case "rating":
+		case "clicks":
+			order_by_clause = LINKS_ORDER_BY_CLICKS
+		case "rating", "":
 		default:
 			tl.Error = fmt.Errorf("invalid sort_by value")
 			return tl
@@ -395,6 +408,13 @@ func (tl *TopLinks) SortBy(order_by string) *TopLinks {
 				tl.Text,
 				LINKS_ORDER_BY,
 				LINKS_ORDER_BY_OLDEST,
+				1,
+			)
+		case "clicks":
+			tl.Text = strings.Replace(
+				tl.Text,
+				LINKS_ORDER_BY,
+				LINKS_ORDER_BY_CLICKS,
 				1,
 			)
 		case "rating", "":
@@ -558,6 +578,13 @@ func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_ORDER_BY_OLDEST,
+			nsfw_clause,
+			1,
+		)
+
+		tl.Text = strings.Replace(
+			tl.Text,
+			LINKS_ORDER_BY_CLICKS,
 			nsfw_clause,
 			1,
 		)
