@@ -347,6 +347,7 @@ func (ts *TmapSubmitted) SortBy(metric string) *TmapSubmitted {
 	switch metric {
 		case "newest": order_by = TMAP_ORDER_BY_NEWEST
 		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
+		case "clicks": order_by = TMAP_ORDER_BY_CLICKS 
 		case "rating", "": return ts
 		default: 
 			ts.Error = e.ErrInvalidSortByParams
@@ -385,6 +386,7 @@ func (ts *TmapSubmitted) DuringPeriod(period string) *TmapSubmitted {
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -402,6 +404,7 @@ func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -421,6 +424,7 @@ func (ts *TmapSubmitted) WithURLLacking(snippet string) *TmapSubmitted {
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -559,6 +563,7 @@ func (tc *TmapCopied) SortBy(metric string) *TmapCopied {
 	switch metric {
 		case "newest": order_by = TMAP_ORDER_BY_NEWEST
 		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
+		case "clicks": order_by = TMAP_ORDER_BY_CLICKS
 		case "rating", "": return tc
 		default: 
 			tc.Error = e.ErrInvalidSortByParams
@@ -597,6 +602,7 @@ func (tc *TmapCopied) DuringPeriod(period string) *TmapCopied {
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		tc.Text = strings.Replace(
 			tc.Text,
@@ -614,6 +620,7 @@ func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		tc.Text = strings.Replace(
 			tc.Text,
@@ -633,6 +640,7 @@ func (tc *TmapCopied) WithURLLacking(snippet string) *TmapCopied {
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		tc.Text = strings.Replace(
 			tc.Text,
@@ -810,6 +818,7 @@ func (tt *TmapTagged) SortBy(metric string) *TmapTagged {
 	switch metric {
 		case "newest": order_by = TMAP_ORDER_BY_NEWEST
 		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
+		case "clicks": order_by = TMAP_ORDER_BY_CLICKS
 		case "rating", "": return tt
 		default: 
 			tt.Error = e.ErrInvalidSortByParams
@@ -848,6 +857,7 @@ for _, order_by := range []string{
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		tt.Text = strings.Replace(
 			tt.Text,
@@ -865,6 +875,7 @@ func (tt *TmapTagged) WithURLContaining(snippet string) *TmapTagged {
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		tt.Text = strings.Replace(
 			tt.Text,
@@ -884,6 +895,7 @@ func (tt *TmapTagged) WithURLLacking(snippet string) *TmapTagged {
 		TMAP_DEFAULT_ORDER_BY, 
 		TMAP_ORDER_BY_NEWEST,
 		TMAP_ORDER_BY_OLDEST,
+		TMAP_ORDER_BY_CLICKS,
 	} {
 		tt.Text = strings.Replace(
 			tt.Text,
@@ -1184,6 +1196,15 @@ ORDER BY
 	lc.like_count DESC, 
 	cpc.copy_count DESC,
 	clc.click_count DESC,
+	tc.tag_count DESC,
+	sc.summary_count DESC, 
+	l.id DESC;`
+
+const TMAP_ORDER_BY_CLICKS = `
+ORDER BY 
+	clc.click_count DESC, 
+	lc.like_count DESC, 
+	cpc.copy_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
 	l.id DESC;`

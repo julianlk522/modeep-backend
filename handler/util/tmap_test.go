@@ -51,6 +51,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "", 1, true},
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "submitted", 4, true},
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "copied", 0, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "clicks", true, "copied", 1, true},
 		// "notasection" is invalid
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "notasection", 1, false},
 		// negative page is invalid

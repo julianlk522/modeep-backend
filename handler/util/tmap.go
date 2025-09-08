@@ -83,10 +83,8 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	}
 
 	sort_params = params.Get("sort_by")
-	switch sort_params {
-	case "newest", "oldest", "rating", "": opts.SortBy = sort_params
-	default: 
-		return nil, e.ErrInvalidSortByParams
+	if sort_params != "" && sort_params != "rating" {
+		opts.SortBy = sort_params
 	}
 
 	section_params = strings.ToLower(params.Get("section"))

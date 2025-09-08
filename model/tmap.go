@@ -87,7 +87,7 @@ type TmapOptions struct {
 	RawCatsParams  string
 	Cats     []string
 	Period         string
-	SortBy         string // "newest", "oldest", ("" or "rating" OK but ignored)
+	SortBy         string
 	IncludeNSFW    bool
 	URLContains    string
 	URLLacks       string

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strings"
 	"testing"
+	"time"
 
 	"slices"
 
@@ -520,6 +521,116 @@ func TestTmapSubmittedNSFW(t *testing.T) {
 
 	if !found_NSFW_link {
 		t.Fatal("bradley's tmap does not but should contain link with NSFW tag")
+	}
+}
+
+func TestTmapSubmittedSortBy(t *testing.T) {
+	var test_sorts = []struct {
+		Sort  string
+		Valid bool
+	}{
+		{"newest", true},
+		{"rating", true},
+		{"oldest", true},
+		{"clicks", true},
+		{"random", false},
+		{"invalid", false},
+	}
+
+	for _, ts := range test_sorts {
+		submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).SortBy(ts.Sort)
+		if ts.Valid {
+			if submitted_sql.Error != nil {
+				t.Fatal(submitted_sql.Error)
+			}
+		} else {
+			if submitted_sql.Error == nil {
+				t.Fatal("expected error, but got nil")
+			}
+		}
+
+		rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+
+		var links []model.TmapLink
+		for rows.Next() {
+			var l model.TmapLink
+			if err := rows.Scan(
+				&l.ID,
+				&l.URL,
+				&l.SubmittedBy,
+				&l.SubmitDate,
+				&l.Cats,
+				&l.CatsFromUser,
+				&l.Summary,
+				&l.SummaryCount,
+				&l.LikeCount,
+				&l.EarliestLikers,
+				&l.CopyCount,
+				&l.EarliestCopiers,
+				&l.ClickCount,
+				&l.TagCount,
+				&l.PreviewImgFilename,
+			); err != nil {
+				t.Fatal(err)
+			}
+			
+			links = append(links, l)
+		}
+
+		// Verify sorting
+		switch ts.Sort {
+			case "newest":
+				last_date := time.Now() // most recent
+				for _, link := range links {
+					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if sd.After(last_date) {
+						t.Fatalf("link date %s after last date %s", sd, last_date)
+					} else if sd.Before(last_date) {
+						last_date = sd
+					}
+				}
+			case "rating":
+				var last_like_count int64 = 999 // arbitrary high number
+				for _, link := range links {
+					if link.LikeCount > last_like_count {
+						t.Fatalf("link like count %d above previous min %d", link.LikeCount, last_like_count)
+					} else if link.LikeCount < last_like_count {
+						last_like_count = link.LikeCount
+					}
+				}
+			case "oldest":
+				first_date := time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)
+				for _, link := range links {
+					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if sd.Before(first_date) {
+						t.Fatalf("link date %s before last date %s", sd, first_date)
+					} else if sd.Before(first_date) {
+						first_date = sd
+					}
+				}
+			case "clicks":
+				var highest_click_count int64 = 999
+				for _, link := range links {
+					if link.ClickCount > highest_click_count {
+						t.Fatalf("link click count %d above previous min %d", link.ClickCount, highest_click_count)
+					} else if link.ClickCount < highest_click_count {
+						highest_click_count = link.ClickCount
+					}
+				}
+				
+		}
 	}
 }
 
