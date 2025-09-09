@@ -127,28 +127,28 @@ func TestLinksWithURLContaining(t *testing.T) {
 	var pages int
 
 	for rows.Next() {
-		link := model.Link{}
-		err := rows.Scan(
-			&link.ID,
-			&link.URL,
-			&link.SubmittedBy,
-			&link.SubmitDate,
-			&link.Cats,
-			&link.Summary,
-			&link.SummaryCount,
-			&link.LikeCount,
-			&link.EarliestLikers,
-			&link.CopyCount,
-			&link.EarliestCopiers,
-			&link.ClickCount,
-			&link.TagCount,
-			&link.PreviewImgFilename,
+		l := model.Link{}
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
 			&pages,
-		)
-		if err != nil {
+		); err != nil {
 			t.Fatal(err)
 		}
-		links = append(links, link)
+
+		links = append(links, l)
 	}
 
 	if len(links) == 0 {
@@ -163,7 +163,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 
 	// combined with other methods
 	links_sql = NewTopLinks().
-		FromCats([]string{"umvc3"}).
+		FromCats([]string{"flowers"}).
 		WithURLContaining("google", "rating").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest")
@@ -173,28 +173,81 @@ func TestLinksWithURLContaining(t *testing.T) {
 	}
 	defer rows.Close()
 
+	links_signed_in := []model.LinkSignedIn{}
+
 	for rows.Next() {
-		link := model.Link{}
-		err := rows.Scan(
-			&link.ID,
-			&link.URL,
-			&link.SubmittedBy,
-			&link.SubmitDate,
-			&link.Cats,
-			&link.Summary,
-			&link.SummaryCount,
-			&link.LikeCount,
-			&link.EarliestLikers,
-			&link.CopyCount,
-			&link.EarliestCopiers,
-			&link.ClickCount,
-			&link.TagCount,
-			&link.PreviewImgFilename,
+		l := model.LinkSignedIn{}
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
 			&pages,
-		)
-		if err != nil {
+			&l.IsLiked,
+			&l.IsCopied,
+		); err != nil {
 			t.Fatal(err)
 		}
+
+		links_signed_in = append(links_signed_in, l)
+	}
+
+	if len(links_signed_in) == 0 {
+		t.Fatal("no links")
+	}
+
+	for _, l := range links_signed_in {
+		if !strings.Contains(l.URL, "google") {
+			t.Fatalf("got %s, want containing google", l.URL)
+		}
+	}
+}
+
+func TestLinksWithURLLacking(t *testing.T) {
+	links_sql := NewTopLinks().WithURLLacking("google", "")
+
+	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links []model.Link
+	var pages int
+
+	for rows.Next() {
+		l := model.Link{}
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+			&pages,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		links = append(links, l)
 	}
 
 	if len(links) == 0 {
@@ -202,8 +255,59 @@ func TestLinksWithURLContaining(t *testing.T) {
 	}
 
 	for _, l := range links {
-		if !strings.Contains(l.URL, "google") {
-			t.Fatalf("got %s, want containing google", l.URL)
+		if strings.Contains(l.URL, "google") {
+			t.Fatalf("got %s, should not contain google", l.URL)
+		}
+	}
+
+	// combined with other methods
+	links_sql = NewTopLinks().
+		FromCats([]string{"umvc3"}).
+		WithURLLacking("google", "rating").
+		AsSignedInUser(TEST_USER_ID).
+		SortBy("newest")
+	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links_signed_in []model.LinkSignedIn
+
+	for rows.Next() {
+		l := model.LinkSignedIn{}
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.LikeCount,
+			&l.EarliestLikers,
+			&l.CopyCount,
+			&l.EarliestCopiers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+			&pages,
+			&l.IsLiked,
+			&l.IsCopied,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		links_signed_in = append(links_signed_in, l)
+	}
+
+	if len(links_signed_in) == 0 {
+		t.Fatal("no links")
+	}
+
+	for _, l := range links_signed_in {
+		if strings.Contains(l.URL, "google") {
+			t.Fatalf("got %s, should not contain google", l.URL)
 		}
 	}
 }
