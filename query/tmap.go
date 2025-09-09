@@ -280,7 +280,7 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 				TMAP_BASE_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				SUBMITTED_WHERE +
-				TMAP_DEFAULT_ORDER_BY,
+				TMAP_ORDER_BY_LIKES,
 			Args: []any{
 				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
 				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
@@ -343,23 +343,19 @@ func (ts *TmapSubmitted) NSFW() *TmapSubmitted {
 }
 
 func (ts *TmapSubmitted) SortBy(metric string) *TmapSubmitted {
-	var order_by string
-	switch metric {
-		case "newest": order_by = TMAP_ORDER_BY_NEWEST
-		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
-		case "clicks": order_by = TMAP_ORDER_BY_CLICKS 
-		case "rating", "": return ts
-		default: 
+	if metric != "" && metric != "rating" {
+		order_by_clause, ok := tmap_order_by_clauses[metric]
+		if !ok {
 			ts.Error = e.ErrInvalidSortByParams
-			return ts
+		} else {
+			ts.Text = strings.Replace(
+				ts.Text,
+				TMAP_ORDER_BY_LIKES,
+				order_by_clause,
+				1,
+			)
+		}
 	}
-
-	ts.Text = strings.Replace(
-		ts.Text,
-		TMAP_DEFAULT_ORDER_BY,
-		order_by,
-		1,
-	)
 
 	return ts
 }
@@ -382,16 +378,13 @@ func (ts *TmapSubmitted) DuringPeriod(period string) *TmapSubmitted {
 		1,
 	)
 
-	for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+	// string replaces should be no-op except for whichever order by clause
+	// TmapSubmitted contains
+	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
-			order_by,
-			"\nAND " + period_clause + order_by,
+			order_by_clause,
+			"\nAND " + period_clause + order_by_clause,
 			1,
 		)
 	}
@@ -400,16 +393,11 @@ func (ts *TmapSubmitted) DuringPeriod(period string) *TmapSubmitted {
 }
 
 func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
-	for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
-			order_by,
-			"\nAND " + "url LIKE ?" + order_by,
+			order_by_clause,
+			"\nAND " + "url LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
@@ -420,16 +408,11 @@ func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
 }
 
 func (ts *TmapSubmitted) WithURLLacking(snippet string) *TmapSubmitted {
-	for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
-			order_by,
-			"AND url NOT LIKE ?" + order_by,
+			order_by_clause,
+			"AND url NOT LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
@@ -488,7 +471,7 @@ func NewTmapCopied(login_name string) *TmapCopied {
 				TMAP_BASE_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				COPIED_WHERE +
-				TMAP_DEFAULT_ORDER_BY,
+				TMAP_ORDER_BY_LIKES,
 			Args: []any{
 				login_name, 
 				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
@@ -559,23 +542,19 @@ func (tc *TmapCopied) NSFW() *TmapCopied {
 }
 
 func (tc *TmapCopied) SortBy(metric string) *TmapCopied {
-	var order_by string
-	switch metric {
-		case "newest": order_by = TMAP_ORDER_BY_NEWEST
-		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
-		case "clicks": order_by = TMAP_ORDER_BY_CLICKS
-		case "rating", "": return tc
-		default: 
+	if metric != "" && metric != "rating" {
+		order_by_clause, ok := tmap_order_by_clauses[metric]
+		if !ok {
 			tc.Error = e.ErrInvalidSortByParams
-			return tc
+		} else {
+			tc.Text = strings.Replace(
+				tc.Text,
+				TMAP_ORDER_BY_LIKES,
+				order_by_clause,
+				1,
+			)
+		}
 	}
-
-	tc.Text = strings.Replace(
-		tc.Text,
-		TMAP_DEFAULT_ORDER_BY,
-		order_by,
-		1,
-	)
 
 	return tc
 }
@@ -598,16 +577,11 @@ func (tc *TmapCopied) DuringPeriod(period string) *TmapCopied {
 		1,
 	)
 
-	for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+	for _, order_by_clause := range tmap_order_by_clauses {
 		tc.Text = strings.Replace(
 			tc.Text,
-			order_by,
-			"\nAND " + period_clause + order_by,
+			order_by_clause,
+			"\nAND " + period_clause + order_by_clause,
 			1,
 		)
 	}
@@ -616,16 +590,11 @@ func (tc *TmapCopied) DuringPeriod(period string) *TmapCopied {
 }
 
 func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
-	for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+	for _, order_by_clause := range tmap_order_by_clauses {
 		tc.Text = strings.Replace(
 			tc.Text,
-			order_by,
-			"\nAND " + "url LIKE ?" + order_by,
+			order_by_clause,
+			"\nAND " + "url LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
@@ -636,16 +605,11 @@ func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
 }
 
 func (tc *TmapCopied) WithURLLacking(snippet string) *TmapCopied {
-	for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+	for _, order_by_clause := range tmap_order_by_clauses {
 		tc.Text = strings.Replace(
 			tc.Text,
-			order_by,
-			"AND url NOT LIKE ?" + order_by,
+			order_by_clause,
+			"AND url NOT LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
@@ -703,7 +667,7 @@ func NewTmapTagged(login_name string) *TmapTagged {
 				TAGGED_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				TAGGED_WHERE +
-				TMAP_DEFAULT_ORDER_BY,
+				TMAP_ORDER_BY_LIKES,
 			// login_name used in UserCats, PossibleUserSummary, UserCopies, where
 			Args: []any{
 				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
@@ -760,8 +724,8 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 
 	tt.Text = strings.Replace(
 		tt.Text,
-		TMAP_DEFAULT_ORDER_BY,
-		match_clause+TMAP_DEFAULT_ORDER_BY,
+		TMAP_ORDER_BY_LIKES,
+		match_clause+TMAP_ORDER_BY_LIKES,
 		1,
 	)
 
@@ -814,23 +778,19 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 }
 
 func (tt *TmapTagged) SortBy(metric string) *TmapTagged {
-	var order_by string
-	switch metric {
-		case "newest": order_by = TMAP_ORDER_BY_NEWEST
-		case "oldest": order_by = TMAP_ORDER_BY_OLDEST
-		case "clicks": order_by = TMAP_ORDER_BY_CLICKS
-		case "rating", "": return tt
-		default: 
+	if metric != "" && metric != "rating" {
+		order_by_clause, ok := tmap_order_by_clauses[metric]
+		if !ok {
 			tt.Error = e.ErrInvalidSortByParams
-			return tt
+		} else {
+			tt.Text = strings.Replace(
+				tt.Text,
+				TMAP_ORDER_BY_LIKES,
+				order_by_clause,
+				1,
+			)
+		}
 	}
-
-	tt.Text = strings.Replace(
-		tt.Text,
-		TMAP_DEFAULT_ORDER_BY,
-		order_by,
-		1,
-	)
 
 	return tt
 }
@@ -853,16 +813,11 @@ func (tt *TmapTagged) DuringPeriod(period string) *TmapTagged {
 		1,
 	)
 
-for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+for _, order_by_clause := range tmap_order_by_clauses {
 		tt.Text = strings.Replace(
 			tt.Text,
-			order_by,
-			"\nAND " + period_clause + order_by,
+			order_by_clause,
+			"\nAND " + period_clause + order_by_clause,
 			1,
 		)
 	}
@@ -871,16 +826,11 @@ for _, order_by := range []string{
 }
 
 func (tt *TmapTagged) WithURLContaining(snippet string) *TmapTagged {
-	for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+	for _, order_by_clause := range tmap_order_by_clauses {
 		tt.Text = strings.Replace(
 			tt.Text,
-			order_by,
-			"\nAND " + "url LIKE ?" + order_by,
+			order_by_clause,
+			"\nAND " + "url LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
@@ -891,16 +841,11 @@ func (tt *TmapTagged) WithURLContaining(snippet string) *TmapTagged {
 }
 
 func (tt *TmapTagged) WithURLLacking(snippet string) *TmapTagged {
-	for _, order_by := range []string{
-		TMAP_DEFAULT_ORDER_BY, 
-		TMAP_ORDER_BY_NEWEST,
-		TMAP_ORDER_BY_OLDEST,
-		TMAP_ORDER_BY_CLICKS,
-	} {
+	for _, order_by_clause := range tmap_order_by_clauses {
 		tt.Text = strings.Replace(
 			tt.Text,
-			order_by,
-			"AND url NOT LIKE ?" + order_by,
+			order_by_clause,
+			"AND url NOT LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
@@ -1025,8 +970,8 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 )`
 	q.Text = strings.Replace(
 		q.Text,
-		TMAP_DEFAULT_ORDER_BY,
-		and_clause+TMAP_DEFAULT_ORDER_BY,
+		TMAP_ORDER_BY_LIKES,
+		and_clause+TMAP_ORDER_BY_LIKES,
 		1,
 	)
 
@@ -1170,7 +1115,14 @@ LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
 
 const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
 
-const TMAP_DEFAULT_ORDER_BY = `
+var tmap_order_by_clauses = map[string]string{
+	"rating": TMAP_ORDER_BY_LIKES,
+	"newest": TMAP_ORDER_BY_NEWEST,
+	"oldest": TMAP_ORDER_BY_OLDEST,
+	"clicks": TMAP_ORDER_BY_CLICKS,
+}
+
+const TMAP_ORDER_BY_LIKES = `
 ORDER BY 
 	lc.like_count DESC, 
 	cpc.copy_count DESC,

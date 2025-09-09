@@ -126,13 +126,13 @@ WHERE l.id NOT IN (
 )`
 
 var links_order_by_clauses = map[string]string{
-	"rating": LINKS_ORDER_BY,
+	"rating": LINKS_ORDER_BY_LIKES,
 	"newest": LINKS_ORDER_BY_NEWEST,
 	"oldest": LINKS_ORDER_BY_OLDEST,
 	"clicks": LINKS_ORDER_BY_CLICKS,
 }
 
-const LINKS_ORDER_BY = ` 
+const LINKS_ORDER_BY_LIKES = ` 
 ORDER BY 
     like_count DESC, 
 	copy_count DESC,
@@ -179,7 +179,7 @@ var links_base_query = LINKS_BASE_CTES +
 	LINKS_FROM +
 	LINKS_BASE_JOINS +
 	LINKS_NO_NSFW_CATS_WHERE +
-	LINKS_ORDER_BY +
+	LINKS_ORDER_BY_LIKES +
 	LINKS_LIMIT
 
 func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
@@ -289,13 +289,13 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 		clause_keyword = "WHERE"
 	}
 
-	order_by_clause := LINKS_ORDER_BY
+	order_by_clause := LINKS_ORDER_BY_LIKES
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
 			order_by_clause = clause
 		} else {
-			tl.Error = fmt.Errorf("invalid sort_by value")
+			tl.Error = e.ErrInvalidSortByParams
 			return tl
 		}
 	}
@@ -324,13 +324,13 @@ func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 		clause_keyword = "WHERE"
 	}
 
-	order_by_clause := LINKS_ORDER_BY
+	order_by_clause := LINKS_ORDER_BY_LIKES
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
 			order_by_clause = clause
 		} else {
-			tl.Error = fmt.Errorf("invalid sort_by value")
+			tl.Error = e.ErrInvalidSortByParams
 			return tl
 		}
 	}
@@ -369,13 +369,13 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 		clause_keyword = "WHERE"
 	}
 
-	order_by_clause := LINKS_ORDER_BY
+	order_by_clause := LINKS_ORDER_BY_LIKES
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
 			order_by_clause = clause
 		} else {
-			tl.Error = fmt.Errorf("invalid sort_by value")
+			tl.Error = e.ErrInvalidSortByParams
 			return tl
 		}
 	}
@@ -390,16 +390,16 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) SortBy(sort_by string) *TopLinks {
-	if sort_by != "" && sort_by != "rating" {
-		clause, ok := links_order_by_clauses[sort_by]
+func (tl *TopLinks) SortBy(metric string) *TopLinks {
+	if metric != "" && metric != "rating" {
+		order_by_clause, ok := links_order_by_clauses[metric]
 		if !ok {
-			tl.Error = fmt.Errorf("invalid sort_by value")
+			tl.Error = e.ErrInvalidSortByParams
 		} else {
 			tl.Text = strings.Replace(
 				tl.Text,
-				LINKS_ORDER_BY,
-				clause,
+				LINKS_ORDER_BY_LIKES,
+				order_by_clause,
 				1,
 			)
 		}
