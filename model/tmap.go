@@ -53,8 +53,8 @@ type TmapLinkSignedIn struct {
 
 type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
 	Submitted        *[]T
+	Starred          *[]T
 	Tagged           *[]T
-	Copied           *[]T
 	SectionsWithMore []string
 	Cats             *[]CatCount
 }
@@ -96,7 +96,7 @@ type TmapOptions struct {
 }
 
 type TmapNSFWLinksCountOptions struct {
-	OnlySection string // "Submitted", "Copied", "Tagged"
+	OnlySection string // "Submitted", "Starred", "Tagged"
 	CatsFilter []string
 	Period string
 	URLContains string

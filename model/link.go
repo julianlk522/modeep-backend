@@ -25,10 +25,8 @@ type Link struct {
 	Cats               string
 	Summary            string
 	SummaryCount       int
-	LikeCount          int64
-	EarliestLikers     string
-	CopyCount          int
-	EarliestCopiers    string
+	StarredCount       int64
+	EarliestStarrers   string
 	ClickCount         int64
 	TagCount           int
 	PreviewImgFilename string
@@ -40,8 +38,7 @@ func (l Link) GetCats() string {
 
 type LinkSignedIn struct {
 	Link
-	IsLiked  bool
-	IsCopied bool
+	StarsAssigned uint8
 }
 
 func (lsi LinkSignedIn) GetCats() string {
