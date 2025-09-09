@@ -125,6 +125,13 @@ WHERE l.id NOT IN (
 	SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
 )`
 
+var links_order_by_clauses = map[string]string{
+	"rating": LINKS_ORDER_BY,
+	"newest": LINKS_ORDER_BY_NEWEST,
+	"oldest": LINKS_ORDER_BY_OLDEST,
+	"clicks": LINKS_ORDER_BY_CLICKS,
+}
+
 const LINKS_ORDER_BY = ` 
 ORDER BY 
     like_count DESC, 
@@ -283,18 +290,15 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 	like_clause := "url LIKE ?"
 
 	order_by_clause := LINKS_ORDER_BY
-	switch sort_by {
-		case "newest":
-			order_by_clause = LINKS_ORDER_BY_NEWEST
-		case "oldest":
-			order_by_clause = LINKS_ORDER_BY_OLDEST
-		case "clicks":
-			order_by_clause = LINKS_ORDER_BY_CLICKS
-		case "rating", "":
-		default:
+	if sort_by != "" {
+		clause, ok := links_order_by_clauses[sort_by]
+		if ok {
+			order_by_clause = clause
+		} else {
 			tl.Error = fmt.Errorf("invalid sort_by value")
 			return tl
 		}
+	}
 
 	tl.Text = strings.Replace(
 		tl.Text,
@@ -323,18 +327,15 @@ func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 	like_clause := "url NOT LIKE ?"
 
 	order_by_clause := LINKS_ORDER_BY
-	switch sort_by {
-		case "newest":
-			order_by_clause = LINKS_ORDER_BY_NEWEST
-		case "oldest":
-			order_by_clause = LINKS_ORDER_BY_OLDEST
-		case "clicks":
-			order_by_clause = LINKS_ORDER_BY_CLICKS
-		case "rating", "":
-		default:
+	if sort_by != "" {
+		clause, ok := links_order_by_clauses[sort_by]
+		if ok {
+			order_by_clause = clause
+		} else {
 			tl.Error = fmt.Errorf("invalid sort_by value")
 			return tl
 		}
+	}
 
 	tl.Text = strings.Replace(
 		tl.Text,
@@ -371,17 +372,14 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 	}
 
 	order_by_clause := LINKS_ORDER_BY
-	switch sort_by {
-		case "newest":
-			order_by_clause = LINKS_ORDER_BY_NEWEST
-		case "oldest":
-			order_by_clause = LINKS_ORDER_BY_OLDEST
-		case "clicks":
-			order_by_clause = LINKS_ORDER_BY_CLICKS
-		case "rating", "":
-		default:
+	if sort_by != "" {
+		clause, ok := links_order_by_clauses[sort_by]
+		if ok {
+			order_by_clause = clause
+		} else {
 			tl.Error = fmt.Errorf("invalid sort_by value")
 			return tl
+		}
 	}
 
 	tl.Text = strings.Replace(
@@ -394,33 +392,19 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) SortBy(order_by string) *TopLinks {
-	switch order_by {
-		case "newest":
+func (tl *TopLinks) SortBy(sort_by string) *TopLinks {
+	if sort_by != "" && sort_by != "rating" {
+		clause, ok := links_order_by_clauses[sort_by]
+		if !ok {
+			tl.Error = fmt.Errorf("invalid sort_by value")
+		} else {
 			tl.Text = strings.Replace(
 				tl.Text,
 				LINKS_ORDER_BY,
-				LINKS_ORDER_BY_NEWEST,
+				clause,
 				1,
 			)
-		case "oldest":
-			tl.Text = strings.Replace(
-				tl.Text,
-				LINKS_ORDER_BY,
-				LINKS_ORDER_BY_OLDEST,
-				1,
-			)
-		case "clicks":
-			tl.Text = strings.Replace(
-				tl.Text,
-				LINKS_ORDER_BY,
-				LINKS_ORDER_BY_CLICKS,
-				1,
-			)
-		case "rating", "":
-		default:
-			tl.Error = fmt.Errorf("invalid order_by value")
-			return tl
+		}
 	}
 
 	return tl
@@ -561,33 +545,14 @@ func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
 	if nsfw_params {
 		// insert in front of all LINKS_ORDER_BY variants
 		// (all except one should be no-op)
-		tl.Text = strings.Replace(
-			tl.Text,
-			LINKS_ORDER_BY,
-			nsfw_clause,
-			1,
-		)
-
-		tl.Text = strings.Replace(
-			tl.Text,
-			LINKS_ORDER_BY_NEWEST,
-			nsfw_clause,
-			1,
-		)
-
-		tl.Text = strings.Replace(
-			tl.Text,
-			LINKS_ORDER_BY_OLDEST,
-			nsfw_clause,
-			1,
-		)
-
-		tl.Text = strings.Replace(
-			tl.Text,
-			LINKS_ORDER_BY_CLICKS,
-			nsfw_clause,
-			1,
-		)
+		for _, order_by_clause := range links_order_by_clauses {
+			tl.Text = strings.Replace(
+				tl.Text,
+				order_by_clause,
+				nsfw_clause,
+				1,
+			)
+		}
 	} else {
 		tl.Text = strings.Replace(
 			tl.Text,
