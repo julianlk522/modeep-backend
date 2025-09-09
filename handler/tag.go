@@ -264,7 +264,7 @@ func EditTag(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoTagWithID))
 		return
 	} else if !owns_tag {
-		render.Render(w, r, e.ErrUnauthorized(e.ErrDoesntOwnTag))
+		render.Render(w, r, e.ErrForbidden(e.ErrDoesntOwnTag))
 		return
 	}
 
@@ -327,7 +327,7 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.ErrInvalidRequest(err))
 		return
 	} else if !owns_tag {
-		render.Render(w, r, e.ErrUnauthorized(e.ErrDoesntOwnTag))
+		render.Render(w, r, e.ErrForbidden(e.ErrDoesntOwnTag))
 		return
 	}
 

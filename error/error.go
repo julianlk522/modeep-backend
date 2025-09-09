@@ -28,20 +28,20 @@ func ErrInvalidRequest(err error) render.Renderer {
 	}
 }
 
-func ErrUnauthenticated(err error) render.Renderer {
+func ErrUnauthorized(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: 401,
-		StatusText:     "Unauthenticated.",
+		StatusText:     "Unauthorized.",
 		ErrorText:      err.Error(),
 	}
 }
 
-func ErrUnauthorized(err error) render.Renderer {
+func ErrForbidden(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: 403,
-		StatusText:     "Unauthorized.",
+		StatusText:     "Forbidden.",
 		ErrorText:      err.Error(),
 	}
 }

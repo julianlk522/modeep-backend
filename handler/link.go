@@ -280,7 +280,7 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	if !util.UserSubmittedLink(req_login_name, request.LinkID) {
-		render.Render(w, r, e.ErrUnauthorized(e.ErrDoesntOwnLink))
+		render.Render(w, r, e.ErrForbidden(e.ErrDoesntOwnLink))
 		return
 	}
 

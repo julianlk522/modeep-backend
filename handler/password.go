@@ -62,7 +62,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 				render.Render(w, r, e.ErrInvalidRequest(err))
 				return
 			case e.ErrTokenExpired:
-				render.Render(w, r, e.ErrUnauthenticated(err))
+				render.Render(w, r, e.ErrUnauthorized(err))
 				return
 			default:
 				render.Render(w, r, e.Err500(err))
