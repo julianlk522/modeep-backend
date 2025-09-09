@@ -421,7 +421,7 @@ func TestDecrementSpellfixRanksForCats(t *testing.T) {
 	}
 }
 
-// Like / unlike link
+// Star/unstar link
 func TestUserSubmittedLink(t *testing.T) {
 	var test_links = []struct {
 		ID                  string
@@ -443,12 +443,12 @@ func TestUserSubmittedLink(t *testing.T) {
 	}
 }
 
-func TestUserHasLikedLink(t *testing.T) {
+func TestUserHasStarredLink(t *testing.T) {
 	var test_links = []struct {
 		ID              string
-		LikedByTestUser bool
+		StarredByTestUser bool
 	}{
-		// user jlk liked links with ID 24, 32, 103
+		// user jlk starred links with ID 24, 32, 103
 		// (not 9, 11, or 15)
 		{"24", true},
 		{"32", true},
@@ -459,31 +459,8 @@ func TestUserHasLikedLink(t *testing.T) {
 	}
 
 	for _, l := range test_links {
-		if got := UserHasLikedLink(TEST_USER_ID, l.ID); got != l.LikedByTestUser {
-			t.Fatalf("expected %t, got %t", l.LikedByTestUser, got)
-		}
-	}
-}
-
-// Copy link
-func TestUserHasCopiedLink(t *testing.T) {
-	var test_links = []struct {
-		ID               string
-		CopiedByTestUser bool
-	}{
-		// test user jlk copied links with ID 19, 31, 32
-		// (not 0, 1, or 104)
-		{"19", true},
-		{"31", true},
-		{"32", true},
-		{"0", false},
-		{"1", false},
-		{"104", false},
-	}
-
-	for _, l := range test_links {
-		if got := UserHasCopiedLink(TEST_USER_ID, l.ID); got != l.CopiedByTestUser {
-			t.Fatalf("expected %t, got %t", l.CopiedByTestUser, got)
+		if got := UserHasStarredLink(TEST_USER_ID, l.ID); got != l.StarredByTestUser {
+			t.Fatalf("expected %t, got %t", l.StarredByTestUser, got)
 		}
 	}
 }

@@ -99,8 +99,8 @@ func main() {
 	r.Post("/ghwh", h.HandleGitHubWebhook)
 
 	// OPTIONAL AUTHENTICATION
-	// (bearer token used optionally to get IsLiked / IsCopied for links
-	// or to authenticate a link click)
+	// (bearer token used optionally to get StarsAssigned for links
+	// and authenticate link clicks)
 	r.Group(func(r chi.Router) {
 		r.Use(m.VerifierOptional(token_auth))
 		r.Use(m.AuthenticatorOptional(token_auth))
@@ -146,10 +146,8 @@ func main() {
 		// Links
 		r.Post("/links", h.AddLink)
 		r.Delete("/links", h.DeleteLink)
-		r.Post("/links/{link_id}/like", h.LikeLink)
-		r.Delete("/links/{link_id}/like", h.UnlikeLink)
-		r.Post("/links/{link_id}/copy", h.CopyLink)
-		r.Delete("/links/{link_id}/copy", h.UncopyLink)
+		r.Post("/links/star", h.StarLink)
+		r.Delete("/links/star", h.UnstarLink)
 
 		// Tags
 		r.Post("/tags", h.AddTag)

@@ -2,6 +2,7 @@ package model
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	e "github.com/julianlk522/modeep/error"
@@ -140,6 +141,23 @@ type DeleteLinkRequest struct {
 func (dlr *DeleteLinkRequest) Bind(r *http.Request) error {
 	if dlr.LinkID == "" {
 		return e.ErrNoLinkID
+	}
+
+	return nil
+}
+
+type StarLinkRequest struct {
+	LinkID string `json:"link_id"`
+	Stars  string `json:"stars"`
+}
+
+func (sl *StarLinkRequest) Bind(r *http.Request) error {
+	if sl.LinkID == "" {
+		return e.ErrNoLinkID
+	}
+
+	if _, err := strconv.ParseUint(sl.Stars, 10, 8); err != nil {
+		return e.ErrInvalidStars
 	}
 
 	return nil

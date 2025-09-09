@@ -109,10 +109,8 @@ func ScanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 				&l.Cats,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.LikeCount,
-				&l.EarliestLikers,
-				&l.CopyCount,
-				&l.EarliestCopiers,
+				&l.StarredCount,
+				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
@@ -139,16 +137,13 @@ func ScanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 				&l.Cats,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.LikeCount,
-				&l.EarliestLikers,
-				&l.CopyCount,
-				&l.EarliestCopiers,
+				&l.StarredCount,
+				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
 				&pages,
-				&l.IsLiked,
-				&l.IsCopied,
+				&l.StarsAssigned,
 			); err != nil {
 				return nil, err
 			}
@@ -184,15 +179,12 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 				&l.Cats,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.LikeCount,
-				&l.EarliestLikers,
-				&l.CopyCount,
-				&l.EarliestCopiers,
+				&l.StarredCount,
+				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
-				&l.IsLiked,
-				&l.IsCopied,
+				&l.StarsAssigned,
 			); err != nil {
 			return nil, err
 		}
@@ -210,10 +202,8 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 				&l.Cats,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.LikeCount,
-				&l.EarliestLikers,
-				&l.CopyCount,
-				&l.EarliestCopiers,
+				&l.StarredCount,
+				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
@@ -497,7 +487,7 @@ func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 	return nil
 }
 
-// Like / unlike link
+// Star link
 func UserSubmittedLink(login_name string, link_id string) bool {
 	var sb sql.NullString
 	err := db.Client.QueryRow("SELECT submitted_by FROM Links WHERE id = ?;", link_id).Scan(&sb)
@@ -509,23 +499,9 @@ func UserSubmittedLink(login_name string, link_id string) bool {
 	return sb.String == login_name
 }
 
-func UserHasLikedLink(user_id string, link_id string) bool {
+func UserHasStarredLink(user_id string, link_id string) bool {
 	var l sql.NullString
-	err := db.Client.QueryRow(`SELECT id FROM "Link Likes" WHERE user_id = ? AND link_id = ?;`, user_id, link_id).Scan(&l)
-
-	return err == nil && l.Valid
-}
-
-// Copy link
-func UserHasCopiedLink(user_id string, link_id string) bool {
-	var l sql.NullString
-	err := db.Client.QueryRow(`SELECT id 
-		FROM "Link Copies" 
-		WHERE user_id = ? 
-		AND link_id = ?;`,
-		user_id,
-		link_id,
-	).Scan(&l)
+	err := db.Client.QueryRow(`SELECT id FROM Stars WHERE user_id = ? AND link_id = ?;`, user_id, link_id).Scan(&l)
 
 	return err == nil && l.Valid
 }

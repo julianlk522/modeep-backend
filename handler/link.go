@@ -343,42 +343,77 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusResetContent)
 }
 
-func LikeLink(w http.ResponseWriter, r *http.Request) {
-	link_id := chi.URLParam(r, "link_id")
+// unfortunate name :/
+func StarLink(w http.ResponseWriter, r *http.Request) {
+	request := &model.StarLinkRequest{}
+	if err := render.Bind(r, request); err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
+
+	link_id := request.LinkID
 	if link_id == "" {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLinkID))
 		return
 	}
 
-	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
-	if util.UserSubmittedLink(req_login_name, link_id) {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrCannotLikeOwnLink))
+	link_exists, err := util.LinkExists(link_id)
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	} else if !link_exists {
+		render.Render(w, r, e.ErrUnprocessable(e.ErrNoLinkWithID))
 		return
 	}
 
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
-	if util.UserHasLikedLink(req_user_id, link_id) {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrLinkAlreadyLiked))
-		return
-	}
 
-	new_like_id := uuid.New().String()
-	_, err := db.Client.Exec(
-		`INSERT INTO "Link Likes" VALUES(?,?,?,?);`,
-		new_like_id,
-		link_id,
-		req_user_id,
-		mutil.NEW_LONG_TIMESTAMP(),
-		
-	)
-	if err != nil {
-		render.Render(w, r, e.Err500(err))
-	}
+	switch request.Stars {
+		case "0":
+			// Unstar
+			if !util.UserHasStarredLink(req_user_id, link_id) {
+				render.Render(w, r, e.ErrForbidden(e.ErrLinkNotStarred))
+				return
+			}
 
-	w.WriteHeader(http.StatusNoContent)
+			if _, err := db.Client.Exec(
+				`DELETE FROM "Stars" WHERE link_id = ? AND user_id = ?;`,
+				link_id,
+				req_user_id,
+			); err != nil {
+				log.Fatal(err)
+			}
+
+			w.WriteHeader(http.StatusNoContent)
+
+		case "1", "2", "3":
+			// Add star
+			if util.UserHasStarredLink(req_user_id, link_id) {
+				render.Render(w, r, e.ErrInvalidRequest(e.ErrLinkAlreadyStarred))
+				return
+			}
+
+			star_id := uuid.New().String()
+			if _, err := db.Client.Exec(
+				`INSERT INTO "Stars" VALUES(?,?,?,?,?);`,
+				star_id,
+				link_id,
+				req_user_id,
+				request.Stars,
+				mutil.NEW_LONG_TIMESTAMP(),
+				
+			); err != nil {
+				render.Render(w, r, e.Err500(err))
+			}
+
+			w.WriteHeader(http.StatusNoContent)
+
+		default:
+			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidStars))
+	}
 }
 
-func UnlikeLink(w http.ResponseWriter, r *http.Request) {
+func UnstarLink(w http.ResponseWriter, r *http.Request) {
 	link_id := chi.URLParam(r, "link_id")
 	if link_id == "" {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLinkID))
@@ -386,76 +421,13 @@ func UnlikeLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
-	if !util.UserHasLikedLink(req_user_id, link_id) {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrLinkNotLiked))
+	if !util.UserHasStarredLink(req_user_id, link_id) {
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrLinkNotStarred))
 		return
 	}
 
 	_, err := db.Client.Exec(
-		`DELETE FROM "Link Likes" WHERE link_id = ? AND user_id = ?;`,
-		link_id,
-		req_user_id,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func CopyLink(w http.ResponseWriter, r *http.Request) {
-	link_id := chi.URLParam(r, "link_id")
-	if link_id == "" {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLinkID))
-		return
-	}
-
-	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
-	owns_link := util.UserSubmittedLink(req_login_name, link_id)
-	if owns_link {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrCannotCopyOwnLink))
-		return
-	}
-
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
-	already_copied := util.UserHasCopiedLink(req_user_id, link_id)
-	if already_copied {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrLinkAlreadyCopied))
-		return
-	}
-
-	new_copy_id := uuid.New().String()
-
-	_, err := db.Client.Exec(
-		`INSERT INTO "Link Copies" VALUES(?,?,?,?);`,
-		new_copy_id,
-		link_id,
-		req_user_id,
-		mutil.NEW_LONG_TIMESTAMP(),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func UncopyLink(w http.ResponseWriter, r *http.Request) {
-	link_id := chi.URLParam(r, "link_id")
-	if link_id == "" {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLinkID))
-		return
-	}
-
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
-	already_copied := util.UserHasCopiedLink(req_user_id, link_id)
-	if !already_copied {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrLinkNotCopied))
-		return
-	}
-
-	_, err := db.Client.Exec(
-		`DELETE FROM "Link Copies" WHERE link_id = ? AND user_id = ?;`,
+		`DELETE FROM Stars WHERE link_id = ? AND user_id = ?;`,
 		link_id,
 		req_user_id,
 	)

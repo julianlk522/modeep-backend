@@ -29,8 +29,8 @@ func TestNewTopLinks(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) < 15 {
-		t.Fatal("too few columns")
+	} else if len(cols) < 13 {
+		t.Fatalf("too few columns, want 15 got %d", len(cols))
 	}
 
 	var test_cols = []struct {
@@ -460,8 +460,8 @@ func TestAsSignedInUser(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 17 {
-		t.Fatal("incorrect col count")
+	} else if len(cols) != 14 {
+		t.Fatalf("incorrect col count, got %d, want 17", len(cols))
 	}
 
 	var test_cols = []struct {
@@ -492,7 +492,6 @@ func TestAsSignedInUser(t *testing.T) {
 	var expected_args = []any{
 		mutil.EARLIEST_STARRERS_LIMIT, 
 		TEST_USER_ID, 
-		TEST_USER_ID, 
 		LINKS_PAGE_LIMIT,
 	}
 	for i, arg := range links_sql.Args {
@@ -510,7 +509,6 @@ func TestAsSignedInUser(t *testing.T) {
 	// "go AND coding" modified to include plural/singular variations
 	expected_args = []any{
 		mutil.EARLIEST_STARRERS_LIMIT, 
-		TEST_USER_ID, 
 		TEST_USER_ID, 
 		WithOptionalPluralOrSingularForm("go") + " AND " + WithOptionalPluralOrSingularForm("coding"), 
 		LINKS_PAGE_LIMIT,
@@ -662,7 +660,6 @@ func TestPage(t *testing.T) {
 	// "go AND coding" modified to include plural/singular variations
 	var expected_args = []any{
 		mutil.EARLIEST_STARRERS_LIMIT, 
-		TEST_USER_ID, 
 		TEST_USER_ID, 
 		WithOptionalPluralOrSingularForm("go") + " AND " + WithOptionalPluralOrSingularForm("coding"), 
 		LINKS_PAGE_LIMIT + 1, 

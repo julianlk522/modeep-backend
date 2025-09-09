@@ -12,6 +12,7 @@ var (
 	ErrInvalidPageParams   error = errors.New("invalid page provided")
 	ErrInvalidNSFWParams   error = errors.New("invalid NSFW params provided")
 	ErrInvalidSortByParams error = errors.New("invalid sort_by params provided")
+	ErrInvalidStars        error = errors.New("invalid number of stars provided")
 	ErrNoLinkID            error = errors.New("no link ID provided")
 	ErrNoLinkWithID        error = errors.New("no link found with given ID")
 	ErrNoCats              error = errors.New("no cats provided")
@@ -23,12 +24,9 @@ var (
 	ErrInvalidURL            error = errors.New("invalid URL provided")
 	ErrGoogleAPIsKeyNotFound error = errors.New("gAPIs key not found")
 	ErrRedirect              error = errors.New("invalid link destination: redirect detected")
-	ErrCannotLikeOwnLink     error = errors.New("cannot like your own link")
-	ErrLinkAlreadyLiked      error = errors.New("link already liked")
-	ErrLinkNotLiked          error = errors.New("link not already liked")
-	ErrCannotCopyOwnLink     error = errors.New("cannot copy your own link to your treasure map")
-	ErrLinkAlreadyCopied     error = errors.New("link already copied to treasure map")
-	ErrLinkNotCopied         error = errors.New("link not already copied")
+	ErrCannotStarOwnLink     error = errors.New("cannot star your own link")
+	ErrLinkAlreadyStarred     error = errors.New("link already starred")
+	ErrLinkNotStarred         error = errors.New("link is not starred")
 	// Delete link
 	ErrDoesntOwnLink error = errors.New("not your link; cannot delete")
 	// Click link

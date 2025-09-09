@@ -838,7 +838,7 @@ func TestNewTmapStarred(t *testing.T) {
 		// Verify tmap owner has starred
 		var link_id string
 		err := TestClient.QueryRow(`SELECT id
-				FROM "Link Copies"
+				FROM Stars
 				WHERE link_id = ?
 				AND user_id = ?`,
 			l.ID,
@@ -889,7 +889,7 @@ func TestTmapStarredFromCats(t *testing.T) {
 		// Verify tmap owner has starred
 		var link_id string
 		err := TestClient.QueryRow(`SELECT id
-				FROM "Link Copies"
+				FROM Stars
 				WHERE link_id = ?
 				AND user_id = ?`,
 			l.ID,
@@ -943,7 +943,7 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 	// EXCEPT those with NSFW cats, are returned
 	var all_starred_link_ids []string
 	rows, err = TestClient.Query(`SELECT link_id
-		FROM "Link Copies"
+		FROM Stars
 		WHERE user_id = ?`, TEST_USER_ID)
 	if err != nil {
 		t.Fatal(err)

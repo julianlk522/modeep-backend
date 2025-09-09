@@ -49,20 +49,20 @@ func TestBuildSummaryPageForLink(t *testing.T) {
 			}
 		}
 
-		// Verify like count
-		var lc int64
+		// Verify starred count
+		var stc int64
 		var tc int
 
 		err = TestClient.QueryRow(`
 			SELECT count(*)
-			FROM "Link Likes"
+			FROM Stars
 			WHERE link_id = ?`,
-			TEST_LINK_ID).Scan(&lc)
+			TEST_LINK_ID).Scan(&stc)
 
 		if err != nil {
-			t.Fatalf("failed to get link LikeCount: %s", err)
-		} else if lc != summary_page.Link.StarredCount {
-			t.Fatalf("got link like count %d, want %d", lc, summary_page.Link.StarredCount)
+			t.Fatalf("failed to get link starred_count: %s", err)
+		} else if stc != summary_page.Link.StarredCount {
+			t.Fatalf("got link like count %d, want %d", stc, summary_page.Link.StarredCount)
 		}
 
 		// Verify tag count
