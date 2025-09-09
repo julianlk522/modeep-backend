@@ -65,7 +65,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 	}
 	
 	nsfw_params := options.NSFW
-	hidden_links, err := CountNSFWLinks[T](links_sql, nsfw_params)
+	hidden_links, err := GetNSFWLinksCount[T](links_sql, nsfw_params)
 	if err != nil {
 		return nil, err
 	}
@@ -259,8 +259,8 @@ func CountMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cat
 	}
 }
 
-func CountNSFWLinks[T model.HasCats](links_sql *query.TopLinks, nsfw_params bool) (int, error) {
-	hidden_links_count_sql := links_sql.NSFWLinks(nsfw_params)
+func GetNSFWLinksCount[T model.HasCats](links_sql *query.TopLinks, nsfw_params bool) (int, error) {
+	hidden_links_count_sql := links_sql.CountNSFWLinks(nsfw_params)
 	var hidden_links sql.NullInt32
 	if err := db.Client.QueryRow(
 		hidden_links_count_sql.Text, 

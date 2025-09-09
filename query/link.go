@@ -183,10 +183,12 @@ var links_base_query = LINKS_BASE_CTES +
 	LINKS_LIMIT
 
 func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
+
 	// this first because using sort_params value helps with
-	// later text replaces since ORDER BY goes at the end
-	// (hence the methods below with a "sort_params" arg - it is
-	// not the prettiest solution but it works)
+	// later text replaces (hence the methods below using a sort_params arg)
+	// ORDER BY goes at the end so it's convenient to prepend new clauses before it
+	// and the sort_params value indicates exactly which ORDER BY clause to replace
+	// not the prettiest solution but it works...
 	sort_params := params.Get("sort_by")
 	if sort_params != "" {
 		tl = tl.SortBy(sort_params)
@@ -287,8 +289,6 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 		clause_keyword = "WHERE"
 	}
 
-	like_clause := "url LIKE ?"
-
 	order_by_clause := LINKS_ORDER_BY
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
@@ -303,7 +303,7 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 	tl.Text = strings.Replace(
 		tl.Text,
 		order_by_clause,
-		"\n" + clause_keyword + " " + like_clause + order_by_clause,
+		"\n" + clause_keyword + " " + "url LIKE ?" + order_by_clause,
 		1,
 	)
 
@@ -324,8 +324,6 @@ func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 		clause_keyword = "WHERE"
 	}
 
-	like_clause := "url NOT LIKE ?"
-
 	order_by_clause := LINKS_ORDER_BY
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
@@ -340,7 +338,7 @@ func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		order_by_clause,
-		"\n" + clause_keyword + " " + like_clause + order_by_clause,
+		"\n" + clause_keyword + " " + "url NOT LIKE ?" + order_by_clause,
 		1,
 	)
 
@@ -507,7 +505,7 @@ func (tl *TopLinks) Page(page int) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) NSFWLinks(nsfw_params bool) *TopLinks {
+func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 	count_select := `
 	SELECT count(l.id)`
 
