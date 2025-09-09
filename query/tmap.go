@@ -198,7 +198,7 @@ func (tnlc *TmapNSFWLinksCount) DuringPeriod(period string) *TmapNSFWLinksCount 
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		";",
-		"\nAND "+period_clause + ";",
+		"\nAND " + period_clause + ";",
 		1,
 	)
 
@@ -213,7 +213,7 @@ func (tnlc *TmapNSFWLinksCount) WithURLContaining(snippet string) *TmapNSFWLinks
 		1,
 	)
 
-	tnlc.Args = append(tnlc.Args, "%"+snippet+"%")
+	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
 
 	return tnlc
 }
@@ -226,7 +226,7 @@ func (tnlc *TmapNSFWLinksCount) WithURLLacking(snippet string) *TmapNSFWLinksCou
 		1,
 	)
 
-	tnlc.Args = append(tnlc.Args, "%"+snippet+"%")
+	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
 
 	return tnlc
 }
@@ -295,6 +295,38 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 const SUBMITTED_WHERE = `
 AND l.submitted_by = ?`
 
+func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
+	if len(opts.Cats) > 0 {
+		ts.FromCats(opts.Cats)
+	}
+
+	if opts.AsSignedInUser != "" {
+		ts.AsSignedInUser(opts.AsSignedInUser)
+	}
+
+	if opts.SortBy != "" {
+		ts.SortBy(opts.SortBy)
+	}
+
+	if opts.IncludeNSFW {
+		ts.NSFW()
+	}
+
+	if opts.Period != "" {
+		ts.DuringPeriod(opts.Period)
+	}
+
+	if opts.URLContains != "" {
+		ts.WithURLContaining(opts.URLContains)
+	}
+
+	if opts.URLLacks != "" {
+		ts.WithURLLacking(opts.URLLacks)
+	}
+
+	return ts
+}
+
 func (ts *TmapSubmitted) FromCats(cats []string) *TmapSubmitted {
 	ts.Query = FromUserOrGlobalCats(ts.Query, cats)
 	return ts
@@ -302,9 +334,9 @@ func (ts *TmapSubmitted) FromCats(cats []string) *TmapSubmitted {
 
 func (ts *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES+","+TMAP_AUTH_CTES,
-		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS+TMAP_AUTH_FIELDS,
-		TMAP_BASE_JOINS, TMAP_BASE_JOINS+TMAP_AUTH_JOINS,
+		TMAP_BASE_CTES, TMAP_BASE_CTES + "," + TMAP_AUTH_CTES,
+		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELDS,
+		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOINS,
 	)
 	ts.Text = fields_replacer.Replace(ts.Text)
 
@@ -402,7 +434,7 @@ func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
 		)
 	} 
 
-	ts.Args = append(ts.Args, "%"+snippet+"%")
+	ts.Args = append(ts.Args, "%" + snippet + "%")
 
 	return ts
 }
@@ -417,39 +449,7 @@ func (ts *TmapSubmitted) WithURLLacking(snippet string) *TmapSubmitted {
 		)
 	} 
 
-	ts.Args = append(ts.Args, "%"+snippet+"%")
-
-	return ts
-}
-
-func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
-	if len(opts.Cats) > 0 {
-		ts.FromCats(opts.Cats)
-	}
-
-	if opts.AsSignedInUser != "" {
-		ts.AsSignedInUser(opts.AsSignedInUser)
-	}
-
-	if opts.SortBy != "" {
-		ts.SortBy(opts.SortBy)
-	}
-
-	if opts.IncludeNSFW {
-		ts.NSFW()
-	}
-
-	if opts.Period != "" {
-		ts.DuringPeriod(opts.Period)
-	}
-
-	if opts.URLContains != "" {
-		ts.WithURLContaining(opts.URLContains)
-	}
-
-	if opts.URLLacks != "" {
-		ts.WithURLLacking(opts.URLLacks)
-	}
+	ts.Args = append(ts.Args, "%" + snippet + "%")
 
 	return ts
 }
@@ -492,6 +492,38 @@ INNER JOIN UserCopies uc ON l.id = uc.link_id`
 const COPIED_WHERE = ` 
 AND l.submitted_by != ?`
 
+func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
+	if len(opts.Cats) > 0 {
+		tc.FromCats(opts.Cats)
+	}
+
+	if opts.AsSignedInUser != "" {
+		tc.AsSignedInUser(opts.AsSignedInUser)
+	}
+
+	if opts.SortBy != "" {
+		tc.SortBy(opts.SortBy)
+	}
+
+	if opts.IncludeNSFW {
+		tc.NSFW()
+	}
+
+	if opts.Period != "" {
+		tc.DuringPeriod(opts.Period)
+	}
+
+	if opts.URLContains != "" {
+		tc.WithURLContaining(opts.URLContains)
+	}
+
+	if opts.URLLacks != "" {
+		tc.WithURLLacking(opts.URLLacks)
+	}
+
+	return tc
+}
+
 func (tc *TmapCopied) FromCats(cats []string) *TmapCopied {
 	tc.Query = FromUserOrGlobalCats(tc.Query, cats)
 	return tc
@@ -499,9 +531,9 @@ func (tc *TmapCopied) FromCats(cats []string) *TmapCopied {
 
 func (tc *TmapCopied) AsSignedInUser(req_user_id string) *TmapCopied {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES+","+TMAP_AUTH_CTES,
-		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS+TMAP_AUTH_FIELDS,
-		COPIED_JOIN, COPIED_JOIN+TMAP_AUTH_JOINS,
+		TMAP_BASE_CTES, TMAP_BASE_CTES + "," + TMAP_AUTH_CTES,
+		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELDS,
+		COPIED_JOIN, COPIED_JOIN + TMAP_AUTH_JOINS,
 	)
 	tc.Text = fields_replacer.Replace(tc.Text)
 
@@ -599,7 +631,7 @@ func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
 		)
 	} 
 
-	tc.Args = append(tc.Args, "%"+snippet+"%")
+	tc.Args = append(tc.Args, "%" + snippet + "%")
 
 	return tc
 }
@@ -614,39 +646,7 @@ func (tc *TmapCopied) WithURLLacking(snippet string) *TmapCopied {
 		)
 	} 
 
-	tc.Args = append(tc.Args, "%"+snippet+"%")
-
-	return tc
-}
-
-func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
-	if len(opts.Cats) > 0 {
-		tc.FromCats(opts.Cats)
-	}
-
-	if opts.AsSignedInUser != "" {
-		tc.AsSignedInUser(opts.AsSignedInUser)
-	}
-
-	if opts.SortBy != "" {
-		tc.SortBy(opts.SortBy)
-	}
-
-	if opts.IncludeNSFW {
-		tc.NSFW()
-	}
-
-	if opts.Period != "" {
-		tc.DuringPeriod(opts.Period)
-	}
-
-	if opts.URLContains != "" {
-		tc.WithURLContaining(opts.URLContains)
-	}
-
-	if opts.URLLacks != "" {
-		tc.WithURLLacking(opts.URLLacks)
-	}
+	tc.Args = append(tc.Args, "%" + snippet + "%")
 
 	return tc
 }
@@ -713,6 +713,38 @@ AND l.submitted_by != ?
 AND l.id NOT IN
 	(SELECT link_id FROM UserCopies)`
 
+func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
+	if len(opts.Cats) > 0 {
+		tt.FromCats(opts.Cats)
+	}
+	
+	if opts.AsSignedInUser != "" {
+		tt.AsSignedInUser(opts.AsSignedInUser)
+	}
+	
+	if opts.SortBy != "" {
+		tt.SortBy(opts.SortBy)
+	}
+	
+	if opts.IncludeNSFW {
+		tt.NSFW()
+	}
+	
+	if opts.Period != "" {
+		tt.DuringPeriod(opts.Period)
+	}
+	
+	if opts.URLContains != "" {
+		tt.WithURLContaining(opts.URLContains)
+	}
+
+	if opts.URLLacks != "" {
+		tt.WithURLLacking(opts.URLLacks)
+	}
+
+	return tt
+}
+
 func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 	if len(cats) == 0 || cats[0] == "" {
 		return tt
@@ -725,7 +757,7 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 	tt.Text = strings.Replace(
 		tt.Text,
 		TMAP_ORDER_BY_LIKES,
-		match_clause+TMAP_ORDER_BY_LIKES,
+		match_clause + TMAP_ORDER_BY_LIKES,
 		1,
 	)
 
@@ -741,9 +773,9 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 
 func (tt *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES+","+TMAP_AUTH_CTES,
-		TAGGED_FIELDS, TAGGED_FIELDS+TMAP_AUTH_FIELDS,
-		TAGGED_JOINS, TAGGED_JOINS+TMAP_AUTH_JOINS,
+		TMAP_BASE_CTES, TMAP_BASE_CTES + ","+TMAP_AUTH_CTES,
+		TAGGED_FIELDS, TAGGED_FIELDS + TMAP_AUTH_FIELDS,
+		TAGGED_JOINS, TAGGED_JOINS + TMAP_AUTH_JOINS,
 	)
 	tt.Text = fields_replacer.Replace(tt.Text)
 
@@ -835,7 +867,7 @@ func (tt *TmapTagged) WithURLContaining(snippet string) *TmapTagged {
 		)
 	} 
 
-	tt.Args = append(tt.Args, "%"+snippet+"%")
+	tt.Args = append(tt.Args, "%" + snippet + "%")
 
 	return tt
 }
@@ -850,39 +882,7 @@ func (tt *TmapTagged) WithURLLacking(snippet string) *TmapTagged {
 		)
 	} 
 
-	tt.Args = append(tt.Args, "%"+snippet+"%")
-
-	return tt
-}
-
-func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
-	if len(opts.Cats) > 0 {
-		tt.FromCats(opts.Cats)
-	}
-	
-	if opts.AsSignedInUser != "" {
-		tt.AsSignedInUser(opts.AsSignedInUser)
-	}
-	
-	if opts.SortBy != "" {
-		tt.SortBy(opts.SortBy)
-	}
-	
-	if opts.IncludeNSFW {
-		tt.NSFW()
-	}
-	
-	if opts.Period != "" {
-		tt.DuringPeriod(opts.Period)
-	}
-	
-	if opts.URLContains != "" {
-		tt.WithURLContaining(opts.URLContains)
-	}
-
-	if opts.URLLacks != "" {
-		tt.WithURLLacking(opts.URLLacks)
-	}
+	tt.Args = append(tt.Args, "%" + snippet + "%")
 
 	return tt
 }
@@ -897,7 +897,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 	q.Text = strings.Replace(
 		q.Text,
 		PUC_WHERE,
-		PUC_WHERE+`
+		PUC_WHERE + `
 		AND cats MATCH ?`,
 		1,
 	)
@@ -906,7 +906,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 	q.Text = strings.Replace(
 		q.Text,
 		TMAP_BASE_FIELDS,
-		GLOBAL_CATS_CTE+TMAP_BASE_FIELDS,
+		GLOBAL_CATS_CTE + TMAP_BASE_FIELDS,
 		1,
 	)
 
@@ -957,7 +957,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 	q.Text = strings.Replace(
 		q.Text,
 		TMAP_BASE_JOINS,
-		TMAP_BASE_JOINS+GLOBAL_CATS_JOIN,
+		TMAP_BASE_JOINS + GLOBAL_CATS_JOIN,
 		1,
 	)
 
@@ -971,7 +971,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 	q.Text = strings.Replace(
 		q.Text,
 		TMAP_ORDER_BY_LIKES,
-		and_clause+TMAP_ORDER_BY_LIKES,
+		and_clause + TMAP_ORDER_BY_LIKES,
 		1,
 	)
 
