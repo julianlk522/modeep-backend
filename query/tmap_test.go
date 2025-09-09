@@ -42,8 +42,8 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Copied / Tagged
-	// test user jlk copied link 76 with global tag "engine,search,NSFW",
+	// Starred / Tagged
+	// test user jlk starred link 76 with global tag "engine,search,NSFW",
 	// test user jlk tagged link c880180f-935d-4fd1-9a82-14dca4bd18f3 with
 	// cat "NSFW"
 	// (count should be 2)
@@ -103,22 +103,22 @@ func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
 	}
 }
 
-func TestTmapNSFWLinksCountCopiedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).CopiedOnly()
+func TestTmapNSFWLinksCountStarredOnly(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).StarredOnly()
 	var count int
 	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
 	var expected_count int
-	nsfw_copied_links_sql := `SELECT count(*) as copy_count
-		FROM "Link Copies" lc
-		LEFT JOIN Users u ON u.id = lc.user_id
-		LEFT JOIN Links l ON l.id = lc.link_id
-		WHERE lc.user_id = ?
+	nsfw_starred_links_sql := `SELECT count(*) as starred_count
+		FROM Stars s
+		LEFT JOIN Users u ON u.id = s.user_id
+		LEFT JOIN Links l ON l.id = s.link_id
+		WHERE s.user_id = ?
 		AND l.global_cats LIKE '%' || 'NSFW' || '%';`
 	if err := TestClient.QueryRow(
-		nsfw_copied_links_sql, 
+		nsfw_starred_links_sql, 
 		TEST_REQ_LOGIN_NAME,
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
@@ -283,7 +283,7 @@ func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
-				OnlySection: "copied",
+				OnlySection: "starred",
 				CatsFilter: []string{
 					"search",
 					"engine",
@@ -373,10 +373,8 @@ func TestNewTmapSubmitted(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -429,10 +427,8 @@ func TestTmapSubmittedFromCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -470,15 +466,12 @@ func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
-			&l.IsLiked,
-			&l.IsCopied,
+			&l.StarsAssigned,
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -505,10 +498,8 @@ func TestTmapSubmittedNSFW(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -530,7 +521,7 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 		Valid bool
 	}{
 		{"newest", true},
-		{"rating", true},
+		{"stars", true},
 		{"oldest", true},
 		{"clicks", true},
 		{"random", false},
@@ -567,10 +558,8 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 				&l.CatsFromUser,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.LikeCount,
-				&l.EarliestLikers,
-				&l.CopyCount,
-				&l.EarliestCopiers,
+				&l.StarredCount,
+				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
@@ -597,13 +586,13 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 						last_date = sd
 					}
 				}
-			case "rating":
-				var last_like_count int64 = 999 // arbitrary high number
+			case "stars":
+				var last_star_count int64 = 999 // arbitrary high number
 				for _, link := range links {
-					if link.LikeCount > last_like_count {
-						t.Fatalf("link like count %d above previous min %d", link.LikeCount, last_like_count)
-					} else if link.LikeCount < last_like_count {
-						last_like_count = link.LikeCount
+					if link.StarredCount > last_star_count {
+						t.Fatalf("link like count %d above previous min %d", link.StarredCount, last_star_count)
+					} else if link.StarredCount < last_star_count {
+						last_star_count = link.StarredCount
 					}
 				}
 			case "oldest":
@@ -654,10 +643,8 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -683,10 +670,8 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -742,10 +727,8 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -787,29 +770,27 @@ func TestTmapSubmittedWithURLContaining(t *testing.T) {
 
 	var links []model.TmapLink
 	for rows.Next() {
-		link := model.TmapLink{}
+		l := model.TmapLink{}
 		err := rows.Scan(
-			&link.ID,
-			&link.URL,
-			&link.SubmittedBy,
-			&link.SubmitDate,
-			&link.Cats,
-			&link.CatsFromUser,
-			&link.Summary,
-			&link.SummaryCount,
-			&link.LikeCount,
-			&link.EarliestLikers,
-			&link.CopyCount,
-			&link.EarliestCopiers,
-			&link.ClickCount,
-			&link.TagCount,
-			&link.PreviewImgFilename,
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.StarredCount,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
 		)
 		if err != nil {
 			t.Fatal(err)
 		} 
 
-		links = append(links, link)
+		links = append(links, l)
 	}
 
 	if len(links) != expected_count {
@@ -817,14 +798,14 @@ func TestTmapSubmittedWithURLContaining(t *testing.T) {
 	}
 }
 
-// Copied
-func TestNewTmapCopied(t *testing.T) {
-	copied_sql := NewTmapCopied(TEST_LOGIN_NAME)
-	if copied_sql.Error != nil {
-		t.Fatal(copied_sql.Error)
+// Starred
+func TestNewTmapStarred(t *testing.T) {
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME)
+	if starred_sql.Error != nil {
+		t.Fatal(starred_sql.Error)
 	}
 
-	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -841,10 +822,8 @@ func TestNewTmapCopied(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -856,7 +835,7 @@ func TestNewTmapCopied(t *testing.T) {
 			t.Fatal("should not contain NSFW in base query")
 		}
 
-		// Verify tmap owner has copied
+		// Verify tmap owner has starred
 		var link_id string
 		err := TestClient.QueryRow(`SELECT id
 				FROM "Link Copies"
@@ -871,13 +850,13 @@ func TestNewTmapCopied(t *testing.T) {
 	}
 }
 
-func TestTmapCopiedFromCats(t *testing.T) {
-	copied_sql := NewTmapCopied(TEST_LOGIN_NAME).FromCats(test_cats)
-	if copied_sql.Error != nil {
-		t.Fatal(copied_sql.Error)
+func TestTmapStarredFromCats(t *testing.T) {
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).FromCats(test_cats)
+	if starred_sql.Error != nil {
+		t.Fatal(starred_sql.Error)
 	}
 
-	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -894,10 +873,8 @@ func TestTmapCopiedFromCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -909,7 +886,7 @@ func TestTmapCopiedFromCats(t *testing.T) {
 			t.Fatal("TagCount == 0")
 		}
 
-		// Verify tmap owner has copied
+		// Verify tmap owner has starred
 		var link_id string
 		err := TestClient.QueryRow(`SELECT id
 				FROM "Link Copies"
@@ -924,13 +901,13 @@ func TestTmapCopiedFromCats(t *testing.T) {
 	}
 }
 
-func TestTmapCopiedAsSignedInUser(t *testing.T) {
-	copied_sql := NewTmapCopied(TEST_LOGIN_NAME).AsSignedInUser(TEST_REQ_USER_ID)
-	if copied_sql.Error != nil {
-		t.Fatal(copied_sql.Error)
+func TestTmapStarredAsSignedInUser(t *testing.T) {
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).AsSignedInUser(TEST_REQ_USER_ID)
+	if starred_sql.Error != nil {
+		t.Fatal(starred_sql.Error)
 	}
 
-	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -949,15 +926,12 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
-			&l.IsLiked,
-			&l.IsCopied,
+			&l.StarsAssigned,
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -965,9 +939,9 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 		links = append(links, l)
 	}
 
-	// Manually search Link Copies table to verify that all copied links,
+	// Manually search Link Copies table to verify that all starred links,
 	// EXCEPT those with NSFW cats, are returned
-	var all_copied_link_ids []string
+	var all_starred_link_ids []string
 	rows, err = TestClient.Query(`SELECT link_id
 		FROM "Link Copies"
 		WHERE user_id = ?`, TEST_USER_ID)
@@ -981,19 +955,19 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 		if err := rows.Scan(&link_id); err != nil {
 			t.Fatal(err)
 		}
-		all_copied_link_ids = append(all_copied_link_ids, link_id)
+		all_starred_link_ids = append(all_starred_link_ids, link_id)
 	}
 
-	for _, lid := range all_copied_link_ids {
-		var found_copied_link_in_returned_links bool
+	for _, lid := range all_starred_link_ids {
+		var found_starred_link_in_returned_links bool
 		for _, l := range links {
 			if l.ID == lid {
-				found_copied_link_in_returned_links = true
+				found_starred_link_in_returned_links = true
 			}
 		}
 
-		// Verify that all non-returned copied links have NSFW cats
-		if !found_copied_link_in_returned_links {
+		// Verify that all non-returned starred links have NSFW cats
+		if !found_starred_link_in_returned_links {
 			var cats string
 			if err := TestClient.QueryRow(`SELECT cats
 				FROM user_cats_fts
@@ -1016,10 +990,10 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 		}
 	}
 
-	// Retry with .NSFW() and verify that _all_ links from all_copied_link_ids
+	// Retry with .NSFW() and verify that _all_ links from all_starred_link_ids
 	// are returned
-	copied_sql = NewTmapCopied(TEST_LOGIN_NAME).AsSignedInUser(TEST_REQ_USER_ID).NSFW()
-	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).AsSignedInUser(TEST_REQ_USER_ID).NSFW()
+	rows, err = TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1037,15 +1011,12 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
-			&l.IsLiked,
-			&l.IsCopied,
+			&l.StarsAssigned,
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -1053,23 +1024,23 @@ func TestTmapCopiedAsSignedInUser(t *testing.T) {
 		links = append(links, l)
 	}
 
-	for _, lid := range all_copied_link_ids {
-		var found_copied_link_in_returned_links bool
+	for _, lid := range all_starred_link_ids {
+		var found_starred_link_in_returned_links bool
 		for _, l := range links {
 			if l.ID == lid {
-				found_copied_link_in_returned_links = true
+				found_starred_link_in_returned_links = true
 			}
 		}
-		if !found_copied_link_in_returned_links {
+		if !found_starred_link_in_returned_links {
 			t.Fatalf("non-returned link found despite enabled NSFW flag: %s", lid)
 		}
 	}
 }
 
-func TestTmapCopiedNSFW(t *testing.T) {
-	// TEST_LOGIN_NAME (jlk) has copied 1 link with NSFW tag
-	copied_sql := NewTmapCopied(TEST_LOGIN_NAME).NSFW()
-	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+func TestTmapStarredNSFW(t *testing.T) {
+	// TEST_LOGIN_NAME (jlk) has starred 1 link with NSFW tag
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).NSFW()
+	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1087,10 +1058,8 @@ func TestTmapCopiedNSFW(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1102,14 +1071,14 @@ func TestTmapCopiedNSFW(t *testing.T) {
 	}
 
 	if !found_NSFW_link {
-		t.Fatal("jlk's tmap does not but should contain 1 copied link with NSFW tag")
+		t.Fatal("jlk's tmap does not but should contain 1 starred link with NSFW tag")
 	}
 }
 
-func TestTmapCopiedDuringPeriod(t *testing.T) {
-	var copied_no_period, copied_period_all, copied_period_week []model.TmapLink
-	copied_sql := NewTmapCopied(TEST_LOGIN_NAME)
-	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+func TestTmapStarredDuringPeriod(t *testing.T) {
+	var starred_no_period, starred_period_all, starred_period_week []model.TmapLink
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME)
+	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1126,10 +1095,8 @@ func TestTmapCopiedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1137,11 +1104,11 @@ func TestTmapCopiedDuringPeriod(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		copied_no_period = append(copied_no_period, l)
+		starred_no_period = append(starred_no_period, l)
 	}
 
-	copied_sql = NewTmapCopied(TEST_LOGIN_NAME).DuringPeriod("all")
-	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).DuringPeriod("all")
+	rows, err = TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1158,10 +1125,8 @@ func TestTmapCopiedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1169,15 +1134,15 @@ func TestTmapCopiedDuringPeriod(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		copied_period_all = append(copied_period_all, l)
+		starred_period_all = append(starred_period_all, l)
 	}
 
-	if len(copied_no_period) != len(copied_period_all) {
-		t.Fatal("copied_no_period != copied_period_all")
+	if len(starred_no_period) != len(starred_period_all) {
+		t.Fatal("starred_no_period != starred_period_all")
 	}
 
-	copied_sql = NewTmapCopied(TEST_LOGIN_NAME).DuringPeriod("week")
-	rows, err = TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).DuringPeriod("week")
+	rows, err = TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1193,10 +1158,8 @@ func TestTmapCopiedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1204,23 +1167,23 @@ func TestTmapCopiedDuringPeriod(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		copied_period_week = append(copied_period_week, l)
+		starred_period_week = append(starred_period_week, l)
 	}
 
-	if len(copied_period_week) != 0 {
-		t.Fatal("should be no links copied within last week")
+	if len(starred_period_week) != 0 {
+		t.Fatal("should be no links starred within last week")
 	}
 }
 
-func TestTmapCopiedWithURLContaining(t *testing.T) {
+func TestTmapStarredWithURLContaining(t *testing.T) {
 	url_snippet := "coding" 
 	var expected_count int
-	expected_count_sql := `SELECT count(*) as copy_count
-		FROM "Link Copies" lc
-		LEFT JOIN Users u ON u.id = lc.user_id
-		LEFT JOIN Links l ON l.id = lc.link_id
+	expected_count_sql := `SELECT count(*) as starred_count
+		FROM Stars s
+		LEFT JOIN Users u ON u.id = s.user_id
+		LEFT JOIN Links l ON l.id = s.link_id
 		WHERE l.url LIKE '%' || ? || '%'
-		AND lc.user_id = ?;`
+		AND s.user_id = ?;`
 	err := TestClient.QueryRow(
 			expected_count_sql, 
 			url_snippet, 
@@ -1230,8 +1193,8 @@ func TestTmapCopiedWithURLContaining(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	copied_sql := NewTmapSubmitted(TEST_LOGIN_NAME).WithURLContaining(url_snippet)
-	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	starred_sql := NewTmapSubmitted(TEST_LOGIN_NAME).WithURLContaining(url_snippet)
+	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1239,29 +1202,27 @@ func TestTmapCopiedWithURLContaining(t *testing.T) {
 
 	var links []model.TmapLink
 	for rows.Next() {
-		link := model.TmapLink{}
+		l := model.TmapLink{}
 		err := rows.Scan(
-			&link.ID,
-			&link.URL,
-			&link.SubmittedBy,
-			&link.SubmitDate,
-			&link.Cats,
-			&link.CatsFromUser,
-			&link.Summary,
-			&link.SummaryCount,
-			&link.LikeCount,
-			&link.EarliestLikers,
-			&link.CopyCount,
-			&link.EarliestCopiers,
-			&link.ClickCount,
-			&link.TagCount,
-			&link.PreviewImgFilename,
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.StarredCount,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
 		)
 		if err != nil {
 			t.Fatal(err)
 		} 
 
-		links = append(links, link)
+		links = append(links, l)
 	}
 
 	if len(links) != expected_count {
@@ -1292,10 +1253,8 @@ func TestNewTmapTagged(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1343,8 +1302,8 @@ func TestTmapTaggedFromCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.CopyCount,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1396,15 +1355,12 @@ func TestTmapTaggedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
-			&l.IsLiked,
-			&l.IsCopied,
+			&l.StarsAssigned,
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -1413,8 +1369,8 @@ func TestTmapTaggedAsSignedInUser(t *testing.T) {
 
 func TestTmapTaggedNSFW(t *testing.T) {
 	// TEST_LOGIN_NAME (jlk) has tagged 1 link with NSFW tag
-	copied_sql := NewTmapTagged(TEST_LOGIN_NAME).NSFW()
-	rows, err := TestClient.Query(copied_sql.Text, copied_sql.Args...)
+	starred_sql := NewTmapTagged(TEST_LOGIN_NAME).NSFW()
+	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1432,10 +1388,8 @@ func TestTmapTaggedNSFW(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1471,10 +1425,8 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1503,10 +1455,8 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1538,10 +1488,8 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1565,22 +1513,22 @@ func TestTmapTaggedWithURLContaining(t *testing.T) {
 		FROM user_cats_fts
 		WHERE submitted_by = ?
 	),
-	UserCopies AS (
-		SELECT lc.link_id
-		FROM "Link Copies" lc
-		INNER JOIN Users u ON u.id = lc.user_id
+	UserStars AS (
+		SELECT s.link_id
+		FROM Stars s
+		INNER JOIN Users u ON u.id = s.user_id
 		WHERE u.login_name = ?
 	)
 	SELECT count(l.id) AS count
 	FROM Links l
 	INNER JOIN UserCats uct ON l.id = uct.link_id
-	LEFT JOIN UserCopies uc ON l.id = uc.link_id
+	LEFT JOIN UserStars us ON l.id = us.link_id
 	WHERE l.id NOT IN (
 			SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
 	)
 	AND l.submitted_by != ?
 	AND l.id NOT IN
-			(SELECT link_id FROM UserCopies)
+			(SELECT link_id FROM UserStars)
 	AND l.url LIKE '%' || ? || '%'
 	ORDER BY l.id DESC;`
 	err := TestClient.QueryRow(
@@ -1603,29 +1551,27 @@ func TestTmapTaggedWithURLContaining(t *testing.T) {
 
 	var links []model.TmapLink
 	for rows.Next() {
-		link := model.TmapLink{}
+		l := model.TmapLink{}
 		err := rows.Scan(
-			&link.ID,
-			&link.URL,
-			&link.SubmittedBy,
-			&link.SubmitDate,
-			&link.Cats,
-			&link.CatsFromUser,
-			&link.Summary,
-			&link.SummaryCount,
-			&link.LikeCount,
-			&link.EarliestLikers,
-			&link.CopyCount,
-			&link.EarliestCopiers,
-			&link.ClickCount,
-			&link.TagCount,
-			&link.PreviewImgFilename,
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.StarredCount,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
 		)
 		if err != nil {
 			t.Fatal(err)
 		} 
 
-		links = append(links, link)
+		links = append(links, l)
 	}
 
 	if len(links) != expected_count {
@@ -1659,10 +1605,8 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -1673,14 +1617,14 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 		}
 	}
 
-	tmap_copied := NewTmapCopied(TEST_LOGIN_NAME)
-	_, err = TestClient.Query(tmap_copied.Text, tmap_copied.Args...)
+	tmap_starred := NewTmapStarred(TEST_LOGIN_NAME)
+	_, err = TestClient.Query(tmap_starred.Text, tmap_starred.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tmap_copied.Query = FromUserOrGlobalCats(tmap_copied.Query, test_cats)
-	rows, err = TestClient.Query(tmap_copied.Text, tmap_copied.Args...)
+	tmap_starred.Query = FromUserOrGlobalCats(tmap_starred.Query, test_cats)
+	rows, err = TestClient.Query(tmap_starred.Text, tmap_starred.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1697,10 +1641,8 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,

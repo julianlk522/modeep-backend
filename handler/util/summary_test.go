@@ -61,8 +61,8 @@ func TestBuildSummaryPageForLink(t *testing.T) {
 
 		if err != nil {
 			t.Fatalf("failed to get link LikeCount: %s", err)
-		} else if lc != summary_page.Link.LikeCount {
-			t.Fatalf("got link like count %d, want %d", lc, summary_page.Link.LikeCount)
+		} else if lc != summary_page.Link.StarredCount {
+			t.Fatalf("got link like count %d, want %d", lc, summary_page.Link.StarredCount)
 		}
 
 		// Verify tag count

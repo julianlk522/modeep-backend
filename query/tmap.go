@@ -63,10 +63,10 @@ GlobalCatsFTS AS (
 	FROM global_cats_fts
 	WHERE global_cats MATCH 'NSFW'
 ),
-UserCopies AS (
-    SELECT lc.link_id
-    FROM "Link Copies" lc
-    INNER JOIN Users u ON u.id = lc.user_id
+UserStars AS (
+    SELECT s.link_id
+    FROM Stars s
+    INNER JOIN Users u ON u.id = s.user_id
     WHERE u.login_name = ?
 )
 SELECT count(*) as NSFW_link_count
@@ -81,7 +81,7 @@ WHERE
 	)
 AND (
 	l.submitted_by = ?
-	OR l.id IN UserCopies
+	OR l.id IN UserStars
 	OR l.id IN 
 		(
 		SELECT link_id
@@ -94,7 +94,7 @@ func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
 		tnlc.Text,
 		`(
 	l.submitted_by = ?
-	OR l.id IN UserCopies
+	OR l.id IN UserStars
 	OR l.id IN 
 		(
 		SELECT link_id
@@ -108,19 +108,19 @@ func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
 	return tnlc
 }
 
-func (tnlc *TmapNSFWLinksCount) CopiedOnly() *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) StarredOnly() *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		`(
 	l.submitted_by = ?
-	OR l.id IN UserCopies
+	OR l.id IN UserStars
 	OR l.id IN 
 		(
 		SELECT link_id
 		FROM PossibleUserCats
 		)
 	)`,
-		"l.id IN UserCopies",
+		"l.id IN UserStars",
 		1,
 	)
 
@@ -134,7 +134,7 @@ func (tnlc *TmapNSFWLinksCount) TaggedOnly() *TmapNSFWLinksCount {
 		tnlc.Text,
 		`
 	l.submitted_by = ?
-	OR l.id IN UserCopies
+	OR l.id IN UserStars
 	OR l.id IN 
 		(
 		SELECT link_id
@@ -236,8 +236,8 @@ func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOption
 		switch opts.OnlySection {
 		case "submitted":
 			tnlc.SubmittedOnly()
-		case "copied":
-			tnlc.CopiedOnly()
+		case "starred":
+			tnlc.StarredOnly()
 		case "tagged":
 			tnlc.TaggedOnly()
 		default:
@@ -280,10 +280,9 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 				TMAP_BASE_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				SUBMITTED_WHERE +
-				TMAP_ORDER_BY_LIKES,
+				TMAP_ORDER_BY_STARS,
 			Args: []any{
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				mutil.EARLIEST_STARRERS_LIMIT, 
 				login_name, 
 				login_name, 
 				login_name,
@@ -334,21 +333,18 @@ func (ts *TmapSubmitted) FromCats(cats []string) *TmapSubmitted {
 
 func (ts *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + "," + TMAP_AUTH_CTES,
-		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELDS,
-		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOINS,
+		TMAP_BASE_CTES, TMAP_BASE_CTES + "," + TMAP_AUTH_CTE,
+		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
+		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
 	)
 	ts.Text = fields_replacer.Replace(ts.Text)
 
-	new_args := make([]any, 0, len(ts.Args)+2)
+	new_args := make([]any, 0, len(ts.Args)+1)
 
-	first_2_args := make([]any, 2)
-	copy(first_2_args, ts.Args[:2])
+	first_arg := ts.Args[0]
+	trailing_args := ts.Args[1:]
 
-	trailing_args := ts.Args[2:]
-
-	new_args = append(new_args, first_2_args...)
-	new_args = append(new_args, req_user_id, req_user_id)
+	new_args = append(new_args, first_arg, req_user_id)
 	new_args = append(new_args, trailing_args...)
 
 	ts.Args = new_args
@@ -375,14 +371,14 @@ func (ts *TmapSubmitted) NSFW() *TmapSubmitted {
 }
 
 func (ts *TmapSubmitted) SortBy(metric string) *TmapSubmitted {
-	if metric != "" && metric != "rating" {
+	if metric != "" && metric != "stars" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
 			ts.Error = e.ErrInvalidSortByParams
 		} else {
 			ts.Text = strings.Replace(
 				ts.Text,
-				TMAP_ORDER_BY_LIKES,
+				TMAP_ORDER_BY_STARS,
 				order_by_clause,
 				1,
 			)
@@ -454,28 +450,27 @@ func (ts *TmapSubmitted) WithURLLacking(snippet string) *TmapSubmitted {
 	return ts
 }
 
-type TmapCopied struct {
+type TmapStarred struct {
 	*Query
 }
 
-func NewTmapCopied(login_name string) *TmapCopied {
-	q := &TmapCopied{
+func NewTmapStarred(login_name string) *TmapStarred {
+	q := &TmapStarred{
 		Query: &Query{
-			Text: "WITH " + USER_COPIES_CTE + ",\n" +
+			Text: "WITH " + USER_STARS_CTE + ",\n" +
 				TMAP_BASE_CTES + "," +
 				POSSIBLE_USER_CATS_CTE + "," +
 				POSSIBLE_USER_SUMMARY_CTE +
 				TMAP_BASE_FIELDS +
 				TMAP_FROM +
-				COPIED_JOIN +
+				STARRED_JOIN +
 				TMAP_BASE_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
-				COPIED_WHERE +
-				TMAP_ORDER_BY_LIKES,
+				STARRED_WHERE +
+				TMAP_ORDER_BY_STARS,
 			Args: []any{
 				login_name, 
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				mutil.EARLIEST_STARRERS_LIMIT, 
 				login_name,
 				login_name, 
 				login_name,
@@ -486,13 +481,13 @@ func NewTmapCopied(login_name string) *TmapCopied {
 	return q
 }
 
-const COPIED_JOIN = `
-INNER JOIN UserCopies uc ON l.id = uc.link_id`
+const STARRED_JOIN = `
+INNER JOIN UserStars us ON l.id = us.link_id`
 
-const COPIED_WHERE = ` 
+const STARRED_WHERE = ` 
 AND l.submitted_by != ?`
 
-func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
+func (tc *TmapStarred) FromOptions(opts *model.TmapOptions) *TmapStarred {
 	if len(opts.Cats) > 0 {
 		tc.FromCats(opts.Cats)
 	}
@@ -524,37 +519,36 @@ func (tc *TmapCopied) FromOptions(opts *model.TmapOptions) *TmapCopied {
 	return tc
 }
 
-func (tc *TmapCopied) FromCats(cats []string) *TmapCopied {
+func (tc *TmapStarred) FromCats(cats []string) *TmapStarred {
 	tc.Query = FromUserOrGlobalCats(tc.Query, cats)
 	return tc
 }
 
-func (tc *TmapCopied) AsSignedInUser(req_user_id string) *TmapCopied {
+func (tc *TmapStarred) AsSignedInUser(req_user_id string) *TmapStarred {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + "," + TMAP_AUTH_CTES,
-		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELDS,
-		COPIED_JOIN, COPIED_JOIN + TMAP_AUTH_JOINS,
+		TMAP_BASE_CTES, TMAP_BASE_CTES + "," + TMAP_AUTH_CTE,
+		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
+		STARRED_JOIN, STARRED_JOIN + TMAP_AUTH_JOIN,
 	)
 	tc.Text = fields_replacer.Replace(tc.Text)
 
-	new_args := make([]any, 0, len(tc.Args)+2)
+	new_args := make([]any, 0, len(tc.Args)+1)
 	
-	// login_name, earliest likers/copiers limit * 2
-	first_3_args := make([]any, 3)
-	copy(first_3_args, tc.Args[:3])
+	// login_name, earliest starrers limit
+	first_2_args := make([]any, 2)
+	copy(first_2_args, tc.Args[:2])
 
-	trailing_args := tc.Args[3:]
+	trailing_args := tc.Args[2:]
 
-	new_args = append(new_args, first_3_args...)
-	new_args = append(new_args, req_user_id, req_user_id)
+	new_args = append(new_args, first_2_args...)
+	new_args = append(new_args, req_user_id)
 	new_args = append(new_args, trailing_args...)
 
 	tc.Args = new_args
-
 	return tc
 }
 
-func (tc *TmapCopied) NSFW() *TmapCopied {
+func (tc *TmapStarred) NSFW() *TmapStarred {
 	// Remove NSFW clause
 	tc.Text = strings.Replace(
 		tc.Text,
@@ -573,15 +567,15 @@ func (tc *TmapCopied) NSFW() *TmapCopied {
 	return tc
 }
 
-func (tc *TmapCopied) SortBy(metric string) *TmapCopied {
-	if metric != "" && metric != "rating" {
+func (tc *TmapStarred) SortBy(metric string) *TmapStarred {
+	if metric != "" && metric != "stars" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
 			tc.Error = e.ErrInvalidSortByParams
 		} else {
 			tc.Text = strings.Replace(
 				tc.Text,
-				TMAP_ORDER_BY_LIKES,
+				TMAP_ORDER_BY_STARS,
 				order_by_clause,
 				1,
 			)
@@ -591,7 +585,7 @@ func (tc *TmapCopied) SortBy(metric string) *TmapCopied {
 	return tc
 }
 
-func (tc *TmapCopied) DuringPeriod(period string) *TmapCopied {
+func (tc *TmapStarred) DuringPeriod(period string) *TmapStarred {
 	if period == "all" {
 		return tc
 	}
@@ -621,7 +615,7 @@ func (tc *TmapCopied) DuringPeriod(period string) *TmapCopied {
 	return tc
 }
 
-func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
+func (tc *TmapStarred) WithURLContaining(snippet string) *TmapStarred {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		tc.Text = strings.Replace(
 			tc.Text,
@@ -636,7 +630,7 @@ func (tc *TmapCopied) WithURLContaining(snippet string) *TmapCopied {
 	return tc
 }
 
-func (tc *TmapCopied) WithURLLacking(snippet string) *TmapCopied {
+func (tc *TmapStarred) WithURLLacking(snippet string) *TmapStarred {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		tc.Text = strings.Replace(
 			tc.Text,
@@ -661,17 +655,16 @@ func NewTmapTagged(login_name string) *TmapTagged {
 			Text: "WITH " + TMAP_BASE_CTES + ",\n" +
 				USER_CATS_CTE + "," +
 				POSSIBLE_USER_SUMMARY_CTE + ",\n" +
-				USER_COPIES_CTE +
+				USER_STARS_CTE +
 				TAGGED_FIELDS +
 				TMAP_FROM +
 				TAGGED_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				TAGGED_WHERE +
-				TMAP_ORDER_BY_LIKES,
-			// login_name used in UserCats, PossibleUserSummary, UserCopies, where
+				TMAP_ORDER_BY_STARS,
+			// login_name used in UserCats, PossibleUserSummary, UserStars, where
 			Args: []any{
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+				mutil.EARLIEST_STARRERS_LIMIT, 
 				login_name, 
 				login_name, 
 				login_name, 
@@ -702,7 +695,7 @@ var TAGGED_JOINS = strings.Replace(
 	"INNER JOIN UserCats uct ON l.id = uct.link_id",
 	1,
 ) + strings.Replace(
-	COPIED_JOIN,
+	STARRED_JOIN,
 	"INNER",
 	"LEFT",
 	1,
@@ -711,7 +704,7 @@ var TAGGED_JOINS = strings.Replace(
 const TAGGED_WHERE = `
 AND l.submitted_by != ?
 AND l.id NOT IN
-	(SELECT link_id FROM UserCopies)`
+	(SELECT link_id FROM UserStars)`
 
 func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 	if len(opts.Cats) > 0 {
@@ -756,8 +749,8 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 
 	tt.Text = strings.Replace(
 		tt.Text,
-		TMAP_ORDER_BY_LIKES,
-		match_clause + TMAP_ORDER_BY_LIKES,
+		TMAP_ORDER_BY_STARS,
+		match_clause + TMAP_ORDER_BY_STARS,
 		1,
 	)
 
@@ -773,20 +766,21 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 
 func (tt *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + ","+TMAP_AUTH_CTES,
-		TAGGED_FIELDS, TAGGED_FIELDS + TMAP_AUTH_FIELDS,
-		TAGGED_JOINS, TAGGED_JOINS + TMAP_AUTH_JOINS,
+		TMAP_BASE_CTES, TMAP_BASE_CTES + ","+TMAP_AUTH_CTE,
+		TAGGED_FIELDS, TAGGED_FIELDS + TMAP_AUTH_FIELD,
+		TAGGED_JOINS, TAGGED_JOINS + TMAP_AUTH_JOIN,
 	)
 	tt.Text = fields_replacer.Replace(tt.Text)
 
-	first_2_args := make([]any, 2)
-	copy(first_2_args, tt.Args[:2])
+	new_args := make([]any, 0, len(tt.Args)+1)
 
-	trailing_args := tt.Args[2:]
+	first_arg := tt.Args[0]
+	trailing_args := tt.Args[1:]
 
-	tt.Args = append(first_2_args, req_user_id, req_user_id)
-	tt.Args = append(tt.Args, trailing_args...)
+	new_args = append(new_args, first_arg, req_user_id)
+	new_args = append(new_args, trailing_args...)
 
+	tt.Args = new_args
 	return tt
 }
 
@@ -810,14 +804,14 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 }
 
 func (tt *TmapTagged) SortBy(metric string) *TmapTagged {
-	if metric != "" && metric != "rating" {
+	if metric != "" && metric != "stars" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
 			tt.Error = e.ErrInvalidSortByParams
 		} else {
 			tt.Text = strings.Replace(
 				tt.Text,
-				TMAP_ORDER_BY_LIKES,
+				TMAP_ORDER_BY_STARS,
 				order_by_clause,
 				1,
 			)
@@ -919,22 +913,21 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 	// Rebuild args with match_arg * 2 (once for PossibleUserCats CTE, once
 	// for GlobalCatsFTS CTE)
 
-	// TmapSubmitted args order: likers/copiers limit, likers/copiers limit, login_name, MATCH, login_name, MATCH, login_name
-	// TmapCopied args order: login_name, likers/copiers limit, likers/copiers limit,  login_name, MATCH, login_name, MATCH, login_name
+	// TmapSubmitted args order: starrers limit, starrers limit, login_name, MATCH, login_name, MATCH, login_name
+	// TmapStarred args order: login_name, starrers limit, starrers limit,  login_name, MATCH, login_name, MATCH, login_name
 
-	// (Only TmapCopied and TmapTagged contain USER_COPIES_CTE, and TmapTagged
-	// does not call this method, so can check for presence of USER_COPIES_CTE
-	// to determine whether TmapSubmitted or TmapCopied)
+	// (Only TmapStarred and TmapTagged contain USER_STARS_CTE, and TmapTagged
+	// does not call this method, so can check for presence of USER_STARS_CTE
+	// to determine whether TmapSubmitted or TmapStarred)
 
 	// 4th arg is login_name regardless
 	login_name := q.Args[3].(string)
 
-	// TmapCopied
-	if strings.Contains(q.Text, USER_COPIES_CTE) {
+	// TmapStarred
+	if strings.Contains(q.Text, USER_STARS_CTE) {
 		q.Args = []any{
 			login_name, 
-			mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
-			mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+			mutil.EARLIEST_STARRERS_LIMIT, 
 			login_name, 
 			match_arg, 
 			login_name, match_arg, 
@@ -943,8 +936,7 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 		// TmapSubmitted
 	} else {
 		q.Args = []any{
-			mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
-			mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+			mutil.EARLIEST_STARRERS_LIMIT, 
 			login_name, 
 			match_arg, 
 			login_name, 
@@ -970,8 +962,8 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 )`
 	q.Text = strings.Replace(
 		q.Text,
-		TMAP_ORDER_BY_LIKES,
-		and_clause + TMAP_ORDER_BY_LIKES,
+		TMAP_ORDER_BY_STARS,
+		and_clause + TMAP_ORDER_BY_STARS,
 		1,
 	)
 
@@ -1002,44 +994,23 @@ const TMAP_BASE_CTES = `SummaryCount AS (
     FROM Summaries
     GROUP BY link_id
 ),
-LikeCount AS (
-    SELECT link_id, COUNT(*) AS like_count
-    FROM "Link Likes"
+StarredCount AS (
+    SELECT link_id, COUNT(*) AS starred_count
+    FROM Stars
     GROUP BY link_id
 ),
-EarliestLikers AS (
+EarliestStarrers AS (
     SELECT 
         link_id,
-        GROUP_CONCAT(login_name, ', ') AS earliest_likers
+        GROUP_CONCAT(login_name, ', ') AS earliest_starrers
     FROM (
         SELECT 
-            ll.link_id,
+            s.link_id,
             u.login_name,
-            ROW_NUMBER() OVER (PARTITION BY ll.link_id ORDER BY ll.timestamp ASC) as row_num
-        FROM "Link Likes" ll
-        JOIN Users u ON ll.user_id = u.id
-		ORDER BY ll.timestamp ASC, u.login_name ASC
-    ) ranked
-    WHERE row_num <= ?
-    GROUP BY link_id
-),
-CopyCount AS (
-	SELECT link_id, COUNT(*) AS copy_count
-	FROM "Link Copies"
-	GROUP BY link_id
-),
-EarliestCopiers AS (
-    SELECT 
-        link_id,
-        GROUP_CONCAT(login_name, ', ') AS earliest_copiers
-    FROM (
-        SELECT 
-            lc.link_id,
-            u.login_name,
-            ROW_NUMBER() OVER (PARTITION BY lc.link_id ORDER BY lc.timestamp ASC) as row_num
-        FROM "Link Copies" lc
-        JOIN Users u ON lc.user_id = u.id
-		ORDER BY lc.timestamp ASC, u.login_name ASC
+            ROW_NUMBER() OVER (PARTITION BY s.link_id ORDER BY s.timestamp ASC) as row_num
+        FROM Stars s
+        JOIN Users u ON s.user_id = u.id
+		ORDER BY s.timestamp ASC, u.login_name ASC
     ) ranked
     WHERE row_num <= ?
     GROUP BY link_id
@@ -1075,10 +1046,10 @@ PossibleUserSummary AS (
 	WHERE u.login_name = ?
 )`
 
-const USER_COPIES_CTE = `UserCopies AS (
-    SELECT lc.link_id
-    FROM "Link Copies" lc
-    INNER JOIN Users u ON u.id = lc.user_id
+const USER_STARS_CTE = `UserStars AS (
+    SELECT s.link_id
+    FROM Stars s
+    INNER JOIN Users u ON u.id = s.user_id
     WHERE u.login_name = ?
 )`
 
@@ -1092,10 +1063,8 @@ SELECT
     COALESCE(puc.cats_from_user,0) AS cats_from_user,
     COALESCE(pus.user_summary, l.global_summary, '') AS summary,
     COALESCE(sc.summary_count, 0) AS summary_count,
-    COALESCE(lc.like_count, 0) AS like_count,
-	COALESCE(el.earliest_likers, '') AS earliest_likers,
-	COALESCE(cpc.copy_count, 0) AS copy_count,
-	COALESCE(ec.earliest_copiers, '') AS earliest_copiers,
+    COALESCE(stc.starred_count, 0) AS starred_count,
+	COALESCE(es.earliest_starrers, '') AS earliest_starrers,
 	COALESCE(clc.click_count, 0) AS click_count,
     COALESCE(tc.tag_count, 0) AS tag_count,
     COALESCE(l.img_file, '') AS img_file`
@@ -1105,10 +1074,8 @@ const TMAP_FROM = LINKS_FROM
 const TMAP_BASE_JOINS = `
 LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id
 LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
-LEFT JOIN LikeCount lc ON l.id = lc.link_id
-LEFT JOIN EarliestLikers el ON l.id = el.link_id
-LEFT JOIN CopyCount cpc ON l.id = cpc.link_id
-LEFT JOIN EarliestCopiers ec ON l.id = ec.link_id
+LEFT JOIN StarredCount stc ON l.id = stc.link_id
+LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
 LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
@@ -1116,16 +1083,15 @@ LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
 const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
 
 var tmap_order_by_clauses = map[string]string{
-	"rating": TMAP_ORDER_BY_LIKES,
+	"stars": TMAP_ORDER_BY_STARS,
 	"newest": TMAP_ORDER_BY_NEWEST,
 	"oldest": TMAP_ORDER_BY_OLDEST,
 	"clicks": TMAP_ORDER_BY_CLICKS,
 }
 
-const TMAP_ORDER_BY_LIKES = `
+const TMAP_ORDER_BY_STARS = `
 ORDER BY 
-	lc.like_count DESC, 
-	cpc.copy_count DESC,
+	stc.starred_count DESC, 
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, l.id DESC,
@@ -1135,8 +1101,7 @@ ORDER BY
 const TMAP_ORDER_BY_NEWEST = `
 ORDER BY 
 	l.submit_date DESC, 
-	lc.like_count DESC, 
-	cpc.copy_count DESC,
+	stc.starred_count DESC, 
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
@@ -1145,8 +1110,7 @@ ORDER BY
 const TMAP_ORDER_BY_OLDEST = `
 ORDER BY 
 	l.submit_date ASC, 
-	lc.like_count DESC, 
-	cpc.copy_count DESC,
+	stc.starred_count DESC, 
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
@@ -1155,31 +1119,22 @@ ORDER BY
 const TMAP_ORDER_BY_CLICKS = `
 ORDER BY 
 	clc.click_count DESC, 
-	lc.like_count DESC, 
-	cpc.copy_count DESC,
+	stc.starred_count DESC, 
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
 	l.id DESC;`
 
 // Authenticated
-const TMAP_AUTH_CTES = `
-IsLiked AS (
-	SELECT link_id, COUNT(*) AS is_liked
-	FROM "Link Likes"
+const TMAP_AUTH_CTE = `
+StarsAssigned AS (
+	SELECT link_id, num_stars AS stars_assigned
+	FROM Stars
 	WHERE user_id = ?
-	GROUP BY id
-),
-IsCopied AS (
-	SELECT link_id, COUNT(*) AS is_copied
-	FROM "Link Copies"
-	WHERE user_id = ?
-	GROUP BY id
+	GROUP BY link_id
 )`
 
-const TMAP_AUTH_FIELDS = `, 
-	COALESCE(is_liked,0) as is_liked, 
-	COALESCE(is_copied,0) as is_copied`
+const TMAP_AUTH_FIELD = `, 
+	COALESCE(sa.stars_assigned,0) AS stars_assigned`
 
-const TMAP_AUTH_JOINS = `
-	LEFT JOIN IsLiked il ON l.id = il.link_id
-	LEFT JOIN IsCopied ic ON l.id = ic.link_id`
+const TMAP_AUTH_JOIN = `
+	LEFT JOIN StarsAssigned sa ON l.id = sa.link_id`

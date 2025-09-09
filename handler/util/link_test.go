@@ -29,7 +29,7 @@ func TestPrepareLinksPage(t *testing.T) {
 			Valid:      true,
 		},
 		{
-			LinksSQL:   query.NewTopLinks().DuringPeriod("batman", "rating").Page(1),
+			LinksSQL:   query.NewTopLinks().DuringPeriod("batman", "stars").Page(1),
 			Options: &model.LinksPageOptions{
 				NSFW: true,
 			},
@@ -110,7 +110,7 @@ func TestPaginateLinks(t *testing.T) {
 func TestCountMergedCatSpellingVariants(t *testing.T) {
 	// no links; no merged cats
 	test_cat := "nonexistentcat"
-	links_sql := query.NewTopLinks().FromCats([]string{test_cat}).DuringPeriod("day", "rating").Page(1)
+	links_sql := query.NewTopLinks().FromCats([]string{test_cat}).DuringPeriod("day", "stars").Page(1)
 	links_page, err := ScanRawLinksPageData[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)

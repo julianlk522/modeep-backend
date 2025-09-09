@@ -22,7 +22,7 @@ func GetTotals(w http.ResponseWriter, r *http.Request) {
 		Scan(&totals.Links,
 			&totals.Clicks,
 			&totals.Contributors,
-			&totals.Likes,
+			&totals.LinksStarred,
 			&totals.Tags,
 			&totals.Summaries,
 		); err != nil {

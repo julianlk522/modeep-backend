@@ -43,10 +43,8 @@ func TestNewTopLinks(t *testing.T) {
 		{"cats"},
 		{"summary"},
 		{"summary_count"},
-		{"like_count"},
-		{"earliest_likers"},
-		{"copy_count"},
-		{"earliest_copiers"},
+		{"starred_count"},
+		{"earliest_starrers"},
 		{"click_count"},
 		{"tag_count"},
 		{"img_file"},
@@ -88,7 +86,7 @@ func TestFromCats(t *testing.T) {
 		defer rows.Close()
 
 		// With period
-		links_sql = links_sql.DuringPeriod("month", "rating")
+		links_sql = links_sql.DuringPeriod("month", "stars")
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tc.Valid && links_sql.Error == nil {
@@ -136,10 +134,8 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -164,7 +160,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 	// combined with other methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"flowers"}).
-		WithURLContaining("google", "rating").
+		WithURLContaining("google", "stars").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -185,16 +181,13 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
 			&pages,
-			&l.IsLiked,
-			&l.IsCopied,
+			&l.StarsAssigned,
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -235,10 +228,8 @@ func TestLinksWithURLLacking(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
@@ -263,7 +254,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 	// combined with other methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"umvc3"}).
-		WithURLLacking("google", "rating").
+		WithURLLacking("google", "stars").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -284,16 +275,13 @@ func TestLinksWithURLLacking(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
 			&pages,
-			&l.IsLiked,
-			&l.IsCopied,
+			&l.StarsAssigned,
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -362,7 +350,7 @@ func TestLinksSortBy(t *testing.T) {
 		Valid bool
 	}{
 		{"newest", true},
-		{"rating", true},
+		{"stars", true},
 		{"oldest", true},
 		{"clicks", true},
 		{"random", false},
@@ -397,10 +385,8 @@ func TestLinksSortBy(t *testing.T) {
 				&link.Cats,
 				&link.Summary,
 				&link.SummaryCount,
-				&link.LikeCount,
-				&link.EarliestLikers,
-				&link.CopyCount,
-				&link.EarliestCopiers,
+				&link.StarredCount,
+				&link.EarliestStarrers,
 				&link.ClickCount,
 				&link.TagCount,
 				&link.PreviewImgFilename,
@@ -418,13 +404,13 @@ func TestLinksSortBy(t *testing.T) {
 
 		// Verify results correctly sorted
 		switch ts.Sort {
-			case "rating":
-				var last_like_count int64 = 999 // arbitrary high number
+			case "stars":
+				var last_star_count int64 = 999 // arbitrary high number
 				for _, link := range links {
-					if link.LikeCount > last_like_count {
-						t.Fatalf("link like count %d above previous min %d", link.LikeCount, last_like_count)
-					} else if link.LikeCount < last_like_count {
-						last_like_count = link.LikeCount
+					if link.StarredCount > last_star_count {
+						t.Fatalf("link like count %d above previous min %d", link.StarredCount, last_star_count)
+					} else if link.StarredCount < last_star_count {
+						last_star_count = link.StarredCount
 					}
 				}
 			case "newest":
@@ -488,16 +474,13 @@ func TestAsSignedInUser(t *testing.T) {
 		{"cats"},
 		{"summary"},
 		{"summary_count"},
-		{"like_count"},
-		{"earliest_likers"},
-		{"copy_count"},
-		{"earliest_copiers"},
+		{"starred_count"},
+		{"earliest_starrers"},
 		{"click_count"},
 		{"tag_count"},
 		{"img_file"},
 		{"pages"},
-		{"is_liked"},
-		{"is_copied"},
+		{"stars_assigned"},
 	}
 
 	for i, col := range cols {
@@ -507,8 +490,7 @@ func TestAsSignedInUser(t *testing.T) {
 	}
 
 	var expected_args = []any{
-		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
-		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+		mutil.EARLIEST_STARRERS_LIMIT, 
 		TEST_USER_ID, 
 		TEST_USER_ID, 
 		LINKS_PAGE_LIMIT,
@@ -527,8 +509,7 @@ func TestAsSignedInUser(t *testing.T) {
 
 	// "go AND coding" modified to include plural/singular variations
 	expected_args = []any{
-		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
-		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
+		mutil.EARLIEST_STARRERS_LIMIT, 
 		TEST_USER_ID, 
 		TEST_USER_ID, 
 		WithOptionalPluralOrSingularForm("go") + " AND " + WithOptionalPluralOrSingularForm("coding"), 
@@ -554,7 +535,7 @@ func TestNSFW(t *testing.T) {
 	// Verify no conflict with other filter methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
-		DuringPeriod("year", "rating").
+		DuringPeriod("year", "stars").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest").
 		Page(1).
@@ -578,16 +559,13 @@ func TestNSFW(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
 			&pages,
-			&l.IsLiked,
-			&l.IsCopied,
+			&l.StarsAssigned,
 		); err != nil {
 			t.Fatal(err)
 		} else if l.ID != id_of_test_link_having_nsfw_cats {
@@ -617,16 +595,13 @@ func TestNSFW(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.LikeCount,
-			&l.EarliestLikers,
-			&l.CopyCount,
-			&l.EarliestCopiers,
+			&l.StarredCount,
+			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
 			&l.PreviewImgFilename,
 			&pages,
-			&l.IsLiked,
-			&l.IsCopied,
+			&l.StarsAssigned,
 		); err != nil {
 			t.Fatal(err)
 		} else if l.ID == id_of_test_link_having_nsfw_cats {
@@ -675,7 +650,7 @@ func TestPage(t *testing.T) {
 	// Verify no conflict with other methods
 	links_sql = NewTopLinks().
 		FromCats(test_cats).
-		DuringPeriod("year", "rating").
+		DuringPeriod("year", "stars").
 		SortBy("newest").
 		AsSignedInUser(TEST_USER_ID).
 		NSFW().
@@ -686,8 +661,7 @@ func TestPage(t *testing.T) {
 
 	// "go AND coding" modified to include plural/singular variations
 	var expected_args = []any{
-		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT, 
-		mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+		mutil.EARLIEST_STARRERS_LIMIT, 
 		TEST_USER_ID, 
 		TEST_USER_ID, 
 		WithOptionalPluralOrSingularForm("go") + " AND " + WithOptionalPluralOrSingularForm("coding"), 

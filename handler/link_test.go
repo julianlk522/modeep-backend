@@ -65,7 +65,7 @@ func TestGetLinks(t *testing.T) {
 			Params: map[string]string{
 				"cats":    "umvc3",
 				"period":  "month",
-				"sort_by": "rating",
+				"sort_by": "stars",
 			},
 			Page:  1,
 			Valid: true,
@@ -99,7 +99,7 @@ func TestGetLinks(t *testing.T) {
 			Page:   -1,
 			Valid:  true,
 		},
-		// fails: sort_by must be either "rating" or "newest"
+		// invalid sort_by
 		{
 			Params: map[string]string{"sort_by": "invalid"},
 			Page:   1,

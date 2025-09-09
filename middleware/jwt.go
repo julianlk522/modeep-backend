@@ -15,7 +15,7 @@ var claims_defaults = map[string]any{
 	"exp":        nil,
 }
 
-// Requests with no token are allowed, but getting isLiked / isCopied
+// Requests with no token are allowed, but getting StarsAssigned
 // on links requires a token
 func VerifierOptional(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler {
 	return VerifyOptional(ja, jwtauth.TokenFromHeader, jwtauth.TokenFromCookie)

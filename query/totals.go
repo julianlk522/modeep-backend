@@ -17,9 +17,9 @@ func NewTotals() *Query {
 			FROM Users
 			WHERE login_name != 'Auto Summary'
 		),
-		LikesTotal AS (
-			SELECT COUNT(*) AS like_count
-			FROM "Link Likes"
+		StarsTotal AS (
+			SELECT COUNT(*) AS starred_count
+			FROM Stars
 		),
 		TagsTotal AS (
 			SELECT COUNT(*) AS tag_count
@@ -34,7 +34,7 @@ func NewTotals() *Query {
 		FROM LinksTotal
 		CROSS JOIN ClicksTotal
 		CROSS JOIN ContributorsTotal
-		CROSS JOIN LikesTotal
+		CROSS JOIN StarsTotal
 		CROSS JOIN TagsTotal
 		CROSS JOIN SummariesTotal;`,
 		Args: []any{db.AUTO_SUMMARY_USER_ID},

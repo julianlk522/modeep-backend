@@ -83,14 +83,14 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	}
 
 	sort_params = params.Get("sort_by")
-	if sort_params != "" && sort_params != "rating" {
+	if sort_params != "" && sort_params != "stars" {
 		opts.SortBy = sort_params
 	}
 
 	section_params = strings.ToLower(params.Get("section"))
 	if section_params != "" {
 		switch section_params {
-		case "submitted", "copied", "tagged":
+		case "submitted", "starred", "tagged":
 			opts.Section = section_params
 		default:
 			return nil, e.ErrInvalidSectionParams
@@ -167,15 +167,15 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			}
 
 			links, err = ScanTmapLinks[T](submitted_sql.Query)
-		case "copied":
-			copied_sql := query.
-				NewTmapCopied(tmap_owner).
+		case "starred":
+			starred_sql := query.
+				NewTmapStarred(tmap_owner).
 				FromOptions(opts)
-			if copied_sql.Error != nil {
-				return nil, copied_sql.Error
+			if starred_sql.Error != nil {
+				return nil, starred_sql.Error
 			}
 
-			links, err = ScanTmapLinks[T](copied_sql.Query)
+			links, err = ScanTmapLinks[T](starred_sql.Query)
 		case "tagged":
 			tagged_sql := query.
 				NewTmapTagged(tmap_owner).
@@ -247,14 +247,14 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return nil, err
 		}
 
-		copied_sql := query.
-			NewTmapCopied(tmap_owner).
+		starred_sql := query.
+			NewTmapStarred(tmap_owner).
 			FromOptions(opts)
-		if copied_sql.Error != nil {
-			return nil, copied_sql.Error
+		if starred_sql.Error != nil {
+			return nil, starred_sql.Error
 		}
 
-		copied, err := ScanTmapLinks[T](copied_sql.Query)
+		starred, err := ScanTmapLinks[T](starred_sql.Query)
 		if err != nil {
 			return nil, err
 		}
@@ -271,7 +271,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return nil, err
 		}
 
-		links_from_all_sections := slices.Concat(*submitted, *copied, *tagged)
+		links_from_all_sections := slices.Concat(*submitted, *starred, *tagged)
 		if len(links_from_all_sections) == 0 {
 			return model.FilteredTmap[T]{
 				TmapSections:   &model.TmapSections[T]{},
@@ -291,9 +291,9 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			sections_with_more = append(sections_with_more, "submitted")
 			*submitted = (*submitted)[0:query.LINKS_PAGE_LIMIT]
 		}
-		if len(*copied) > query.LINKS_PAGE_LIMIT {
-			sections_with_more = append(sections_with_more, "copied")
-			*copied = (*copied)[0:query.LINKS_PAGE_LIMIT]
+		if len(*starred) > query.LINKS_PAGE_LIMIT {
+			sections_with_more = append(sections_with_more, "starred")
+			*starred = (*starred)[0:query.LINKS_PAGE_LIMIT]
 		}
 		if len(*tagged) > query.LINKS_PAGE_LIMIT {
 			sections_with_more = append(sections_with_more, "tagged")
@@ -302,7 +302,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		sections := &model.TmapSections[T]{
 			Submitted:        submitted,
-			Copied:           copied,
+			Starred:          starred,
 			Tagged:           tagged,
 			SectionsWithMore: sections_with_more,
 			Cats:             cat_counts,
@@ -369,10 +369,8 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 				&l.CatsFromUser,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.LikeCount,
-				&l.EarliestLikers,
-				&l.CopyCount,
-				&l.EarliestCopiers,
+				&l.StarredCount,
+				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename)
@@ -388,7 +386,7 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 
 		for rows.Next() {
 			l := model.TmapLinkSignedIn{}
-			err := rows.Scan(
+			if err := rows.Scan(
 				&l.ID,
 				&l.URL,
 				&l.SubmittedBy,
@@ -397,18 +395,15 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 				&l.CatsFromUser,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.LikeCount,
-				&l.EarliestLikers,
-				&l.CopyCount,
-				&l.EarliestCopiers,
+				&l.StarredCount,
+				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
 				&l.PreviewImgFilename,
 
-				// signed-in only properties
-				&l.IsLiked,
-				&l.IsCopied)
-			if err != nil {
+				// signed-in only
+				&l.StarsAssigned,
+			); err != nil {
 				return nil, err
 			}
 			signed_in_links = append(signed_in_links, l)

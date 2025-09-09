@@ -40,18 +40,18 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		PageParams       int
 		Valid            bool
 	}{
-		{TEST_LOGIN_NAME, TEST_USER_ID, "", "rating", false, "", 1, true},
-		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "rating", true, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_USER_ID, "", "stars", false, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "stars", true, "", 1, true},
 		{TEST_LOGIN_NAME, "", "", "newest", true, "", 1, true},
 		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3", "newest", true, "", 1, true},
 		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "oldest", false, "", 0, true},
-		{TEST_LOGIN_NAME, "", "", "rating", false, "", 10, true},
+		{TEST_LOGIN_NAME, "", "", "stars", false, "", 10, true},
 		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3,flowers", "oldest", true, "", 1, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "rating", false, "", 2, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "stars", false, "", 2, true},
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "", 1, true},
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "submitted", 4, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "copied", 0, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "clicks", true, "copied", 1, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "starred", 0, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "clicks", true, "starred", 1, true},
 		// "notasection" is invalid
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "notasection", 1, false},
 		// negative page is invalid
@@ -148,12 +148,12 @@ func TestScanTmapLinks(t *testing.T) {
 
 	for _, r := range test_requests {
 		submitted_sql := query.NewTmapSubmitted(r.LoginName)
-		copied_sql := query.NewTmapCopied(r.LoginName)
+		starred_sql := query.NewTmapStarred(r.LoginName)
 		tagged_sql := query.NewTmapTagged(r.LoginName)
 
 		if r.RequestingUserID != "" {
 			submitted_sql = submitted_sql.AsSignedInUser(r.RequestingUserID)
-			copied_sql = copied_sql.AsSignedInUser(r.RequestingUserID)
+			starred_sql = starred_sql.AsSignedInUser(r.RequestingUserID)
 			tagged_sql = tagged_sql.AsSignedInUser(r.RequestingUserID)
 
 			_, err := ScanTmapLinks[model.TmapLinkSignedIn](submitted_sql.Query)
@@ -163,10 +163,10 @@ func TestScanTmapLinks(t *testing.T) {
 					err,
 				)
 			}
-			_, err = ScanTmapLinks[model.TmapLinkSignedIn](copied_sql.Query)
+			_, err = ScanTmapLinks[model.TmapLinkSignedIn](starred_sql.Query)
 			if err != nil {
 				t.Fatalf(
-					"failed scanning tmap copied links (signed-in) with error: %s",
+					"failed scanning tmap starred links (signed-in) with error: %s",
 					err,
 				)
 			}
@@ -185,10 +185,10 @@ func TestScanTmapLinks(t *testing.T) {
 					err,
 				)
 			}
-			_, err = ScanTmapLinks[model.TmapLink](copied_sql.Query)
+			_, err = ScanTmapLinks[model.TmapLink](starred_sql.Query)
 			if err != nil {
 				t.Fatalf(
-					"failed scanning tmap copied links (no auth) with error: %s",
+					"failed scanning tmap starred links (no auth) with error: %s",
 					err,
 				)
 			}
@@ -217,7 +217,7 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 	case model.Tmap[model.TmapLink]:
 		all_links = slices.Concat(
 			*tmap.(model.Tmap[model.TmapLink]).Submitted,
-			*tmap.(model.Tmap[model.TmapLink]).Copied,
+			*tmap.(model.Tmap[model.TmapLink]).Starred,
 			*tmap.(model.Tmap[model.TmapLink]).Tagged,
 		)
 		l, ok := all_links.([]model.TmapLink)

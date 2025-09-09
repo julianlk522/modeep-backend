@@ -20,8 +20,7 @@ func NewTopLinks() *TopLinks {
 		Query: Query{
 			Text: links_base_query,
 			Args: []any{
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+				mutil.EARLIEST_STARRERS_LIMIT,
 				LINKS_PAGE_LIMIT,
 			},
 		},
@@ -128,7 +127,7 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 var num_wheres_in_links_base_query = strings.Count(links_base_query, "WHERE")
 
 func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks {
-	order_by_clause := LINKS_ORDER_BY_LIKES
+	order_by_clause := LINKS_ORDER_BY_STARS
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
@@ -163,7 +162,7 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 }
 
 func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
-	order_by_clause := LINKS_ORDER_BY_LIKES
+	order_by_clause := LINKS_ORDER_BY_STARS
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
@@ -208,7 +207,7 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 		return tl
 	}
 
-	order_by_clause := LINKS_ORDER_BY_LIKES
+	order_by_clause := LINKS_ORDER_BY_STARS
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
@@ -237,14 +236,14 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 }
 
 func (tl *TopLinks) SortBy(metric string) *TopLinks {
-	if metric != "" && metric != "rating" {
+	if metric != "" && metric != "stars" {
 		order_by_clause, ok := links_order_by_clauses[metric]
 		if !ok {
 			tl.Error = e.ErrInvalidSortByParams
 		} else {
 			tl.Text = strings.Replace(
 				tl.Text,
-				LINKS_ORDER_BY_LIKES,
+				LINKS_ORDER_BY_STARS,
 				order_by_clause,
 				1,
 			)
@@ -256,22 +255,18 @@ func (tl *TopLinks) SortBy(metric string) *TopLinks {
 
 func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
 	auth_replacer := strings.NewReplacer(
-		// Add auth CTEs
-		LINKS_BASE_CTES, LINKS_BASE_CTES+LINKS_AUTH_CTES,
-		// Add auth fields
-		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS+LINKS_AUTH_FIELDS,
-		// Add auth joins
-		LINKS_BASE_JOINS, LINKS_BASE_JOINS+LINKS_AUTH_JOINS,
+		LINKS_BASE_CTES, LINKS_BASE_CTES+LINKS_AUTH_CTE,
+		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS+LINKS_AUTH_FIELD,
+		LINKS_BASE_JOINS, LINKS_BASE_JOINS+LINKS_AUTH_JOIN,
 	)
 	tl.Text = auth_replacer.Replace(tl.Text)
 
-	// insert req_user_id * 2 between 2nd and 3rd args (indexes 1 and 2)
-	first_2_args := tl.Args[:2]
-	trailing_args := tl.Args[2:]
+	first_arg := tl.Args[0]
+	trailing_args := tl.Args[1:]
 
 	new_args := make([]any, 0, len(tl.Args)+2)
-	new_args = append(new_args, first_2_args...)
-	new_args = append(new_args, req_user_id, req_user_id)
+	new_args = append(new_args, first_arg)
+	new_args = append(new_args, req_user_id)
 	new_args = append(new_args, trailing_args...)
 
 	tl.Args = new_args
@@ -279,27 +274,19 @@ func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
 	return tl
 }
 
-const LINKS_AUTH_CTES = `,
-IsLiked AS (
-	SELECT link_id, COUNT(*) AS is_liked
-	FROM "Link Likes"
-	WHERE user_id = ?
-	GROUP BY link_id
-),
-IsCopied AS (
-	SELECT link_id, COUNT(*) AS is_copied
-	FROM "Link Copies"
+const LINKS_AUTH_CTE = `,
+StarsAssigned AS (
+	SELECT link_id, num_stars AS stars_assigned
+	FROM Stars
 	WHERE user_id = ?
 	GROUP BY link_id
 )`
 
-const LINKS_AUTH_FIELDS = `,
-	COALESCE(il.is_liked,0) AS is_liked,
-	COALESCE(ic.is_copied,0) AS is_copied`
+const LINKS_AUTH_FIELD = `,
+	COALESCE(sa.stars_assigned,0) AS stars_assigned`
 
-const LINKS_AUTH_JOINS = `
-	LEFT JOIN IsLiked il ON l.id = il.link_id
-	LEFT JOIN IsCopied ic ON l.id = ic.link_id`
+const LINKS_AUTH_JOIN = `
+	LEFT JOIN StarsAssigned sa ON l.id = sa.link_id`
 
 func (tl *TopLinks) NSFW() *TopLinks {
 	has_subsequent_clause := strings.Contains(
@@ -356,10 +343,10 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 	SELECT count(l.id)`
 
 	// replace either base or auth-enabled fields
-	// it should be one or the other
+	// one will work, other will no-op
 	tl.Text = strings.Replace(
 		tl.Text,
-		LINKS_BASE_FIELDS + LINKS_AUTH_FIELDS,
+		LINKS_BASE_FIELDS + LINKS_AUTH_FIELD,
 		count_select,
 		1,
 	)
@@ -417,44 +404,23 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 	return tl
 }
 
-const LINKS_BASE_CTES = `WITH LikeCount AS (
-    SELECT link_id, COUNT(*) AS like_count 
-    FROM "Link Likes"
+const LINKS_BASE_CTES = `WITH StarredCount AS (
+    SELECT link_id, COUNT(*) AS starred_count 
+    FROM Stars
     GROUP BY link_id
 ),
-EarliestLikers AS (
+EarliestStarrers AS (
     SELECT 
         link_id,
-        GROUP_CONCAT(login_name, ', ') AS earliest_likers
+        GROUP_CONCAT(login_name, ', ') AS earliest_starrers
     FROM (
         SELECT 
-            ll.link_id,
+            s.link_id,
             u.login_name,
-            ROW_NUMBER() OVER (PARTITION BY ll.link_id ORDER BY ll.timestamp ASC) as row_num
-        FROM "Link Likes" ll
-        JOIN Users u ON ll.user_id = u.id
-		ORDER BY ll.timestamp ASC, u.login_name ASC
-    ) ranked
-    WHERE row_num <= ?
-    GROUP BY link_id
-),
-CopyCount AS (
-	SELECT link_id, COUNT(*) AS copy_count
-	FROM "Link Copies"
-	GROUP BY link_id
-),
-EarliestCopiers AS (
-    SELECT 
-        link_id,
-        GROUP_CONCAT(login_name, ', ') AS earliest_copiers
-    FROM (
-        SELECT 
-            lc.link_id,
-            u.login_name,
-            ROW_NUMBER() OVER (PARTITION BY lc.link_id ORDER BY lc.timestamp ASC) as row_num
-        FROM "Link Copies" lc
-        JOIN Users u ON lc.user_id = u.id
-		ORDER BY lc.timestamp ASC, u.login_name ASC
+            ROW_NUMBER() OVER (PARTITION BY s.link_id ORDER BY s.timestamp ASC) as row_num
+        FROM Stars s
+        JOIN Users u ON s.user_id = u.id
+		ORDER BY s.timestamp ASC, u.login_name ASC
     ) ranked
     WHERE row_num <= ?
     GROUP BY link_id
@@ -484,10 +450,8 @@ SELECT
     COALESCE(l.global_cats, '') AS cats, 
     COALESCE(l.global_summary, '') AS summary, 
     COALESCE(sc.summary_count, 0) AS summary_count,
-    COALESCE(lc.like_count, 0) AS like_count,
-	COALESCE(el.earliest_likers, '') AS earliest_likers,
-	COALESCE(cpc.copy_count, 0) AS copy_count,
-	COALESCE(ec.earliest_copiers, '') AS earliest_copiers,
+    COALESCE(stc.starred_count, 0) AS starred_count,
+	COALESCE(es.earliest_starrers, '') AS earliest_starrers,
 	COALESCE(clc.click_count, 0) AS click_count, 
     COALESCE(tc.tag_count, 0) AS tag_count,
     COALESCE(l.img_file, '') AS img_file,
@@ -500,10 +464,8 @@ FROM
 	Links l`
 
 const LINKS_BASE_JOINS = `
-LEFT JOIN LikeCount lc ON l.id = lc.link_id
-LEFT JOIN EarliestLikers el ON l.id = el.link_id
-LEFT JOIN CopyCount cpc ON l.id = cpc.link_id
-LEFT JOIN EarliestCopiers ec ON l.id = ec.link_id
+LEFT JOIN StarredCount stc ON l.id = stc.link_id
+LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
 LEFT JOIN SummaryCount sc ON l.id = sc.link_id
@@ -515,16 +477,15 @@ WHERE l.id NOT IN (
 )`
 
 var links_order_by_clauses = map[string]string{
-	"rating": LINKS_ORDER_BY_LIKES,
+	"stars": LINKS_ORDER_BY_STARS,
 	"newest": LINKS_ORDER_BY_NEWEST,
 	"oldest": LINKS_ORDER_BY_OLDEST,
 	"clicks": LINKS_ORDER_BY_CLICKS,
 }
 
-const LINKS_ORDER_BY_LIKES = ` 
+const LINKS_ORDER_BY_STARS = ` 
 ORDER BY 
-    like_count DESC, 
-	copy_count DESC,
+    starred_count DESC, 
 	click_count DESC,
 	tag_count DESC,
     summary_count DESC, 
@@ -534,8 +495,7 @@ ORDER BY
 const LINKS_ORDER_BY_NEWEST = `
 ORDER BY 
 	submit_date DESC, 
-	like_count DESC, 
-	copy_count DESC,
+	starred_count DESC, 
 	click_count DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
@@ -544,8 +504,7 @@ ORDER BY
 const LINKS_ORDER_BY_OLDEST = `
 ORDER BY 
 	submit_date ASC, 
-	like_count DESC, 
-	copy_count DESC,
+	starred_count DESC, 
 	click_count DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
@@ -554,8 +513,7 @@ ORDER BY
 const LINKS_ORDER_BY_CLICKS = `
 ORDER BY 
 	click_count DESC, 
-	like_count DESC, 
-	copy_count DESC,
+	starred_count DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
 	l.id DESC`
@@ -568,7 +526,7 @@ var links_base_query = LINKS_BASE_CTES +
 	LINKS_FROM +
 	LINKS_BASE_JOINS +
 	LINKS_NO_NSFW_CATS_WHERE +
-	LINKS_ORDER_BY_LIKES +
+	LINKS_ORDER_BY_STARS +
 	LINKS_LIMIT
 
 // SingleLink used on top Tags + Summary pages for a link
@@ -585,8 +543,7 @@ func NewSingleLink(link_id string) *SingleLink {
 				SINGLE_LINK_BASE_JOINS + ";",
 			Args: []any{
 				link_id,
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
-				mutil.EARLIEST_LIKERS_AND_COPIERS_LIMIT,
+				mutil.EARLIEST_STARRERS_LIMIT,
 			},
 		},
 	}
@@ -612,48 +569,25 @@ SummaryCount AS (
     FROM Summaries
     GROUP BY link_id
 ),
-LikeCount AS (
+StarredCount AS (
     SELECT 
         link_id, 
-        COUNT(*) as like_count
-    FROM "Link Likes"
+        COUNT(*) as starred_count
+    FROM Stars
     GROUP BY link_id
 ),
-EarliestLikers AS (
+EarliestStarrers AS (
     SELECT 
         link_id,
-        GROUP_CONCAT(login_name, ', ') AS earliest_likers
+        GROUP_CONCAT(login_name, ', ') AS earliest_starrers
     FROM (
         SELECT 
-            ll.link_id,
+            s.link_id,
             u.login_name,
-            ROW_NUMBER() OVER (PARTITION BY ll.link_id ORDER BY ll.timestamp ASC, u.login_name ASC) as row_num
-        FROM "Link Likes" ll
-        JOIN Users u ON ll.user_id = u.id
-		ORDER BY ll.timestamp ASC, u.login_name ASC
-    ) ranked
-    WHERE row_num <= ?
-    GROUP BY link_id
-),
-CopyCount AS (
-    SELECT 
-        link_id, 
-        COUNT(*) as copy_count
-    FROM "Link Copies"
-    GROUP BY link_id
-),
-EarliestCopiers AS (
-    SELECT 
-        link_id,
-        GROUP_CONCAT(login_name, ', ') AS earliest_copiers
-    FROM (
-        SELECT 
-            lc.link_id,
-            u.login_name,
-            ROW_NUMBER() OVER (PARTITION BY lc.link_id ORDER BY lc.timestamp ASC, u.login_name ASC) as row_num
-        FROM "Link Copies" lc
-        JOIN Users u ON lc.user_id = u.id
-		ORDER BY lc.timestamp ASC, u.login_name ASC
+            ROW_NUMBER() OVER (PARTITION BY s.link_id ORDER BY s.timestamp ASC, u.login_name ASC) as row_num
+        FROM Stars s
+        JOIN Users u ON s.user_id = u.id
+		ORDER BY s.timestamp ASC, u.login_name ASC
     ) ranked
     WHERE row_num <= ?
     GROUP BY link_id
@@ -682,10 +616,8 @@ SELECT
     b.cats,
     b.summary,
     COALESCE(sc.summary_count, 0) as summary_count,
-    COALESCE(lc.like_count, 0) as like_count,
-    COALESCE(el.earliest_likers, "") as earliest_likers,
-    COALESCE(cc.copy_count, 0) as copy_count,
-	COALESCE(ec.earliest_copiers, "") as earliest_copiers,
+    COALESCE(stc.starred_count, 0) as starred_count,
+    COALESCE(es.earliest_starrers, "") as earliest_starrers,
     COALESCE(ckc.click_count, 0) as click_count,
     COALESCE(tc.tag_count, 0) as tag_count,
     b.img_file`
@@ -695,10 +627,8 @@ FROM Base b`
 
 const SINGLE_LINK_BASE_JOINS = `
 LEFT JOIN SummaryCount sc ON sc.link_id = b.link_id
-LEFT JOIN LikeCount lc ON lc.link_id = b.link_id
-LEFT JOIN EarliestLikers el ON el.link_id = b.link_id
-LEFT JOIN CopyCount cc ON cc.link_id = b.link_id
-LEFT JOIN EarliestCopiers ec ON ec.link_id = b.link_id
+LEFT JOIN StarredCount stc ON stc.link_id = b.link_id
+LEFT JOIN EarliestStarrers es ON es.link_id = b.link_id
 LEFT JOIN ClickCount ckc ON ckc.link_id = b.link_id
 LEFT JOIN TagCount tc ON tc.link_id = b.link_id`
 
@@ -706,21 +636,21 @@ func (sl *SingleLink) AsSignedInUser(user_id string) *SingleLink {
 	sl.Text = strings.Replace(
 		sl.Text,
 		SINGLE_LINK_BASE_CTES,
-		SINGLE_LINK_BASE_CTES + SINGLE_LINK_AUTH_CTES,
+		SINGLE_LINK_BASE_CTES + SINGLE_LINK_AUTH_CTE,
 		1,
 	)
 
 	sl.Text = strings.Replace(
 		sl.Text,
 		SINGLE_LINK_BASE_FIELDS,
-		SINGLE_LINK_BASE_FIELDS + SINGLE_LINK_AUTH_FIELDS,
+		SINGLE_LINK_BASE_FIELDS + SINGLE_LINK_AUTH_FIELD,
 		1,
 	)
 
 	sl.Text = strings.Replace(
 		sl.Text,
 		SINGLE_LINK_BASE_JOINS,
-		SINGLE_LINK_BASE_JOINS + SINGLE_LINK_AUTH_JOINS,
+		SINGLE_LINK_BASE_JOINS + SINGLE_LINK_AUTH_JOIN,
 		1,
 	)
 
@@ -729,28 +659,18 @@ func (sl *SingleLink) AsSignedInUser(user_id string) *SingleLink {
 	return sl
 }
 
-const SINGLE_LINK_AUTH_CTES = `,
-IsLiked AS (
+const SINGLE_LINK_AUTH_CTE = `,
+StarsAssigned AS (
     SELECT 
         link_id,
-        COUNT(*) as is_liked
-    FROM "Link Likes"
-    WHERE user_id = ?
-    GROUP BY link_id
-),
-IsCopied AS (
-    SELECT 
-        link_id,
-        COUNT(*) as is_copied
-    FROM "Link Copies"
+        num_stars as stars_assigned
+    FROM Stars
     WHERE user_id = ?
     GROUP BY link_id
 )`
 
-const SINGLE_LINK_AUTH_FIELDS = `,
-COALESCE(il.is_liked, 0) as is_liked,
-COALESCE(ic.is_copied, 0) as is_copied`
+const SINGLE_LINK_AUTH_FIELD = `,
+COALESCE(sa.stars_assigned, 0) as stars_assigned`
 
-const SINGLE_LINK_AUTH_JOINS = `
-LEFT JOIN IsLiked il ON il.link_id = b.link_id
-LEFT JOIN IsCopied ic ON ic.link_id = b.link_id`
+const SINGLE_LINK_AUTH_JOIN = `
+LEFT JOIN StarsAssigned sa ON sa.stars_assigned = b.link_id`

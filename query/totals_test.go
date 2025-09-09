@@ -15,7 +15,7 @@ func TestNewTotals(t *testing.T) {
 		Scan(&totals.Links,
 			&totals.Clicks,
 			&totals.Contributors,
-			&totals.Likes,
+			&totals.LinksStarred,
 			&totals.Tags,
 			&totals.Summaries,
 		); err != nil {
