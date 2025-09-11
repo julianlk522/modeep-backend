@@ -25,7 +25,7 @@ type Link struct {
 	Cats               string
 	Summary            string
 	SummaryCount       int
-	StarredCount       int64
+	TimesStarred       int64
 	EarliestStarrers   string
 	ClickCount         int64
 	TagCount           int

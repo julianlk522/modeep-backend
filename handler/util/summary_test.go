@@ -60,9 +60,9 @@ func TestBuildSummaryPageForLink(t *testing.T) {
 			TEST_LINK_ID).Scan(&stc)
 
 		if err != nil {
-			t.Fatalf("failed to get link starred_count: %s", err)
-		} else if stc != summary_page.Link.StarredCount {
-			t.Fatalf("got link like count %d, want %d", stc, summary_page.Link.StarredCount)
+			t.Fatalf("failed to get link times_starred: %s", err)
+		} else if stc != summary_page.Link.TimesStarred {
+			t.Fatalf("got link like count %d, want %d", stc, summary_page.Link.TimesStarred)
 		}
 
 		// Verify tag count

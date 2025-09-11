@@ -404,8 +404,8 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 	return tl
 }
 
-const LINKS_BASE_CTES = `WITH StarredCount AS (
-    SELECT link_id, COUNT(*) AS starred_count 
+const LINKS_BASE_CTES = `WITH TimesStarred AS (
+    SELECT link_id, COUNT(*) AS times_starred 
     FROM Stars
     GROUP BY link_id
 ),
@@ -450,7 +450,7 @@ SELECT
     COALESCE(l.global_cats, '') AS cats, 
     COALESCE(l.global_summary, '') AS summary, 
     COALESCE(sc.summary_count, 0) AS summary_count,
-    COALESCE(stc.starred_count, 0) AS starred_count,
+    COALESCE(ts.times_starred, 0) AS times_starred,
 	COALESCE(es.earliest_starrers, '') AS earliest_starrers,
 	COALESCE(clc.click_count, 0) AS click_count, 
     COALESCE(tc.tag_count, 0) AS tag_count,
@@ -464,7 +464,7 @@ FROM
 	Links l`
 
 const LINKS_BASE_JOINS = `
-LEFT JOIN StarredCount stc ON l.id = stc.link_id
+LEFT JOIN TimesStarred ts ON l.id = ts.link_id
 LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
@@ -485,7 +485,7 @@ var links_order_by_clauses = map[string]string{
 
 const LINKS_ORDER_BY_STARS = ` 
 ORDER BY 
-    starred_count DESC, 
+    times_starred DESC, 
 	click_count DESC,
 	tag_count DESC,
     summary_count DESC, 
@@ -495,7 +495,7 @@ ORDER BY
 const LINKS_ORDER_BY_NEWEST = `
 ORDER BY 
 	submit_date DESC, 
-	starred_count DESC, 
+	times_starred DESC, 
 	click_count DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
@@ -504,7 +504,7 @@ ORDER BY
 const LINKS_ORDER_BY_OLDEST = `
 ORDER BY 
 	submit_date ASC, 
-	starred_count DESC, 
+	times_starred DESC, 
 	click_count DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
@@ -513,7 +513,7 @@ ORDER BY
 const LINKS_ORDER_BY_CLICKS = `
 ORDER BY 
 	click_count DESC, 
-	starred_count DESC, 
+	times_starred DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
 	l.id DESC`
@@ -569,10 +569,10 @@ SummaryCount AS (
     FROM Summaries
     GROUP BY link_id
 ),
-StarredCount AS (
+TimesStarred AS (
     SELECT 
         link_id, 
-        COUNT(*) as starred_count
+        COUNT(*) as times_starred
     FROM Stars
     GROUP BY link_id
 ),
@@ -616,7 +616,7 @@ SELECT
     b.cats,
     b.summary,
     COALESCE(sc.summary_count, 0) as summary_count,
-    COALESCE(stc.starred_count, 0) as starred_count,
+    COALESCE(ts.times_starred, 0) as times_starred,
     COALESCE(es.earliest_starrers, "") as earliest_starrers,
     COALESCE(ckc.click_count, 0) as click_count,
     COALESCE(tc.tag_count, 0) as tag_count,
@@ -627,7 +627,7 @@ FROM Base b`
 
 const SINGLE_LINK_BASE_JOINS = `
 LEFT JOIN SummaryCount sc ON sc.link_id = b.link_id
-LEFT JOIN StarredCount stc ON stc.link_id = b.link_id
+LEFT JOIN TimesStarred ts ON ts.link_id = b.link_id
 LEFT JOIN EarliestStarrers es ON es.link_id = b.link_id
 LEFT JOIN ClickCount ckc ON ckc.link_id = b.link_id
 LEFT JOIN TagCount tc ON tc.link_id = b.link_id`

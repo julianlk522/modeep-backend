@@ -18,7 +18,7 @@ func NewTotals() *Query {
 			WHERE login_name != 'Auto Summary'
 		),
 		StarsTotal AS (
-			SELECT COUNT(*) AS starred_count
+			SELECT COUNT(*) AS times_starred
 			FROM Stars
 		),
 		TagsTotal AS (

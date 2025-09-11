@@ -994,8 +994,8 @@ const TMAP_BASE_CTES = `SummaryCount AS (
     FROM Summaries
     GROUP BY link_id
 ),
-StarredCount AS (
-    SELECT link_id, COUNT(*) AS starred_count
+TimesStarred AS (
+    SELECT link_id, COUNT(*) AS times_starred
     FROM Stars
     GROUP BY link_id
 ),
@@ -1063,7 +1063,7 @@ SELECT
     COALESCE(puc.cats_from_user,0) AS cats_from_user,
     COALESCE(pus.user_summary, l.global_summary, '') AS summary,
     COALESCE(sc.summary_count, 0) AS summary_count,
-    COALESCE(stc.starred_count, 0) AS starred_count,
+    COALESCE(ts.times_starred, 0) AS times_starred,
 	COALESCE(es.earliest_starrers, '') AS earliest_starrers,
 	COALESCE(clc.click_count, 0) AS click_count,
     COALESCE(tc.tag_count, 0) AS tag_count,
@@ -1074,7 +1074,7 @@ const TMAP_FROM = LINKS_FROM
 const TMAP_BASE_JOINS = `
 LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id
 LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
-LEFT JOIN StarredCount stc ON l.id = stc.link_id
+LEFT JOIN TimesStarred ts ON l.id = ts.link_id
 LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
@@ -1091,7 +1091,7 @@ var tmap_order_by_clauses = map[string]string{
 
 const TMAP_ORDER_BY_STARS = `
 ORDER BY 
-	stc.starred_count DESC, 
+	ts.times_starred DESC, 
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, l.id DESC,
@@ -1101,7 +1101,7 @@ ORDER BY
 const TMAP_ORDER_BY_NEWEST = `
 ORDER BY 
 	l.submit_date DESC, 
-	stc.starred_count DESC, 
+	ts.times_starred DESC, 
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
@@ -1110,7 +1110,7 @@ ORDER BY
 const TMAP_ORDER_BY_OLDEST = `
 ORDER BY 
 	l.submit_date ASC, 
-	stc.starred_count DESC, 
+	ts.times_starred DESC, 
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
@@ -1119,7 +1119,7 @@ ORDER BY
 const TMAP_ORDER_BY_CLICKS = `
 ORDER BY 
 	clc.click_count DESC, 
-	stc.starred_count DESC, 
+	ts.times_starred DESC, 
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
 	l.id DESC;`

@@ -43,7 +43,7 @@ func TestNewTopLinks(t *testing.T) {
 		{"cats"},
 		{"summary"},
 		{"summary_count"},
-		{"starred_count"},
+		{"times_starred"},
 		{"earliest_starrers"},
 		{"click_count"},
 		{"tag_count"},
@@ -134,7 +134,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -181,7 +181,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -228,7 +228,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -275,7 +275,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -385,7 +385,7 @@ func TestLinksSortBy(t *testing.T) {
 				&link.Cats,
 				&link.Summary,
 				&link.SummaryCount,
-				&link.StarredCount,
+				&link.TimesStarred,
 				&link.EarliestStarrers,
 				&link.ClickCount,
 				&link.TagCount,
@@ -407,10 +407,10 @@ func TestLinksSortBy(t *testing.T) {
 			case "stars":
 				var last_star_count int64 = 999 // arbitrary high number
 				for _, link := range links {
-					if link.StarredCount > last_star_count {
-						t.Fatalf("link like count %d above previous min %d", link.StarredCount, last_star_count)
-					} else if link.StarredCount < last_star_count {
-						last_star_count = link.StarredCount
+					if link.TimesStarred > last_star_count {
+						t.Fatalf("link like count %d above previous min %d", link.TimesStarred, last_star_count)
+					} else if link.TimesStarred < last_star_count {
+						last_star_count = link.TimesStarred
 					}
 				}
 			case "newest":
@@ -474,7 +474,7 @@ func TestAsSignedInUser(t *testing.T) {
 		{"cats"},
 		{"summary"},
 		{"summary_count"},
-		{"starred_count"},
+		{"times_starred"},
 		{"earliest_starrers"},
 		{"click_count"},
 		{"tag_count"},
@@ -557,7 +557,7 @@ func TestNSFW(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -593,7 +593,7 @@ func TestNSFW(t *testing.T) {
 			&l.Cats,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,

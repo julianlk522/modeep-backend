@@ -111,7 +111,7 @@ func TestTmapNSFWLinksCountStarredOnly(t *testing.T) {
 	}
 
 	var expected_count int
-	nsfw_starred_links_sql := `SELECT count(*) as starred_count
+	nsfw_starred_links_sql := `SELECT count(*) as times_starred
 		FROM Stars s
 		LEFT JOIN Users u ON u.id = s.user_id
 		LEFT JOIN Links l ON l.id = s.link_id
@@ -373,7 +373,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -427,7 +427,7 @@ func TestTmapSubmittedFromCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -466,7 +466,7 @@ func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -498,7 +498,7 @@ func TestTmapSubmittedNSFW(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -558,7 +558,7 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 				&l.CatsFromUser,
 				&l.Summary,
 				&l.SummaryCount,
-				&l.StarredCount,
+				&l.TimesStarred,
 				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
@@ -589,10 +589,10 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 			case "stars":
 				var last_star_count int64 = 999 // arbitrary high number
 				for _, link := range links {
-					if link.StarredCount > last_star_count {
-						t.Fatalf("link like count %d above previous min %d", link.StarredCount, last_star_count)
-					} else if link.StarredCount < last_star_count {
-						last_star_count = link.StarredCount
+					if link.TimesStarred > last_star_count {
+						t.Fatalf("link like count %d above previous min %d", link.TimesStarred, last_star_count)
+					} else if link.TimesStarred < last_star_count {
+						last_star_count = link.TimesStarred
 					}
 				}
 			case "oldest":
@@ -643,7 +643,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -670,7 +670,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -727,7 +727,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -780,7 +780,7 @@ func TestTmapSubmittedWithURLContaining(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -822,7 +822,7 @@ func TestNewTmapStarred(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -873,7 +873,7 @@ func TestTmapStarredFromCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -926,7 +926,7 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1011,7 +1011,7 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1058,7 +1058,7 @@ func TestTmapStarredNSFW(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1095,7 +1095,7 @@ func TestTmapStarredDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1125,7 +1125,7 @@ func TestTmapStarredDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1158,7 +1158,7 @@ func TestTmapStarredDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1178,7 +1178,7 @@ func TestTmapStarredDuringPeriod(t *testing.T) {
 func TestTmapStarredWithURLContaining(t *testing.T) {
 	url_snippet := "coding" 
 	var expected_count int
-	expected_count_sql := `SELECT count(*) as starred_count
+	expected_count_sql := `SELECT count(*) as times_starred
 		FROM Stars s
 		LEFT JOIN Users u ON u.id = s.user_id
 		LEFT JOIN Links l ON l.id = s.link_id
@@ -1212,7 +1212,7 @@ func TestTmapStarredWithURLContaining(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1253,7 +1253,7 @@ func TestNewTmapTagged(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1302,7 +1302,7 @@ func TestTmapTaggedFromCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1355,7 +1355,7 @@ func TestTmapTaggedAsSignedInUser(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1388,7 +1388,7 @@ func TestTmapTaggedNSFW(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1425,7 +1425,7 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1455,7 +1455,7 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1488,7 +1488,7 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1561,7 +1561,7 @@ func TestTmapTaggedWithURLContaining(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1605,7 +1605,7 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -1641,7 +1641,7 @@ func TestFromUserOrGlobalCats(t *testing.T) {
 			&l.CatsFromUser,
 			&l.Summary,
 			&l.SummaryCount,
-			&l.StarredCount,
+			&l.TimesStarred,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
