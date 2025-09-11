@@ -505,3 +505,12 @@ func UserHasStarredLink(user_id string, link_id string) bool {
 
 	return err == nil && l.Valid
 }
+
+func GetUsersStarsForLink(user_id string, link_id string) uint8 {
+	var stars uint8
+	if err := db.Client.QueryRow(`SELECT num_stars FROM Stars WHERE user_id = ? AND link_id = ?;`, user_id, link_id).Scan(&stars); err != nil {
+		log.Printf("Could not get stars for link %s: %s", link_id, err)
+		return 0
+	}
+	return stars
+}

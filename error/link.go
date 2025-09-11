@@ -13,6 +13,7 @@ var (
 	ErrInvalidNSFWParams   error = errors.New("invalid NSFW params provided")
 	ErrInvalidSortByParams error = errors.New("invalid sort_by params provided")
 	ErrInvalidStars        error = errors.New("invalid number of stars provided")
+	ErrSameNumberOfStars   error = errors.New("invalid number of stars provided: same as before")
 	ErrNoLinkID            error = errors.New("no link ID provided")
 	ErrNoLinkWithID        error = errors.New("no link found with given ID")
 	ErrNoCats              error = errors.New("no cats provided")

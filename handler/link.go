@@ -369,43 +369,44 @@ func StarLink(w http.ResponseWriter, r *http.Request) {
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 
 	switch request.Stars {
-		case "0":
-			// Unstar
-			if !util.UserHasStarredLink(req_user_id, link_id) {
-				render.Render(w, r, e.ErrForbidden(e.ErrLinkNotStarred))
-				return
-			}
+		case 0:
+			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidStars))
+			return
 
-			if _, err := db.Client.Exec(
-				`DELETE FROM "Stars" WHERE link_id = ? AND user_id = ?;`,
-				link_id,
-				req_user_id,
-			); err != nil {
-				log.Fatal(err)
-			}
-
-			w.WriteHeader(http.StatusNoContent)
-
-		case "1", "2", "3":
+		case 1, 2, 3:
 			// Add star
-			if util.UserHasStarredLink(req_user_id, link_id) {
-				render.Render(w, r, e.ErrInvalidRequest(e.ErrLinkAlreadyStarred))
-				return
-			}
+			// (if thus unstarred, add a new row
+			// if already starred, update in place)
+			if !util.UserHasStarredLink(req_user_id, link_id) {
+				star_id := uuid.New().String()
+				if _, err := db.Client.Exec(
+					`INSERT INTO "Stars" VALUES(?,?,?,?,?);`,
+					star_id,
+					link_id,
+					req_user_id,
+					request.Stars,
+					mutil.NEW_LONG_TIMESTAMP(),
+					
+				); err != nil {
+					render.Render(w, r, e.Err500(err))
+				}
+			} else {
+				if current_stars := util.GetUsersStarsForLink(req_user_id, link_id);current_stars == request.Stars {
+					render.Render(w, r, e.ErrUnprocessable(e.ErrSameNumberOfStars))
+					return
+				}
 
-			star_id := uuid.New().String()
-			if _, err := db.Client.Exec(
-				`INSERT INTO "Stars" VALUES(?,?,?,?,?);`,
-				star_id,
-				link_id,
-				req_user_id,
-				request.Stars,
-				mutil.NEW_LONG_TIMESTAMP(),
-				
-			); err != nil {
-				render.Render(w, r, e.Err500(err))
+				if _, err := db.Client.Exec(
+					`UPDATE "Stars" SET num_stars = ?, timestamp = ? WHERE link_id = ? AND user_id = ?;`,
+					request.Stars,
+					mutil.NEW_LONG_TIMESTAMP(),
+					link_id,
+					req_user_id,
+				); err != nil {
+					render.Render(w, r, e.Err500(err))
+				}
 			}
-
+		
 			w.WriteHeader(http.StatusNoContent)
 
 		default:
@@ -414,7 +415,13 @@ func StarLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func UnstarLink(w http.ResponseWriter, r *http.Request) {
-	link_id := chi.URLParam(r, "link_id")
+	request := &model.UnstarLinkRequest{}
+	if err := render.Bind(r, request); err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
+
+	link_id := request.LinkID
 	if link_id == "" {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLinkID))
 		return
