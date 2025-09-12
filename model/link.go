@@ -26,6 +26,7 @@ type Link struct {
 	Summary            string
 	SummaryCount       int
 	TimesStarred       int64
+	AvgStars           float32
 	EarliestStarrers   string
 	ClickCount         int64
 	TagCount           int

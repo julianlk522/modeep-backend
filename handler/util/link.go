@@ -70,8 +70,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 		return nil, err
 	}
 
-	links_page.NSFWLinks = hidden_links
-	
+	links_page.NSFWLinks = hidden_links	
 
 	return links_page, nil
 }
@@ -110,6 +109,7 @@ func ScanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 				&l.Summary,
 				&l.SummaryCount,
 				&l.TimesStarred,
+				&l.AvgStars,
 				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
@@ -138,6 +138,7 @@ func ScanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 				&l.Summary,
 				&l.SummaryCount,
 				&l.TimesStarred,
+				&l.AvgStars,
 				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
@@ -180,6 +181,7 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 				&l.Summary,
 				&l.SummaryCount,
 				&l.TimesStarred,
+				&l.AvgStars,
 				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,
@@ -203,6 +205,7 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 				&l.Summary,
 				&l.SummaryCount,
 				&l.TimesStarred,
+				&l.AvgStars,
 				&l.EarliestStarrers,
 				&l.ClickCount,
 				&l.TagCount,

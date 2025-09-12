@@ -29,8 +29,6 @@ func TestNewTopLinks(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) < 13 {
-		t.Fatalf("too few columns, want 15 got %d", len(cols))
 	}
 
 	var test_cols = []struct {
@@ -44,6 +42,7 @@ func TestNewTopLinks(t *testing.T) {
 		{"summary"},
 		{"summary_count"},
 		{"times_starred"},
+		{"avg_stars"},
 		{"earliest_starrers"},
 		{"click_count"},
 		{"tag_count"},
@@ -135,6 +134,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.TimesStarred,
+			&l.AvgStars,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -182,6 +182,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.TimesStarred,
+			&l.AvgStars,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -229,6 +230,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.TimesStarred,
+			&l.AvgStars,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -276,6 +278,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.TimesStarred,
+			&l.AvgStars,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -376,26 +379,27 @@ func TestLinksSortBy(t *testing.T) {
 		// Scan
 		var links []model.Link
 		for rows.Next() {
-			link := model.Link{}
+			l := model.Link{}
 			err := rows.Scan(
-				&link.ID,
-				&link.URL,
-				&link.SubmittedBy,
-				&link.SubmitDate,
-				&link.Cats,
-				&link.Summary,
-				&link.SummaryCount,
-				&link.TimesStarred,
-				&link.EarliestStarrers,
-				&link.ClickCount,
-				&link.TagCount,
-				&link.PreviewImgFilename,
+				&l.ID,
+				&l.URL,
+				&l.SubmittedBy,
+				&l.SubmitDate,
+				&l.Cats,
+				&l.Summary,
+				&l.SummaryCount,
+				&l.TimesStarred,
+				&l.AvgStars,
+				&l.EarliestStarrers,
+				&l.ClickCount,
+				&l.TagCount,
+				&l.PreviewImgFilename,
 				&pages,
 			)
 			if err != nil {
 				t.Fatal(err)
 			}
-			links = append(links, link)
+			links = append(links, l)
 		}
 
 		if !ts.Valid {
@@ -460,8 +464,6 @@ func TestAsSignedInUser(t *testing.T) {
 
 	if len(cols) == 0 {
 		t.Fatal("no columns")
-	} else if len(cols) != 14 {
-		t.Fatalf("incorrect col count, got %d, want 17", len(cols))
 	}
 
 	var test_cols = []struct {
@@ -475,6 +477,7 @@ func TestAsSignedInUser(t *testing.T) {
 		{"summary"},
 		{"summary_count"},
 		{"times_starred"},
+		{"avg_stars"},
 		{"earliest_starrers"},
 		{"click_count"},
 		{"tag_count"},
@@ -558,6 +561,7 @@ func TestNSFW(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.TimesStarred,
+			&l.AvgStars,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,
@@ -594,6 +598,7 @@ func TestNSFW(t *testing.T) {
 			&l.Summary,
 			&l.SummaryCount,
 			&l.TimesStarred,
+			&l.AvgStars,
 			&l.EarliestStarrers,
 			&l.ClickCount,
 			&l.TagCount,

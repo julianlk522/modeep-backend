@@ -999,6 +999,11 @@ TimesStarred AS (
     FROM Stars
     GROUP BY link_id
 ),
+AverageStars AS (
+	SELECT link_id, ROUND(AVG(num_stars), 2) AS avg_stars
+	FROM Stars
+	GROUP BY link_id
+),
 EarliestStarrers AS (
     SELECT 
         link_id,
@@ -1064,6 +1069,7 @@ SELECT
     COALESCE(pus.user_summary, l.global_summary, '') AS summary,
     COALESCE(sc.summary_count, 0) AS summary_count,
     COALESCE(ts.times_starred, 0) AS times_starred,
+	COALESCE(avs.avg_stars, 0) AS avg_stars,
 	COALESCE(es.earliest_starrers, '') AS earliest_starrers,
 	COALESCE(clc.click_count, 0) AS click_count,
     COALESCE(tc.tag_count, 0) AS tag_count,
@@ -1075,6 +1081,7 @@ const TMAP_BASE_JOINS = `
 LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id
 LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
 LEFT JOIN TimesStarred ts ON l.id = ts.link_id
+LEFT JOIN AverageStars avs ON l.id = avs.link_id
 LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
