@@ -127,7 +127,7 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 var num_wheres_in_links_base_query = strings.Count(links_base_query, "WHERE")
 
 func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks {
-	order_by_clause := LINKS_ORDER_BY_STARS
+	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
@@ -162,7 +162,7 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 }
 
 func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
-	order_by_clause := LINKS_ORDER_BY_STARS
+	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
@@ -207,7 +207,7 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 		return tl
 	}
 
-	order_by_clause := LINKS_ORDER_BY_STARS
+	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
 		if ok {
@@ -236,14 +236,14 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 }
 
 func (tl *TopLinks) SortBy(metric string) *TopLinks {
-	if metric != "" && metric != "stars" {
+	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := links_order_by_clauses[metric]
 		if !ok {
 			tl.Error = e.ErrInvalidSortByParams
 		} else {
 			tl.Text = strings.Replace(
 				tl.Text,
-				LINKS_ORDER_BY_STARS,
+				LINKS_ORDER_BY_TIMES_STARRED,
 				order_by_clause,
 				1,
 			)
@@ -484,13 +484,14 @@ WHERE l.id NOT IN (
 )`
 
 var links_order_by_clauses = map[string]string{
-	"stars": LINKS_ORDER_BY_STARS,
+	"times_starred": LINKS_ORDER_BY_TIMES_STARRED,
+	"avg_stars": LINKS_ORDER_BY_AVG_STARS,
 	"newest": LINKS_ORDER_BY_NEWEST,
 	"oldest": LINKS_ORDER_BY_OLDEST,
 	"clicks": LINKS_ORDER_BY_CLICKS,
 }
 
-const LINKS_ORDER_BY_STARS = ` 
+const LINKS_ORDER_BY_TIMES_STARRED = ` 
 ORDER BY 
     times_starred DESC, 
 	click_count DESC,
@@ -498,6 +499,16 @@ ORDER BY
     summary_count DESC, 
 	submit_date DESC,
     l.id DESC`
+
+const LINKS_ORDER_BY_AVG_STARS = `
+ORDER BY 
+	avg_stars DESC, 
+	times_starred DESC,
+	click_count DESC,
+	tag_count DESC,
+	summary_count DESC, 
+	submit_date DESC,
+	l.id DESC`
 
 const LINKS_ORDER_BY_NEWEST = `
 ORDER BY 
@@ -533,7 +544,7 @@ var links_base_query = LINKS_BASE_CTES +
 	LINKS_FROM +
 	LINKS_BASE_JOINS +
 	LINKS_NO_NSFW_CATS_WHERE +
-	LINKS_ORDER_BY_STARS +
+	LINKS_ORDER_BY_TIMES_STARRED +
 	LINKS_LIMIT
 
 // SingleLink used on top Tags + Summary pages for a link

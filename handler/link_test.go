@@ -65,7 +65,7 @@ func TestGetLinks(t *testing.T) {
 			Params: map[string]string{
 				"cats":    "umvc3",
 				"period":  "month",
-				"sort_by": "stars",
+				"sort_by": "times_starred",
 			},
 			Page:  1,
 			Valid: true,

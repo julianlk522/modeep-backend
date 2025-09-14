@@ -85,7 +85,7 @@ func TestFromCats(t *testing.T) {
 		defer rows.Close()
 
 		// With period
-		links_sql = links_sql.DuringPeriod("month", "stars")
+		links_sql = links_sql.DuringPeriod("month", "times_starred")
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tc.Valid && links_sql.Error == nil {
@@ -160,7 +160,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 	// combined with other methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"flowers"}).
-		WithURLContaining("google", "stars").
+		WithURLContaining("google", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -256,7 +256,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 	// combined with other methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"umvc3"}).
-		WithURLLacking("google", "stars").
+		WithURLLacking("google", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -353,7 +353,8 @@ func TestLinksSortBy(t *testing.T) {
 		Valid bool
 	}{
 		{"newest", true},
-		{"stars", true},
+		{"times_starred", true},
+		{"avg_stars", true},
 		{"oldest", true},
 		{"clicks", true},
 		{"random", false},
@@ -408,13 +409,22 @@ func TestLinksSortBy(t *testing.T) {
 
 		// Verify results correctly sorted
 		switch ts.Sort {
-			case "stars":
+			case "times_starred":
 				var last_star_count int64 = 999 // arbitrary high number
 				for _, link := range links {
 					if link.TimesStarred > last_star_count {
 						t.Fatalf("link like count %d above previous min %d", link.TimesStarred, last_star_count)
 					} else if link.TimesStarred < last_star_count {
 						last_star_count = link.TimesStarred
+					}
+				}
+			case "avg_stars":
+				var last_avg_stars float32 = 999
+				for _, link := range links {
+					if link.AvgStars > last_avg_stars {
+						t.Fatalf("link avg stars %f above previous min %f", link.AvgStars, last_avg_stars)
+					} else if link.AvgStars < last_avg_stars {
+						last_avg_stars = link.AvgStars
 					}
 				}
 			case "newest":
@@ -536,7 +546,7 @@ func TestNSFW(t *testing.T) {
 	// Verify no conflict with other filter methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"search", "engine", "NSFW"}).
-		DuringPeriod("year", "stars").
+		DuringPeriod("year", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest").
 		Page(1).
@@ -653,7 +663,7 @@ func TestPage(t *testing.T) {
 	// Verify no conflict with other methods
 	links_sql = NewTopLinks().
 		FromCats(test_cats).
-		DuringPeriod("year", "stars").
+		DuringPeriod("year", "times_starred").
 		SortBy("newest").
 		AsSignedInUser(TEST_USER_ID).
 		NSFW().

@@ -83,7 +83,7 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	}
 
 	sort_params = params.Get("sort_by")
-	if sort_params != "" && sort_params != "stars" {
+	if sort_params != "" && sort_params != "times_starred" {
 		opts.SortBy = sort_params
 	}
 

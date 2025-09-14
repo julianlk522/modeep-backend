@@ -280,7 +280,7 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 				TMAP_BASE_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				SUBMITTED_WHERE +
-				TMAP_ORDER_BY_STARS,
+				TMAP_ORDER_BY_TIMES_STARRED,
 			Args: []any{
 				mutil.EARLIEST_STARRERS_LIMIT, 
 				login_name, 
@@ -371,14 +371,14 @@ func (ts *TmapSubmitted) NSFW() *TmapSubmitted {
 }
 
 func (ts *TmapSubmitted) SortBy(metric string) *TmapSubmitted {
-	if metric != "" && metric != "stars" {
+	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
 			ts.Error = e.ErrInvalidSortByParams
 		} else {
 			ts.Text = strings.Replace(
 				ts.Text,
-				TMAP_ORDER_BY_STARS,
+				TMAP_ORDER_BY_TIMES_STARRED,
 				order_by_clause,
 				1,
 			)
@@ -467,7 +467,7 @@ func NewTmapStarred(login_name string) *TmapStarred {
 				TMAP_BASE_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				STARRED_WHERE +
-				TMAP_ORDER_BY_STARS,
+				TMAP_ORDER_BY_TIMES_STARRED,
 			Args: []any{
 				login_name, 
 				mutil.EARLIEST_STARRERS_LIMIT, 
@@ -568,14 +568,14 @@ func (tc *TmapStarred) NSFW() *TmapStarred {
 }
 
 func (tc *TmapStarred) SortBy(metric string) *TmapStarred {
-	if metric != "" && metric != "stars" {
+	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
 			tc.Error = e.ErrInvalidSortByParams
 		} else {
 			tc.Text = strings.Replace(
 				tc.Text,
-				TMAP_ORDER_BY_STARS,
+				TMAP_ORDER_BY_TIMES_STARRED,
 				order_by_clause,
 				1,
 			)
@@ -661,7 +661,7 @@ func NewTmapTagged(login_name string) *TmapTagged {
 				TAGGED_JOINS +
 				TMAP_NO_NSFW_CATS_WHERE +
 				TAGGED_WHERE +
-				TMAP_ORDER_BY_STARS,
+				TMAP_ORDER_BY_TIMES_STARRED,
 			// login_name used in UserCats, PossibleUserSummary, UserStars, where
 			Args: []any{
 				mutil.EARLIEST_STARRERS_LIMIT, 
@@ -749,8 +749,8 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 
 	tt.Text = strings.Replace(
 		tt.Text,
-		TMAP_ORDER_BY_STARS,
-		match_clause + TMAP_ORDER_BY_STARS,
+		TMAP_ORDER_BY_TIMES_STARRED,
+		match_clause + TMAP_ORDER_BY_TIMES_STARRED,
 		1,
 	)
 
@@ -804,14 +804,14 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 }
 
 func (tt *TmapTagged) SortBy(metric string) *TmapTagged {
-	if metric != "" && metric != "stars" {
+	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
 			tt.Error = e.ErrInvalidSortByParams
 		} else {
 			tt.Text = strings.Replace(
 				tt.Text,
-				TMAP_ORDER_BY_STARS,
+				TMAP_ORDER_BY_TIMES_STARRED,
 				order_by_clause,
 				1,
 			)
@@ -962,8 +962,8 @@ func FromUserOrGlobalCats(q *Query, cats []string) *Query {
 )`
 	q.Text = strings.Replace(
 		q.Text,
-		TMAP_ORDER_BY_STARS,
-		and_clause + TMAP_ORDER_BY_STARS,
+		TMAP_ORDER_BY_TIMES_STARRED,
+		and_clause + TMAP_ORDER_BY_TIMES_STARRED,
 		1,
 	)
 
@@ -1090,13 +1090,14 @@ LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
 const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
 
 var tmap_order_by_clauses = map[string]string{
-	"stars": TMAP_ORDER_BY_STARS,
+	"times_starred": TMAP_ORDER_BY_TIMES_STARRED,
+	"avg_stars": TMAP_ORDER_BY_AVG_STARS,
 	"newest": TMAP_ORDER_BY_NEWEST,
 	"oldest": TMAP_ORDER_BY_OLDEST,
 	"clicks": TMAP_ORDER_BY_CLICKS,
 }
 
-const TMAP_ORDER_BY_STARS = `
+const TMAP_ORDER_BY_TIMES_STARRED = `
 ORDER BY 
 	ts.times_starred DESC, 
 	clc.click_count DESC,
@@ -1104,6 +1105,17 @@ ORDER BY
 	sc.summary_count DESC, l.id DESC,
 	l.submit_date DESC,
 	l.id DESC;`
+
+const TMAP_ORDER_BY_AVG_STARS = `
+ORDER BY 
+	avs.avg_stars DESC, 
+	ts.times_starred DESC,
+	clc.click_count DESC,
+	tc.tag_count DESC,
+	sc.summary_count DESC, 
+	l.submit_date DESC,
+	l.id DESC`
+
 
 const TMAP_ORDER_BY_NEWEST = `
 ORDER BY 

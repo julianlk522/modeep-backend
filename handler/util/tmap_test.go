@@ -40,14 +40,14 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		PageParams       int
 		Valid            bool
 	}{
-		{TEST_LOGIN_NAME, TEST_USER_ID, "", "stars", false, "", 1, true},
-		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "stars", true, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_USER_ID, "", "times_starred", false, "", 1, true},
+		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "times_starred", true, "", 1, true},
 		{TEST_LOGIN_NAME, "", "", "newest", true, "", 1, true},
 		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3", "newest", true, "", 1, true},
 		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "oldest", false, "", 0, true},
-		{TEST_LOGIN_NAME, "", "", "stars", false, "", 10, true},
+		{TEST_LOGIN_NAME, "", "", "times_starred", false, "", 10, true},
 		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3,flowers", "oldest", true, "", 1, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "stars", false, "", 2, true},
+		{TEST_LOGIN_NAME, "", "umvc3,flowers", "times_starred", false, "", 2, true},
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "", 1, true},
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "submitted", 4, true},
 		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "starred", 0, true},

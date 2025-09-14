@@ -525,7 +525,8 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 		Valid bool
 	}{
 		{"newest", true},
-		{"stars", true},
+		{"times_starred", true},
+		{"avg_stars", true},
 		{"oldest", true},
 		{"clicks", true},
 		{"random", false},
@@ -591,13 +592,22 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 						last_date = sd
 					}
 				}
-			case "stars":
+			case "times_starred":
 				var last_star_count int64 = 999 // arbitrary high number
 				for _, link := range links {
 					if link.TimesStarred > last_star_count {
 						t.Fatalf("link like count %d above previous min %d", link.TimesStarred, last_star_count)
 					} else if link.TimesStarred < last_star_count {
 						last_star_count = link.TimesStarred
+					}
+				}
+			case "avg_stars":
+				var last_avg_stars float32 = 999
+				for _, link := range links {
+					if link.AvgStars > last_avg_stars {
+						t.Fatalf("link avg stars %f above previous min %f", link.AvgStars, last_avg_stars)
+					} else if link.AvgStars < last_avg_stars {
+						last_avg_stars = link.AvgStars
 					}
 				}
 			case "oldest":
