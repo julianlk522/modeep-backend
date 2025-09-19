@@ -139,8 +139,13 @@ func UserHasTaggedLink(login_name string, link_id string) (bool, error) {
 
 }
 
-func AlphabetizeCats(cats string) string {
+func TidyCats(cats string) string {
 	split_cats := strings.Split(cats, ",")
+
+	for i := 0; i < len(split_cats); i++ {
+		split_cats[i] = strings.TrimSpace(split_cats[i])
+	}
+
 	slices.SortFunc(split_cats, func(i, j string) int {
 		if strings.ToLower(i) < strings.ToLower(j) {
 			return -1

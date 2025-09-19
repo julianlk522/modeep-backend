@@ -200,7 +200,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert tag
-	new_link.Cats = util.AlphabetizeCats(request.Cats)
+	new_link.Cats = util.TidyCats(request.Cats)
 	if _, err = tx.Exec(
 		"INSERT INTO Tags VALUES(?,?,?,?,?);",
 		uuid.New().String(),

@@ -280,6 +280,25 @@ func TestUserHasTaggedLink(t *testing.T) {
 	}
 }
 
+func TestTidyCats(t *testing.T) {
+	var test_cats = []struct {
+		Cats string
+		ExpectedResult string
+	}{
+		{"", ""},
+		{"test,abc", "abc,test"},
+		{"  test,abc  ", "abc,test"},
+		{"abc,test,ACB", "abc,ACB,test"},
+	}
+
+	for _, c := range test_cats {
+		got := TidyCats(c.Cats)
+		if c.ExpectedResult != got {
+			t.Fatalf("expected %s, got %s", c.ExpectedResult, got)
+		}
+	}
+}
+
 // Edit tag
 func TestUserSubmittedTagWithID(t *testing.T) {
 	var test_tags = []struct {

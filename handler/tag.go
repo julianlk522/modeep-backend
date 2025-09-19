@@ -227,7 +227,7 @@ func AddTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tag_data.Cats = util.AlphabetizeCats(tag_data.Cats)
+	tag_data.Cats = util.TidyCats(tag_data.Cats)
 
 	_, err = db.Client.Exec(
 		"INSERT INTO Tags VALUES(?,?,?,?,?);",
@@ -268,7 +268,7 @@ func EditTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	edit_tag_data.Cats = util.AlphabetizeCats(edit_tag_data.Cats)
+	edit_tag_data.Cats = util.TidyCats(edit_tag_data.Cats)
 
 	_, err = db.Client.Exec(
 		`UPDATE Tags 
