@@ -13,7 +13,7 @@ var (
 	ErrDoesntOwnSummary         error = errors.New("not your summary")
 	ErrCannotLikeOwnSummary     error = errors.New("cannot like your own summary")
 	ErrSummaryAlreadyLiked      error = errors.New("summary already liked")
-	ErrSummaryNotLiked          error = errors.New("summary not already liked")
+	ErrSummaryNotLiked          error = errors.New("summary is not liked")
 )
 
 func SummaryLengthExceedsLimit(limit int) error {

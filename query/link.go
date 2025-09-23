@@ -78,7 +78,7 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 
 func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	if len(cats) == 0 || cats[0] == "" {
-		tl.Error = fmt.Errorf("no cats provided")
+		tl.Error = e.ErrNoCats
 		return tl
 	}
 	// Pop limit arg

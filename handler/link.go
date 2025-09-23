@@ -287,14 +287,13 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 	// Fetch global cats and preview image file before deleting
 	// so spellfix ranks can be updated and preview image can be deleted
 	var gc, pi string
-	err = db.Client.QueryRow(
+	if err = db.Client.QueryRow(
 		"SELECT global_cats, COALESCE(img_file, '') FROM Links WHERE id = ?;", 
 		request.LinkID,
 	).Scan(
 		&gc, 
 		&pi,
-	)
-	if err != nil {
+	); err != nil {
 		render.Render(w, r, e.Err500(err))
 		return
 	}
@@ -359,7 +358,7 @@ func StarLink(w http.ResponseWriter, r *http.Request) {
 
 	link_exists, err := util.LinkExists(link_id)
 	if err != nil {
-		render.Render(w, r, e.ErrInvalidRequest(err))
+		render.Render(w, r, e.Err500(err))
 		return
 	} else if !link_exists {
 		render.Render(w, r, e.ErrUnprocessable(e.ErrNoLinkWithID))
