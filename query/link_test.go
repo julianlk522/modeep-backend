@@ -112,7 +112,8 @@ func TestFromCats(t *testing.T) {
 }
 
 func TestLinksWithURLContaining(t *testing.T) {
-	links_sql := NewTopLinks().WithURLContaining("google", "")
+	// case-insensitive
+	links_sql := NewTopLinks().WithURLContaining("GoOgLe", "")
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
@@ -208,7 +209,8 @@ func TestLinksWithURLContaining(t *testing.T) {
 }
 
 func TestLinksWithURLLacking(t *testing.T) {
-	links_sql := NewTopLinks().WithURLLacking("google", "")
+	// case-insensitive
+	links_sql := NewTopLinks().WithURLLacking("gOoGlE", "")
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
@@ -256,7 +258,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 	// combined with other methods
 	links_sql = NewTopLinks().
 		FromCats([]string{"umvc3"}).
-		WithURLLacking("google", "times_starred").
+		WithURLLacking("gOOgle", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
 		SortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)

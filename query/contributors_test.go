@@ -80,7 +80,8 @@ FROM Links l`,
 }
 
 func TestTopContributorsWithURLContaining(t *testing.T) {
-	contributors_sql := NewTopContributors().WithURLContaining("google")
+	// case-insensitive
+	contributors_sql := NewTopContributors().WithURLContaining("gooGLE")
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}

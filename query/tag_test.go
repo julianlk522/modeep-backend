@@ -174,7 +174,8 @@ func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
 
 	counts_sql := NewTopGlobalCatCounts().
 		SubcatsOfCats(strings.Join(test_cats, ",")).
-		WithURLContaining("google").
+		// case-insensitive
+		WithURLContaining("GooGlE").
 		More()
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
