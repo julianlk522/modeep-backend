@@ -22,7 +22,7 @@ func AttemptPasswordReset(w http.ResponseWriter, r *http.Request) {
 
 	user_exists, err := util.UserExists(login_name)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !user_exists {
 		// fail silently
@@ -32,7 +32,7 @@ func AttemptPasswordReset(w http.ResponseWriter, r *http.Request) {
 
 	email, err := util.GetEmailFromLoginName(login_name)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if email == "" {
 		// fail silently
@@ -41,7 +41,7 @@ func AttemptPasswordReset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = util.EmailPasswordResetLink(login_name, email); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -65,7 +65,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 				render.Render(w, r, e.ErrUnauthorized(err))
 				return
 			default:
-				render.Render(w, r, e.Err500(err))
+				render.Render(w, r, e.ErrInternalServerError(err))
 				return
 		}
 	}

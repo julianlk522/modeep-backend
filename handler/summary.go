@@ -24,7 +24,7 @@ func GetSummaryPage(w http.ResponseWriter, r *http.Request) {
 
 	link_exists, err := util.LinkExists(link_id)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !link_exists {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLinkWithID))
@@ -33,7 +33,7 @@ func GetSummaryPage(w http.ResponseWriter, r *http.Request) {
 
 	summary_page, err := util.BuildSummaryPageForLink(link_id, r)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -50,7 +50,7 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	link_exists, err := util.LinkExists(summary_data.LinkID)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !link_exists {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLinkWithID))
@@ -59,7 +59,7 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := db.Client.Begin()
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 	defer tx.Rollback()
@@ -78,12 +78,12 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 				summary_data.LastUpdated,
 			)
 			if err != nil {
-				render.Render(w, r, e.Err500(err))
+				render.Render(w, r, e.ErrInternalServerError(err))
 				return
 			}
 
 		} else {
-			render.Render(w, r, e.Err500(err))
+			render.Render(w, r, e.ErrInternalServerError(err))
 			return
 		}
 
@@ -97,7 +97,7 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 			summary_data.LinkID,
 		)
 		if err != nil {
-			render.Render(w, r, e.Err500(err))
+			render.Render(w, r, e.ErrInternalServerError(err))
 			return
 		}
 
@@ -106,19 +106,19 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 			summary_id,
 		)
 		if err != nil {
-			render.Render(w, r, e.Err500(err))
+			render.Render(w, r, e.ErrInternalServerError(err))
 			return
 		}
 	}
 
 	err = util.CalculateAndSetGlobalSummary(summary_data.LinkID)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -135,7 +135,7 @@ func DeleteSummary(w http.ResponseWriter, r *http.Request) {
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	owns_summary, err := util.SummarySubmittedByUser(delete_data.SummaryID, req_user_id)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !owns_summary {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrDoesntOwnSummary))
@@ -144,13 +144,13 @@ func DeleteSummary(w http.ResponseWriter, r *http.Request) {
 
 	link_id, err := util.GetLinkIDFromSummaryID(delete_data.SummaryID)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	tx, err := db.Client.Begin()
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 	defer tx.Rollback()
@@ -160,18 +160,18 @@ func DeleteSummary(w http.ResponseWriter, r *http.Request) {
 		delete_data.SummaryID,
 	)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	err = util.CalculateAndSetGlobalSummary(link_id)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -198,7 +198,7 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	user_exists, err := util.UserExists(req_login_name)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !user_exists {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserWithLoginName))
@@ -207,7 +207,7 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	owns_summary, err := util.SummarySubmittedByUser(summary_id, req_user_id)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if owns_summary {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrCannotLikeOwnSummary))
@@ -216,7 +216,7 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 
 	already_liked, err := util.UserHasLikedSummary(req_user_id, summary_id)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if already_liked {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrSummaryAlreadyLiked))
@@ -225,7 +225,7 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := db.Client.Begin()
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 	defer tx.Rollback()
@@ -237,18 +237,18 @@ func LikeSummary(w http.ResponseWriter, r *http.Request) {
 		req_user_id,
 	)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	err = util.CalculateAndSetGlobalSummary(link_id.String)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -276,7 +276,7 @@ func UnlikeSummary(w http.ResponseWriter, r *http.Request) {
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	already_liked, err := util.UserHasLikedSummary(req_user_id, summary_id)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !already_liked {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrSummaryNotLiked))
@@ -285,7 +285,7 @@ func UnlikeSummary(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := db.Client.Begin()
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 	defer tx.Rollback()
@@ -295,18 +295,18 @@ func UnlikeSummary(w http.ResponseWriter, r *http.Request) {
 		summary_id,
 	)
 	if err != nil {
-		render.Render(w, r, e.Err500(e.ErrNoSummaryWithID))
+		render.Render(w, r, e.ErrInternalServerError(e.ErrNoSummaryWithID))
 		return
 	}
 
 	err = util.CalculateAndSetGlobalSummary(link_id.String)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 

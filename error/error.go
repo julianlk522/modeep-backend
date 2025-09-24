@@ -46,7 +46,7 @@ func ErrForbidden(err error) render.Renderer {
 	}
 }
 
-func Err404(err error) render.Renderer {
+func ErrNotFound(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: http.StatusNotFound, // 404
@@ -93,7 +93,7 @@ func ErrTooManyRequests(err error) render.Renderer {
 	}
 }
 
-func Err500(err error) render.Renderer {
+func ErrInternalServerError(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: http.StatusInternalServerError, // 500

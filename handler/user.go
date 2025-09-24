@@ -52,7 +52,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 
 	token, err := util.GetJWTFromLoginName(signup_data.Auth.LoginName)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -72,13 +72,13 @@ func LogIn(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.ErrUnauthorized(e.ErrInvalidLogin))
 		return
 	} else if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	token, err := util.GetJWTFromLoginName(login_data.Auth.LoginName)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -96,7 +96,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 	user_exists, err := util.UserExists(req_login_name)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !user_exists {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserWithLoginName))
@@ -110,7 +110,7 @@ func UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		email_data.Email,
 		req_login_name,
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 

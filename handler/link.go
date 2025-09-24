@@ -55,7 +55,7 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 		resp, err = util.PrepareLinksPage[model.Link](links_sql, page_opts)
 	}
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 	}
 
 	render.JSON(w, r, resp)
@@ -83,7 +83,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
 
 	if user_submitted_max_daily_links, err := util.UserHasSubmittedMaxDailyLinks(req_login_name); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if user_submitted_max_daily_links {
 		render.Render(w, r, e.ErrTooManyRequests(e.ErrMaxDailyLinkSubmissionsReached(util.MAX_DAILY_SUBMITTED_LINKS)))
@@ -156,7 +156,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	// Verified: add link
 	tx, err := db.Client.Begin()
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 	defer tx.Rollback()
@@ -192,7 +192,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 			req_user_id,
 			new_link.SubmitDate,
 		); err != nil {
-			render.Render(w, r, e.Err500(err))
+			render.Render(w, r, e.ErrInternalServerError(err))
 			return
 		} else {
 			new_link.SummaryCount += 1
@@ -209,7 +209,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		new_link.SubmittedBy,
 		new_link.SubmitDate,
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -240,7 +240,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		new_link.Summary,
 		new_link.PreviewImgFilename,
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -249,12 +249,12 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		tx,
 		strings.Split(request.Cats, ","),
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -294,13 +294,13 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 		&gc, 
 		&pi,
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	tx, err := db.Client.Begin()
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 	defer tx.Rollback()
@@ -309,7 +309,7 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 		"DELETE FROM Links WHERE id = ?;",
 		request.LinkID,
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -317,12 +317,12 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 		tx,
 		strings.Split(gc, ","),
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -358,7 +358,7 @@ func StarLink(w http.ResponseWriter, r *http.Request) {
 
 	link_exists, err := util.LinkExists(link_id)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !link_exists {
 		render.Render(w, r, e.ErrUnprocessable(e.ErrNoLinkWithID))
@@ -387,7 +387,7 @@ func StarLink(w http.ResponseWriter, r *http.Request) {
 					mutil.NEW_LONG_TIMESTAMP(),
 					
 				); err != nil {
-					render.Render(w, r, e.Err500(err))
+					render.Render(w, r, e.ErrInternalServerError(err))
 				}
 			} else {
 				if current_stars := util.GetUsersStarsForLink(req_user_id, link_id);current_stars == request.Stars {
@@ -402,7 +402,7 @@ func StarLink(w http.ResponseWriter, r *http.Request) {
 					link_id,
 					req_user_id,
 				); err != nil {
-					render.Render(w, r, e.Err500(err))
+					render.Render(w, r, e.ErrInternalServerError(err))
 				}
 			}
 		
@@ -453,7 +453,7 @@ func ClickLink(w http.ResponseWriter, r *http.Request) {
 
 	link_exists, err := util.LinkExists(request.LinkID)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	} else if !link_exists {
 		render.Render(w, r, e.ErrUnprocessable(e.ErrNoLinkWithID))
@@ -495,7 +495,7 @@ func ClickLink(w http.ResponseWriter, r *http.Request) {
 		result.IPAddr,
 		result.Timestamp,
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 

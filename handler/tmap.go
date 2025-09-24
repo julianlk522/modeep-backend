@@ -77,7 +77,7 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 
 	var file_name string
 	if file_name, err = util.SaveUploadedImg(upload); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -87,7 +87,7 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 	if has_pfp := util.UserWithIDHasProfilePic(req_user_id); has_pfp {
 		var current_file_name string
 		if err := db.Client.QueryRow(`SELECT pfp FROM Users WHERE id = ?`, req_user_id).Scan(&current_file_name); err != nil {
-			render.Render(w, r, e.Err500(err))
+			render.Render(w, r, e.ErrInternalServerError(err))
 			return
 		}
 		
@@ -103,7 +103,7 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 		file_name, 
 		req_user_id,
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -125,7 +125,7 @@ func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
 	var pfp string
 	err := db.Client.QueryRow(`SELECT pfp FROM Users WHERE id = ?`, req_user_id).Scan(&pfp)
 	if err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 	pfp_path := util.Profile_pic_dir + "/" + pfp
@@ -135,14 +135,14 @@ func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
 		`UPDATE Users SET pfp = NULL WHERE id = ?`,
 		req_user_id,
 	); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
 	if _, err := os.Stat(pfp_path); err == nil {
 		err = os.Remove(pfp_path)
 		if err != nil {
-			render.Render(w, r, e.Err500(e.ErrCouldNotDeleteProfilePicFile))
+			render.Render(w, r, e.ErrInternalServerError(e.ErrCouldNotDeleteProfilePicFile))
 			return
 		}
 	} else {
@@ -164,7 +164,7 @@ func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.ErrInvalidRequest(err))
 		return
 	} else if !user_exists {
-		render.Render(w, r, e.Err404(e.ErrNoUserWithLoginName))
+		render.Render(w, r, e.ErrNotFound(e.ErrNoUserWithLoginName))
 		return
 	}
 

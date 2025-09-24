@@ -26,7 +26,7 @@ func GetTotals(w http.ResponseWriter, r *http.Request) {
 			&totals.Tags,
 			&totals.Summaries,
 		); err != nil {
-		render.Render(w, r, e.Err500(err))
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
