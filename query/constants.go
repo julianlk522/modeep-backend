@@ -2,7 +2,7 @@ package query
 
 const (
 	// Link
-	LINKS_PAGE_LIMIT                = 20
+	LINKS_PAGE_LIMIT                = 10
 
 	// Contributor
 	CONTRIBUTORS_PAGE_LIMIT         = 10
