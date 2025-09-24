@@ -26,12 +26,12 @@ func TestLoadSpellfix(t *testing.T) {
 
 	var sql_dump_path, db_dir string
 
-	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
-	if test_data_path == "" {
+	backend_root_path := os.Getenv("MODEEP_BACKEND_ROOT")
+	if backend_root_path == "" {
 		_, dbtest_file, _, _ := runtime.Caller(0)
 		db_dir = filepath.Dir(dbtest_file)
 	} else {
-		db_dir = test_data_path
+		db_dir = backend_root_path + "/db"
 	}
 	sql_dump_path = filepath.Join(db_dir, "modeep_test.db.sql")
 

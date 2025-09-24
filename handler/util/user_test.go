@@ -62,11 +62,11 @@ func TestHasAcceptableAspectRatio(t *testing.T) {
 		{"test3.webp", true},
 	}
 
-	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
-	if test_data_path == "" {
-		t.Fatal("$MODEEP_TEST_DATA_PATH not set")
+	backend_root_path := os.Getenv("MODEEP_BACKEND_ROOT")
+	if backend_root_path == "" {
+		t.Fatal("$MODEEP_BACKEND_ROOT not set")
 	}
-	pic_dir := test_data_path + "/img/profile"
+	pic_dir := backend_root_path + "/db/img/profile"
 
 	for _, l := range test_image_files {
 		f, err := os.Open(pic_dir + "/" + l.Name)

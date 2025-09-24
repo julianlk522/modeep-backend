@@ -24,11 +24,11 @@ import (
 var Preview_img_dir string
 
 func init() {
-	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
-	if test_data_path == "" {
-		log.Panic("$MODEEP_TEST_DATA_PATH not set")
+	backend_root_path := os.Getenv("MODEEP_BACKEND_ROOT")
+	if backend_root_path == "" {
+		log.Panic("$MODEEP_BACKEND_ROOT not set")
 	}
-	Preview_img_dir = test_data_path + "/img/preview"
+	Preview_img_dir = backend_root_path + "/db/img/preview"
 }
 
 func UserHasSubmittedMaxDailyLinks(login_name string) (bool, error) {
