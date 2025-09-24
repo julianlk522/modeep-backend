@@ -87,19 +87,24 @@ func TestSignUp(t *testing.T) {
 		res := w.Result()
 		defer res.Body.Close()
 
-		if tr.Valid && res.StatusCode != 201 {
+		if tr.Valid && res.StatusCode != http.StatusCreated {
 			text, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatal("failed but unable to read request body bytes")
 			} else {
 				t.Fatalf(
-					"expected status code 201, got %d (test request %+v)\n%s", res.StatusCode,
+					"expected status code %d, got %d (test request %+v)\n%s", 
+					res.StatusCode,
+					http.StatusCreated,
 					tr.Payload,
 					text,
 				)
 			}
-		} else if !tr.Valid && res.StatusCode != 400 {
-			t.Fatalf("expected status code 400, got %d", res.StatusCode)
+		} else if !tr.Valid && res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("expected status code %d, got %d", 
+				http.StatusBadRequest,
+				res.StatusCode,
+			)
 		}
 	}
 }

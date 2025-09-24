@@ -22,7 +22,7 @@ func (er *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
 func ErrInvalidRequest(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 400,
+		HTTPStatusCode: http.StatusBadRequest, // 400
 		StatusText:     "Invalid request.",
 		ErrorText:      err.Error(),
 	}
@@ -31,7 +31,7 @@ func ErrInvalidRequest(err error) render.Renderer {
 func ErrUnauthorized(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 401,
+		HTTPStatusCode: http.StatusUnauthorized, // 401
 		StatusText:     "Unauthorized.",
 		ErrorText:      err.Error(),
 	}
@@ -40,7 +40,7 @@ func ErrUnauthorized(err error) render.Renderer {
 func ErrForbidden(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 403,
+		HTTPStatusCode: http.StatusForbidden, // 403
 		StatusText:     "Forbidden.",
 		ErrorText:      err.Error(),
 	}
@@ -49,7 +49,7 @@ func ErrForbidden(err error) render.Renderer {
 func Err404(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 404,
+		HTTPStatusCode: http.StatusNotFound, // 404
 		StatusText:     "Resource not found.",
 		ErrorText:      err.Error(),
 	}
@@ -58,7 +58,7 @@ func Err404(err error) render.Renderer {
 func ErrConflict(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 409,
+		HTTPStatusCode: http.StatusConflict, // 409
 		StatusText:     err.Error(),
 		ErrorText:      err.Error(),
 	}
@@ -67,7 +67,7 @@ func ErrConflict(err error) render.Renderer {
 func ErrContentTooLarge(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 413,
+		HTTPStatusCode: http.StatusRequestEntityTooLarge, // 413
 		StatusText:     "Content too large.",
 		ErrorText:      err.Error(),
 	}
@@ -78,7 +78,7 @@ func ErrContentTooLarge(err error) render.Renderer {
 func ErrUnprocessable(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 422,
+		HTTPStatusCode: http.StatusUnprocessableEntity, // 422
 		StatusText:     "Unprocessable.",
 		ErrorText:      err.Error(),
 	}
@@ -87,7 +87,7 @@ func ErrUnprocessable(err error) render.Renderer {
 func ErrTooManyRequests(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 429,
+		HTTPStatusCode: http.StatusTooManyRequests, // 429
 		StatusText:     "Too many requests.",
 		ErrorText:      err.Error(),
 	}
@@ -96,7 +96,7 @@ func ErrTooManyRequests(err error) render.Renderer {
 func Err500(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 500,
+		HTTPStatusCode: http.StatusInternalServerError, // 500
 		StatusText:     "Server failed to process request.",
 		ErrorText:      err.Error(),
 	}

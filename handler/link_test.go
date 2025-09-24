@@ -163,7 +163,9 @@ func TestGetLinks(t *testing.T) {
 			}
 
 			t.Fatalf(
-				"expected status code 200, got %d (test request %+v)\n%s", res.StatusCode,
+				"expected status code %d, got %d (test request %+v)\n%s", 
+				res.StatusCode,
+				http.StatusOK,
 				tglr.Params,
 				text,
 			)
@@ -188,7 +190,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "test",
 				"summary": "test",
 			},
-			ExpectedStatusCode: 400,
+			ExpectedStatusCode: http.StatusBadRequest,
 		},
 		{
 			Payload: map[string]string{
@@ -196,7 +198,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "test",
 				"summary": "test",
 			},
-			ExpectedStatusCode: 400,
+			ExpectedStatusCode: http.StatusBadRequest,
 		},
 		{
 			Payload: map[string]string{
@@ -204,7 +206,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "test",
 				"summary": "bob",
 			},
-			ExpectedStatusCode: 422,
+			ExpectedStatusCode: http.StatusUnprocessableEntity,
 		},
 		{
 			Payload: map[string]string{
@@ -212,7 +214,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "",
 				"summary": "",
 			},
-			ExpectedStatusCode: 400,
+			ExpectedStatusCode: http.StatusBadRequest,
 		},
 		{
 			Payload: map[string]string{
@@ -220,7 +222,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890",
 				"summary": "",
 			},
-			ExpectedStatusCode: 400,
+			ExpectedStatusCode: http.StatusBadRequest,
 		},
 		{
 			Payload: map[string]string{
@@ -228,7 +230,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "0,1,2,3,4,5,6,7,8,9,0,1,2",
 				"summary": "",
 			},
-			ExpectedStatusCode: 400,
+			ExpectedStatusCode: http.StatusBadRequest,
 		},
 		{
 			Payload: map[string]string{
@@ -236,7 +238,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "testtest",
 				"summary": "01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
 			},
-			ExpectedStatusCode: 400,
+			ExpectedStatusCode: http.StatusBadRequest,
 		},
 		{
 			Payload: map[string]string{
@@ -244,7 +246,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "watermelon",
 				"summary": "test",
 			},
-			ExpectedStatusCode: 201,
+			ExpectedStatusCode: http.StatusCreated,
 		},
 		{
 			Payload: map[string]string{
@@ -252,7 +254,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "watermelon",
 				"summary": "testy",
 			},
-			ExpectedStatusCode: 201,
+			ExpectedStatusCode: http.StatusCreated,
 		},
 		{
 			Payload: map[string]string{
@@ -260,7 +262,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "watermelon",
 				"summary": "testiest",
 			},
-			ExpectedStatusCode: 201,
+			ExpectedStatusCode: http.StatusCreated,
 		},
 		// should fail due to duplicate from previous test with url "google.com"
 		{
@@ -269,7 +271,7 @@ func TestAddLink(t *testing.T) {
 				"cats":    "test",
 				"summary": "",
 			},
-			ExpectedStatusCode: 409,
+			ExpectedStatusCode: http.StatusConflict,
 		},
 	}
 
@@ -316,19 +318,19 @@ func TestDeleteLink(t *testing.T) {
 		{
 			LinkID:             "0",
 			Valid:              false,
-			ExpectedStatusCode: 403,
+			ExpectedStatusCode: http.StatusForbidden,
 		},
 		// not a real link
 		{
 			LinkID:             "-1",
 			Valid:              false,
-			ExpectedStatusCode: 400,
+			ExpectedStatusCode: http.StatusBadRequest,
 		},
 		// test user jlk did submit link 13
 		{
 			LinkID:             "13",
 			Valid:              true,
-			ExpectedStatusCode: 205,
+			ExpectedStatusCode: http.StatusResetContent,
 		},
 	}
 
@@ -440,14 +442,15 @@ func TestClickLink(t *testing.T) {
 			t.Fatal("failed but unable to read request body bytes")
 		}
 
-		if tr.Valid && res.StatusCode != 201 {
+		if tr.Valid && res.StatusCode != http.StatusCreated {
 			t.Fatalf(
-				"expected status code 201, got %d (test request %+v), body: %s",
+				"expected status code %d, got %d (test request %+v), body: %s",
 				res.StatusCode,
+				http.StatusCreated,
 				tr,
 				text,
 			)
-		} else if !tr.Valid && res.StatusCode == 201 {
+		} else if !tr.Valid && res.StatusCode == http.StatusCreated {
 			t.Fatalf(
 				"expected request failure, got success (test request %+v), body: %s",
 				tr,

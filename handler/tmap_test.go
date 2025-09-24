@@ -66,19 +66,25 @@ func TestEditAbout(t *testing.T) {
 		res := w.Result()
 		defer res.Body.Close()
 
-		if tr.Valid && res.StatusCode != 200 {
+		if tr.Valid && res.StatusCode != http.StatusOK {
 			text, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatal("failed but unable to read request body bytes")
 			} else {
 				t.Fatalf(
-					"expected status code 200, got %d (test request %+v)\n%s", res.StatusCode,
+					"expected status code %d, got %d (test request %+v)\n%s", 
+					res.StatusCode,
+					http.StatusOK,
 					tr.Payload,
 					text,
 				)
 			}
-		} else if !tr.Valid && res.StatusCode != 400 {
-			t.Fatalf("expected status code 400, got %d (test request %+v)", res.StatusCode, tr.Payload)
+		} else if !tr.Valid && res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("expected status code %d, got %d (test request %+v)", 
+			res.StatusCode, 
+			http.StatusBadRequest,
+			tr.Payload,
+			)
 		}
 	}
 }
@@ -93,13 +99,13 @@ func TestDeleteProfilePic(t *testing.T) {
 			// test user jlk has a profile pic: should be able to delete it
 			UserID:             TEST_USER_ID,
 			Valid:              true,
-			ExpectedStatusCode: 204,
+			ExpectedStatusCode: http.StatusNoContent,
 		},
 		{
 			// test user bradley (id 9) does not have a profile pic: should fail
 			UserID:             "9",
 			Valid:              false,
-			ExpectedStatusCode: 400,
+			ExpectedStatusCode: http.StatusBadRequest,
 		},
 	}
 
@@ -134,7 +140,11 @@ func TestDeleteProfilePic(t *testing.T) {
 				)
 			}
 		} else if !tr.Valid && res.StatusCode != tr.ExpectedStatusCode {
-			t.Fatalf("expected status code 400, got %d (test request %+v)", res.StatusCode, tr)
+			t.Fatalf("expected status code %d, got %d (test request %+v)", 
+				tr.ExpectedStatusCode,
+				res.StatusCode, 
+				tr,
+			)
 		}
 	}
 }

@@ -342,7 +342,8 @@ func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata
 }
 
 func IsRedirect(status_code int) bool {
-	return status_code > 299 && status_code < 400
+	return status_code >= http.StatusMultipleChoices && 
+	status_code < http.StatusBadRequest
 }
 
 func SavePreviewImgAndGetFileName(url string, link_id string) (string, error) {

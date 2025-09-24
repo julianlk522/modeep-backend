@@ -38,7 +38,7 @@ func GetYTVideoMetadata(url string) (*model.YTVideoMetadata, error) {
 		return nil, e.ErrGoogleAPIsRequestFail(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = e.ErrInvalidGoogleAPIsResponse(resp.Status)
 		log.Print(err.Error())
 		return nil, err
