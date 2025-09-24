@@ -13,8 +13,6 @@ import (
 	"github.com/julianlk522/modeep/model"
 )
 
-const YT_VID_URL_REGEX = `^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+`
-
 func IsYTVideo(url string) bool {
 	match, _ := regexp.MatchString(YT_VID_URL_REGEX, url)
 	return match

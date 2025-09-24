@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-const CONTRIBUTORS_PAGE_LIMIT = 10
-
 type Contributors struct {
 	*Query
 }

@@ -17,8 +17,6 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const THUMBNAIL_WIDTH_PX int = 200
-
 // capitalized so it's exported
 var (
 	Profile_pic_dir, preview_pic_dir string

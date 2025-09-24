@@ -22,8 +22,6 @@ import (
 	"github.com/julianlk522/modeep/query"
 )
 
-const TMAP_CATS_PAGE_LIMIT int = 50
-
 // DeleteProfilePic
 func UserWithIDHasProfilePic(user_id string) bool {
 	var p sql.NullString

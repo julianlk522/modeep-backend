@@ -6,8 +6,6 @@ import (
 	mutil "github.com/julianlk522/modeep/model/util"
 )
 
-const SUMMARIES_PAGE_LIMIT = 20
-
 type Summaries struct {
 	*Query
 }

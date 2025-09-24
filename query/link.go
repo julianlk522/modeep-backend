@@ -9,8 +9,6 @@ import (
 	mutil "github.com/julianlk522/modeep/model/util"
 )
 
-const LINKS_PAGE_LIMIT = 20
-
 type TopLinks struct {
 	Query
 }

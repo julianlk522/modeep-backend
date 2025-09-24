@@ -17,8 +17,6 @@ import (
 	gomail "gopkg.in/mail.v2"
 )
 
-const PW_RESET_TOKEN_VALID_DURATION = 10 * time.Minute
-
 func GetEmailFromLoginName(loginName string) (string, error) {
 	var email sql.NullString
 	if err := db.Client.QueryRow("SELECT email FROM Users WHERE login_name = ?", loginName).Scan(&email); err != nil {

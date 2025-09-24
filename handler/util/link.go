@@ -23,11 +23,6 @@ import (
 // capitalized so it can be exported and used in GetPreviewImg handler
 var Preview_img_dir string
 
-const (
-	MAX_DAILY_LINKS          = 50
-	MAX_PREVIEW_IMG_WIDTH_PX = 200
-)
-
 func init() {
 	test_data_path := os.Getenv("MODEEP_TEST_DATA_PATH")
 	if test_data_path == "" {

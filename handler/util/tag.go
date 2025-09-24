@@ -12,8 +12,6 @@ import (
 	mutil "github.com/julianlk522/modeep/model/util"
 )
 
-const MIN_PERCENT_OF_MAX_CAT_SCORE float32 = 25
-
 func GetUserTagForLink(login_name string, link_id string) (*model.Tag, error) {
 	var id, cats, last_updated sql.NullString
 
@@ -254,7 +252,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 
 	var new_global_cats string
 	for _, cat := range AlphabetizeCatRankings(cat_rankings) {
-		if cat_rankings[cat] >= max_cat_score * (MIN_PERCENT_OF_MAX_CAT_SCORE / 100) {
+		if cat_rankings[cat] >= max_cat_score * (PERCENT_OF_MAX_CAT_SCORE_NEEDED_FOR_ASSIGNMENT / 100) {
 			new_global_cats += cat + ","
 		}
 	}
