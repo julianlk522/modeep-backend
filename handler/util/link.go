@@ -43,7 +43,7 @@ func UserHasSubmittedMaxDailyLinks(login_name string) (bool, error) {
 		return false, err
 	}
 
-	return count >= MAX_DAILY_LINKS, nil
+	return count >= MAX_DAILY_SUBMITTED_LINKS, nil
 }
 
 func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model.LinksPageOptions) (*model.LinksPage[T], error) {

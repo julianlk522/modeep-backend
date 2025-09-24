@@ -9,7 +9,6 @@ import (
 	"github.com/julianlk522/modeep/dbtest"
 )
 
-// shared across handler/util tests
 const (
 	TEST_LOGIN_NAME    = "jlk"
 	TEST_USER_ID       = "3"

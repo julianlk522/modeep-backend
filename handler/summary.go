@@ -87,7 +87,7 @@ func AddSummary(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Update summary if exists
+	// Update summary if exists
 	} else {
 		_, err = db.Client.Exec(
 			`UPDATE Summaries SET text = ?, last_updated = ? WHERE submitted_by = ? AND link_id = ?`,

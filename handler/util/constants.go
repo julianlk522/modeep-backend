@@ -4,7 +4,7 @@ import "time"
 
 const (
 	// Link
-	MAX_DAILY_LINKS                                        = 50
+	MAX_DAILY_SUBMITTED_LINKS                              = 50
 	MAX_PREVIEW_IMG_WIDTH_PX                               = 200
 	YT_VID_URL_REGEX                                       = `^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+`
 

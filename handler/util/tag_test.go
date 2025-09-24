@@ -150,9 +150,8 @@ func TestScanGlobalCatCounts(t *testing.T) {
 	}
 
 	// Verify count for top few cats
-	const FEW = 3
-	if len(*counts) > FEW {
-		*counts = (*counts)[0:FEW]
+	if len(*counts) > 3 {
+		*counts = (*counts)[0:3]
 	}
 
 	var result_count int32
@@ -219,9 +218,9 @@ func TestScanGlobalCatCounts(t *testing.T) {
 				query.GLOBAL_CATS_PAGE_LIMIT,
 			)
 
-			// Only top few cats
-		} else if len(*counts) > FEW {
-			*counts = (*counts)[0:FEW]
+		// Only top few cats
+		} else if len(*counts) > 3 {
+			*counts = (*counts)[0:3]
 		}
 
 		for _, c := range *counts {

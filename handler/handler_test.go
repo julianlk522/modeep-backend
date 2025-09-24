@@ -7,6 +7,11 @@ import (
 	"github.com/julianlk522/modeep/dbtest"
 )
 
+const (
+	TEST_USER_ID    = "3"
+	TEST_LOGIN_NAME = "jlk"
+)
+
 func TestMain(m *testing.M) {
 	err := dbtest.SetupTestDB()
 	if err != nil {
@@ -14,8 +19,3 @@ func TestMain(m *testing.M) {
 	}
 	m.Run()
 }
-
-const (
-	TEST_USER_ID    = "3"
-	TEST_LOGIN_NAME = "jlk"
-)

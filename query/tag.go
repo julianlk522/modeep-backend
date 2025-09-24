@@ -16,7 +16,7 @@ func NewTagRankings(link_id string) *TagRankings {
 	return (&TagRankings{Query: 
 		&Query{
 			Text: TAG_RANKINGS_BASE,
-			Args: []any{link_id, TAG_RANKINGS_CALC_LIMIT},
+			Args: []any{link_id, NUM_TAGS_TO_SEARCH_FOR_TOP_CATS},
 		},
 	})
 }
@@ -37,11 +37,11 @@ func (tr *TagRankings) Public() *TagRankings {
 	tr.Text = strings.Replace(
 		tr.Text,
 		TAG_RANKINGS_BASE_FIELDS,
-		TAG_RANKINGS_BASE_FIELDS+TAG_RANKINGS_PUBLIC_FIELDS,
+		TAG_RANKINGS_BASE_FIELDS + TAG_RANKINGS_PUBLIC_FIELDS,
 		1,
 	)
 
-	tr.Args[1] = TAG_RANKINGS_PAGE_LIMIT
+	tr.Args[1] = TAGS_PAGE_LIMIT
 
 	return tr
 }
@@ -186,7 +186,7 @@ func (gcc *GlobalCatCounts) WithURLContaining(snippet string) *GlobalCatCounts {
 	// insert into args in 2nd-to-last position
 	last_arg := gcc.Args[len(gcc.Args)-1]
 	gcc.Args = gcc.Args[:len(gcc.Args)-1]
-	gcc.Args = append(gcc.Args, "%"+snippet+"%")
+	gcc.Args = append(gcc.Args, "%" + snippet + "%")
 	gcc.Args = append(gcc.Args, last_arg)
 
 	return gcc
@@ -240,7 +240,7 @@ func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
 	// insert into args in 2nd-to-last position
 	last_arg := gcc.Args[len(gcc.Args)-1]
 	gcc.Args = gcc.Args[:len(gcc.Args)-1]
-	gcc.Args = append(gcc.Args, "%"+snippet+"%")
+	gcc.Args = append(gcc.Args, "%" + snippet + "%")
 	gcc.Args = append(gcc.Args, last_arg)
 
 	return gcc

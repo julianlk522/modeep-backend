@@ -96,11 +96,6 @@ func TestAddTag(t *testing.T) {
 		},
 	}
 
-	const (
-		TEST_USER_ID    = "3"
-		TEST_LOGIN_NAME = "jlk"
-	)
-
 	for _, tr := range test_tag_requests {
 		pl, _ := json.Marshal(tr.Payload)
 		r := httptest.NewRequest(
@@ -203,11 +198,6 @@ func TestEditTag(t *testing.T) {
 			ExpectedStatusCode: 200,
 		},
 	}
-
-	const (
-		TEST_USER_ID    = "3"
-		TEST_LOGIN_NAME = "jlk"
-	)
 
 	for _, tr := range test_tag_requests {
 		pl, _ := json.Marshal(tr.Payload)

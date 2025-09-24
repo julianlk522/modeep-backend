@@ -86,7 +86,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, e.Err500(err))
 		return
 	} else if user_submitted_max_daily_links {
-		render.Render(w, r, e.ErrTooManyRequests(e.ErrMaxDailyLinkSubmissionsReached(util.MAX_DAILY_LINKS)))
+		render.Render(w, r, e.ErrTooManyRequests(e.ErrMaxDailyLinkSubmissionsReached(util.MAX_DAILY_SUBMITTED_LINKS)))
 		return
 	}
 

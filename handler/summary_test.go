@@ -68,11 +68,6 @@ func TestAddSummary(t *testing.T) {
 		},
 	}
 
-	const (
-		TEST_USER_ID    = "3"
-		TEST_LOGIN_NAME = "jlk"
-	)
-
 	for _, tr := range test_summary_requests {
 		pl, _ := json.Marshal(tr.Payload)
 		r := httptest.NewRequest(
