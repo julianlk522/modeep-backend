@@ -111,8 +111,108 @@ func TestFromCats(t *testing.T) {
 	}
 }
 
-func TestLinksWithURLContaining(t *testing.T) {
+func TestLinksWithGlobalSummaryContaining(t *testing.T) {
 	// case-insensitive
+	links_sql := NewTopLinks().WithGlobalSummaryContaining("GoOgLe", "")
+
+	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links []model.Link
+	var pages int
+
+	for rows.Next() {
+		l := model.Link{}
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+			&pages,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		links = append(links, l)
+	}
+
+	if len(links) == 0 {
+		t.Fatal("no links")
+	}
+
+	for _, l := range links {
+		if !strings.Contains(strings.ToLower(l.Summary), "google") {
+			t.Fatalf("got %s, want %s", l.Summary, "google")
+		}
+	}
+
+	// no conflct w/ other methods
+	links_sql = NewTopLinks().
+		FromCats([]string{"test"}).
+		WithGlobalSummaryContaining("GoOgLe", "").
+		WithURLContaining("www", "").
+		WithURLLacking("something", "").
+		AsSignedInUser(TEST_USER_ID).
+		NSFW().
+		SortBy("newest").
+		Page(1).
+		DuringPeriod("all", "newest")
+	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	lsi := []model.LinkSignedIn{}
+	for rows.Next() {
+		l := model.LinkSignedIn{}
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+			&pages,
+			&l.StarsAssigned,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		lsi = append(lsi, l)
+	}
+
+	if len(lsi) == 0 {
+		t.Fatal("no links")
+	}
+
+	for _, l := range lsi {
+		if !strings.Contains(strings.ToLower(l.Summary), "google") {
+			t.Fatalf("got %s, want %s", l.Summary, "google")
+		}
+	}
+}
+
+func TestLinksWithURLContaining(t *testing.T) {
 	links_sql := NewTopLinks().WithURLContaining("GoOgLe", "")
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)

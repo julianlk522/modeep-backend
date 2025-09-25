@@ -43,6 +43,11 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 		tl = tl.FromCats(cats)
 	}
 
+	summary_contains_params := params.Get("summary_contains")
+	if summary_contains_params != "" {
+		tl = tl.WithGlobalSummaryContaining(summary_contains_params, sort_params)
+	}
+
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
 		tl = tl.WithURLContaining(url_contains_params, sort_params)
@@ -103,7 +108,7 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_BASE_CTES,
-		LINKS_BASE_CTES+cats_CTE,
+		LINKS_BASE_CTES + cats_CTE,
 		1)
 
 	// Append join
@@ -122,7 +127,40 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	return tl
 }
 
-var num_wheres_in_links_base_query = strings.Count(links_base_query, "WHERE")
+func (tl *TopLinks) WithGlobalSummaryContaining(snippet string, sort_by string) *TopLinks {
+	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
+	if sort_by != "" {
+		clause, ok := links_order_by_clauses[sort_by]
+		if ok {
+			order_by_clause = clause
+		} else {
+			tl.Error = e.ErrInvalidSortByParams
+			return tl
+		}
+	}
+
+	var clause_keyword string
+	if strings.Count(tl.Text, "WHERE") >= num_wheres_in_links_base_query {
+		clause_keyword = "AND"
+	} else {
+		clause_keyword = "WHERE"
+	}
+
+	tl.Text = strings.Replace(
+		tl.Text,
+		order_by_clause,
+		"\n" + clause_keyword + " global_summary LIKE ?" + order_by_clause,
+		1,
+	)
+
+	// insert into args in 2nd-to-last position
+	last_arg := tl.Args[len(tl.Args) - 1]
+	tl.Args = tl.Args[:len(tl.Args) - 1]
+	tl.Args = append(tl.Args, "%" + snippet + "%")
+	tl.Args = append(tl.Args, last_arg)
+
+	return tl
+}
 
 func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks {
 	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
@@ -233,6 +271,8 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 	return tl
 }
 
+var num_wheres_in_links_base_query = strings.Count(links_base_query, "WHERE")
+
 func (tl *TopLinks) SortBy(metric string) *TopLinks {
 	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := links_order_by_clauses[metric]
@@ -253,9 +293,9 @@ func (tl *TopLinks) SortBy(metric string) *TopLinks {
 
 func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
 	auth_replacer := strings.NewReplacer(
-		LINKS_BASE_CTES, LINKS_BASE_CTES+LINKS_AUTH_CTE,
-		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS+LINKS_AUTH_FIELD,
-		LINKS_BASE_JOINS, LINKS_BASE_JOINS+LINKS_AUTH_JOIN,
+		LINKS_BASE_CTES, LINKS_BASE_CTES + LINKS_AUTH_CTE,
+		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS + LINKS_AUTH_FIELD,
+		LINKS_BASE_JOINS, LINKS_BASE_JOINS + LINKS_AUTH_JOIN,
 	)
 	tl.Text = auth_replacer.Replace(tl.Text)
 
@@ -294,7 +334,7 @@ func (tl *TopLinks) NSFW() *TopLinks {
 	if has_subsequent_clause {
 		tl.Text = strings.Replace(
 			tl.Text,
-			LINKS_NO_NSFW_CATS_WHERE+"\nAND",
+			LINKS_NO_NSFW_CATS_WHERE + "\nAND",
 			"\nWHERE",
 			1,
 		)
@@ -362,7 +402,13 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 		SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
 	)`
 
-	if strings.Contains(tl.Text, "WHERE url LIKE") || strings.Contains(tl.Text, "WHERE url NOT LIKE") {
+	if strings.Contains(
+		tl.Text, 
+		"WHERE url",
+	) || strings.Contains(
+		tl.Text, 
+		"WHERE global_summmary",
+	) {
 		nsfw_clause = strings.Replace(
 			nsfw_clause,
 			"WHERE",
@@ -473,8 +519,7 @@ LEFT JOIN AverageStars avs ON l.id = avs.link_id
 LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
-LEFT JOIN SummaryCount sc ON l.id = sc.link_id
-`
+LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
 
 const LINKS_NO_NSFW_CATS_WHERE = `
 WHERE l.id NOT IN (

@@ -187,6 +187,35 @@ func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
 	}
 }
 
+func TestTmapNSFWLinksCountWithSummaryContaining(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).WithSummaryContaining("web")
+	var count int
+	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	var expected_count int
+	nsfw_links_sql := `SELECT COUNT(DISTINCT L.id) as nsfw_links
+FROM Links L
+LEFT JOIN Users U ON L.submitted_by = U.login_name
+LEFT JOIN Stars S ON S.user_id = U.id
+LEFT JOIN Tags T ON T.submitted_by = L.submitted_by
+WHERE L.global_cats LIKE '%' || 'NSFW' || '%'
+	AND L.global_summary LIKE '%' || ? || '%'
+  	AND (L.submitted_by = ? OR T.submitted_by = ? OR U.login_name = ?);`
+	if err := TestClient.QueryRow(
+		nsfw_links_sql,
+		"web",
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)
+	} else if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
 func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
 	// user bradley has 1 NSFW tmap link: "https://www.googler.com/"
 	// count should be 1 overall and 0 with URL contains: {anything not in that}
@@ -763,6 +792,70 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 	}
 }
 
+func TestTmapSubmittedWithSummaryContaining(t *testing.T) {
+	summary_snippet := "you" 
+	var expected_count int
+	expected_count_sql := `WITH PossibleUserSummary AS (
+    SELECT
+        link_id,
+        text as user_summary
+    FROM Summaries
+    INNER JOIN Users u ON u.id = submitted_by
+    WHERE u.login_name = ?
+)
+SELECT count(*) as link_count
+FROM Links l
+LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
+WHERE COALESCE(pus.user_summary, l.global_summary) LIKE '%' || ? || '%'
+AND l.submitted_by = ?;`
+	err := TestClient.QueryRow(
+		expected_count_sql, 
+		TEST_LOGIN_NAME,
+		summary_snippet, 
+		TEST_LOGIN_NAME,
+		).Scan(&expected_count)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).WithSummaryContaining(summary_snippet)
+	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links []model.TmapLink
+	for rows.Next() {
+		l := model.TmapLink{}
+		err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		)
+		if err != nil {
+			t.Fatal(err)
+		} 
+
+		links = append(links, l)
+	}
+
+	if len(links) != expected_count {
+		t.Fatal("len(links) != expected_count")
+	}
+}
+
 func TestTmapSubmittedWithURLContaining(t *testing.T) {
 	url_snippet := "red" 
 	var expected_count int
@@ -1202,6 +1295,71 @@ func TestTmapStarredDuringPeriod(t *testing.T) {
 	}
 }
 
+func TestTmapStarredWithSummaryContaining(t *testing.T) {
+	summary_snippet := "you" 
+	var expected_count int
+	expected_count_sql := `WITH PossibleUserSummary AS (
+		SELECT
+			link_id,
+			text as user_summary
+		FROM Summaries
+		INNER JOIN Users u ON u.id = submitted_by
+		WHERE u.login_name = ?
+	)
+	SELECT count(*) as link_count
+	FROM Links l
+	LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
+	INNER JOIN Users u ON u.login_name = ?
+	INNER JOIN Stars s ON s.link_id = l.id AND s.user_id = u.id
+	WHERE COALESCE(pus.user_summary, l.global_summary) LIKE '%' || ? || '%';`
+	err := TestClient.QueryRow(
+			expected_count_sql,
+			TEST_LOGIN_NAME, 
+			TEST_LOGIN_NAME,
+			summary_snippet, 
+		).Scan(&expected_count)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	starred_sql := NewTmapSubmitted(TEST_LOGIN_NAME).WithSummaryContaining(summary_snippet)
+	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links []model.TmapLink
+	for rows.Next() {
+		l := model.TmapLink{}
+		err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		)
+		if err != nil {
+			t.Fatal(err)
+		} 
+
+		links = append(links, l)
+	}
+
+	if len(links) != expected_count {
+		t.Fatal("len(links) != expected_count")
+	}
+}
+
 func TestTmapStarredWithURLContaining(t *testing.T) {
 	url_snippet := "coding" 
 	var expected_count int
@@ -1537,6 +1695,80 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 
 	if len(tagged_period_week) != 0 {
 		t.Fatal("should be no links tagged within last week")
+	}
+}
+
+func TestTmapTaggedWithSummaryContaining(t *testing.T) {
+	summary_snippet := "test"
+	var expected_count int
+	expected_count_sql := `WITH PossibleUserSummary AS (
+		SELECT
+			link_id,
+			text as user_summary
+		FROM Summaries
+		INNER JOIN Users u ON u.id = submitted_by
+		WHERE u.login_name = ?
+	),
+	UserStars AS (
+		SELECT s.link_id
+		FROM Stars s
+		INNER JOIN Users u ON u.id = s.user_id
+		WHERE u.login_name = ?
+	)
+	SELECT count(*) as link_count
+	FROM Links l
+	LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
+	INNER JOIN Tags t ON t.link_id = l.id AND t.submitted_by = ?
+	WHERE COALESCE(pus.user_summary, l.global_summary) LIKE '%' || ? || '%'
+	AND l.submitted_by != ?
+	AND l.id NOT IN (SELECT link_id FROM UserStars);`
+	err := TestClient.QueryRow(
+			expected_count_sql, 
+			TEST_LOGIN_NAME,
+			TEST_LOGIN_NAME,
+			TEST_LOGIN_NAME,
+			summary_snippet,
+			TEST_LOGIN_NAME,
+		).Scan(&expected_count)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).WithSummaryContaining(summary_snippet)
+	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var links []model.TmapLink
+	for rows.Next() {
+		l := model.TmapLink{}
+		err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		)
+		if err != nil {
+			t.Fatal(err)
+		} 
+
+		links = append(links, l)
+	}
+
+	if len(links) != expected_count {
+		t.Fatal("len(links) != expected_count")
 	}
 }
 

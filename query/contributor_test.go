@@ -79,6 +79,100 @@ FROM Links l`,
 	}
 }
 
+func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
+	// case-insensitive
+	contributors_sql := NewTopContributors().WithGlobalSummaryContaining("gooGLE")
+	if contributors_sql.Error != nil {
+		t.Fatal(contributors_sql.Error)
+	}
+
+	rows, err := TestClient.Query(contributors_sql.Text, contributors_sql.Args...)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var contributors []model.Contributor
+	for rows.Next() {
+		var c model.Contributor
+		if err := rows.Scan(&c.LinksSubmitted, &c.LoginName); err != nil {
+			t.Fatal(err)
+		}
+		contributors = append(contributors, c)
+	}
+
+	if len(contributors) == 0 {
+		t.Fatal("no contributors")
+	}
+
+	// verify counts
+	for _, c := range contributors {
+		var count int
+		if err := TestClient.QueryRow(`SELECT count(id) as count 
+		FROM LINKS 
+		WHERE global_summary LIKE ?
+		AND submitted_by = ?`,
+			"%google%",
+			c.LoginName,
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		} else if count != c.LinksSubmitted {
+			t.Fatalf("got %d, want %d", count, c.LinksSubmitted)
+		}
+	}
+
+	// no conflict w/ other methods
+	contributors_sql = NewTopContributors().
+		WithGlobalSummaryContaining("TEST").
+		WithURLContaining("www").
+		WithURLLacking("test").
+		DuringPeriod("all")
+	if contributors_sql.Error != nil {
+		t.Fatal(contributors_sql.Error)
+	}
+
+	rows, err = TestClient.Query(
+		contributors_sql.Text,
+		contributors_sql.Args...,
+	)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	contributors = []model.Contributor{}
+	for rows.Next() {
+		var c model.Contributor
+		if err := rows.Scan(&c.LinksSubmitted, &c.LoginName); err != nil {
+			t.Fatal(err)
+		}
+		contributors = append(contributors, c)
+	}
+
+	if len(contributors) == 0 {
+		t.Fatal("no contributors")
+	}
+
+	for _, c := range contributors {
+		var count int
+		if err := TestClient.QueryRow(`SELECT count(id) as count 
+		FROM LINKS 
+		WHERE global_summary LIKE ?
+		AND url LIKE ?
+		AND url NOT LIKE ?
+		AND submitted_by = ?`,
+			"%test%",
+			"%www%",
+			"%test%",
+			c.LoginName,
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		} else if count != c.LinksSubmitted {
+			t.Fatalf("got %d, want %d", count, c.LinksSubmitted)
+		}
+	}
+}
+
 func TestTopContributorsWithURLContaining(t *testing.T) {
 	// case-insensitive
 	contributors_sql := NewTopContributors().WithURLContaining("gooGLE")

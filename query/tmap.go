@@ -89,6 +89,44 @@ AND (
 		)
 	);`
 
+func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOptions) *TmapNSFWLinksCount {
+	if opts.OnlySection != "" {
+		switch opts.OnlySection {
+		case "submitted":
+			tnlc.SubmittedOnly()
+		case "starred":
+			tnlc.StarredOnly()
+		case "tagged":
+			tnlc.TaggedOnly()
+		default:
+			tnlc.Error = e.ErrInvalidOnlySectionParams
+			return tnlc
+		}
+	}
+
+	if len(opts.CatsFilter) > 0 {
+		tnlc.FromCats(opts.CatsFilter)
+	}
+
+	if opts.Period != "" {
+		tnlc.DuringPeriod(opts.Period)
+	}
+
+	if opts.SummaryContains != "" {
+		tnlc.WithSummaryContaining(opts.SummaryContains)
+	}
+
+	if opts.URLContains != "" {
+		tnlc.WithURLContaining(opts.URLContains)
+	}
+
+	if opts.URLLacks != "" {
+		tnlc.WithURLLacking(opts.URLLacks)
+	}
+
+	return tnlc
+}
+
 func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
@@ -205,6 +243,19 @@ func (tnlc *TmapNSFWLinksCount) DuringPeriod(period string) *TmapNSFWLinksCount 
 	return tnlc
 }
 
+func (tnlc *TmapNSFWLinksCount) WithSummaryContaining(snippet string) *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		";",
+		"\nAND global_summary LIKE ?;",
+		1,
+	)
+
+	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
+
+	return tnlc
+}
+
 func (tnlc *TmapNSFWLinksCount) WithURLContaining(snippet string) *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
@@ -227,40 +278,6 @@ func (tnlc *TmapNSFWLinksCount) WithURLLacking(snippet string) *TmapNSFWLinksCou
 	)
 
 	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
-
-	return tnlc
-}
-
-func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOptions) *TmapNSFWLinksCount {
-	if opts.OnlySection != "" {
-		switch opts.OnlySection {
-		case "submitted":
-			tnlc.SubmittedOnly()
-		case "starred":
-			tnlc.StarredOnly()
-		case "tagged":
-			tnlc.TaggedOnly()
-		default:
-			tnlc.Error = e.ErrInvalidOnlySectionParams
-			return tnlc
-		}
-	}
-
-	if len(opts.CatsFilter) > 0 {
-		tnlc.FromCats(opts.CatsFilter)
-	}
-
-	if opts.Period != "" {
-		tnlc.DuringPeriod(opts.Period)
-	}
-
-	if opts.URLContains != "" {
-		tnlc.WithURLContaining(opts.URLContains)
-	}
-
-	if opts.URLLacks != "" {
-		tnlc.WithURLLacking(opts.URLLacks)
-	}
 
 	return tnlc
 }
@@ -313,6 +330,10 @@ func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 
 	if opts.Period != "" {
 		ts.DuringPeriod(opts.Period)
+	}
+
+	if opts.SummaryContains != "" {
+		ts.WithSummaryContaining(opts.SummaryContains)
 	}
 
 	if opts.URLContains != "" {
@@ -420,6 +441,21 @@ func (ts *TmapSubmitted) DuringPeriod(period string) *TmapSubmitted {
 	return ts
 }
 
+func (ts *TmapSubmitted) WithSummaryContaining(snippet string) *TmapSubmitted {
+	for _, order_by_clause := range tmap_order_by_clauses {
+		ts.Text = strings.Replace(
+			ts.Text,
+			order_by_clause,
+			"\nAND " + "summary LIKE ?" + order_by_clause,
+			1,
+		)
+	} 
+
+	ts.Args = append(ts.Args, "%" + snippet + "%")
+
+	return ts
+}
+
 func (ts *TmapSubmitted) WithURLContaining(snippet string) *TmapSubmitted {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
@@ -506,6 +542,10 @@ func (tc *TmapStarred) FromOptions(opts *model.TmapOptions) *TmapStarred {
 
 	if opts.Period != "" {
 		tc.DuringPeriod(opts.Period)
+	}
+
+	if opts.SummaryContains != "" {
+		tc.WithSummaryContaining(opts.SummaryContains)
 	}
 
 	if opts.URLContains != "" {
@@ -611,6 +651,21 @@ func (tc *TmapStarred) DuringPeriod(period string) *TmapStarred {
 			1,
 		)
 	}
+
+	return tc
+}
+
+func (tc *TmapStarred) WithSummaryContaining(snippet string) *TmapStarred {
+	for _, order_by_clause := range tmap_order_by_clauses {
+		tc.Text = strings.Replace(
+			tc.Text,
+			order_by_clause,
+			"\nAND " + "summary LIKE ?" + order_by_clause,
+			1,
+		)
+	} 
+
+	tc.Args = append(tc.Args, "%" + snippet + "%")
 
 	return tc
 }
@@ -725,6 +780,10 @@ func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) *TmapTagged {
 	
 	if opts.Period != "" {
 		tt.DuringPeriod(opts.Period)
+	}
+
+	if opts.SummaryContains != "" {
+		tt.WithSummaryContaining(opts.SummaryContains)
 	}
 	
 	if opts.URLContains != "" {
@@ -847,6 +906,22 @@ for _, order_by_clause := range tmap_order_by_clauses {
 			1,
 		)
 	}
+
+	return tt
+}
+
+
+func (tt *TmapTagged) WithSummaryContaining(snippet string) *TmapTagged {
+	for _, order_by_clause := range tmap_order_by_clauses {
+		tt.Text = strings.Replace(
+			tt.Text,
+			order_by_clause,
+			"\nAND " + "summary LIKE ?" + order_by_clause,
+			1,
+		)
+	} 
+
+	tt.Args = append(tt.Args, "%" + snippet + "%")
 
 	return tt
 }

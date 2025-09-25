@@ -87,6 +87,11 @@ func (gcc *GlobalCatCounts) FromRequestParams(params url.Values) *GlobalCatCount
 		gcc = gcc.SubcatsOfCats(cats_params)
 	}
 
+	summary_contains_params := params.Get("summary_contains")
+	if summary_contains_params != "" {
+		gcc = gcc.WithGlobalSummaryContaining(summary_contains_params)
+	}
+
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
 		gcc = gcc.WithURLContaining(url_contains_params)
@@ -113,12 +118,16 @@ func (gcc *GlobalCatCounts) FromRequestParams(params url.Values) *GlobalCatCount
 }
 
 func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
-	// Lowercase to ensure all case variations are returned
+	// lowercase cats to ensure all case variations are returned
 	cats := strings.Split(strings.ToLower(cats_params), ",")
 
-	// Build NOT IN clause
 	not_in_clause := `
 	AND LOWER(global_cat) NOT IN (?`
+
+	// add cat filter args to 2nd-to-last position
+	// (LIMIT stays last no matter what - it is easier to add back after)
+	limit_arg := gcc.Args[len(gcc.Args) - 1]
+	gcc.Args = gcc.Args[:len(gcc.Args) - 1]
 
 	gcc.Args = append(gcc.Args, cats[0])
 	for i := 1; i < len(cats); i++ {
@@ -127,101 +136,140 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	}
 	not_in_clause += ")"
 
-	// Build MATCH clause
+	// Add optional singular/plural variants
+	// (skip for NOT IN clause otherwise subcats include filters)
+	match_arg := WithOptionalPluralOrSingularForm(cats[0])
+	for i := 1; i < len(cats); i++ {
+		match_arg += " AND " + WithOptionalPluralOrSingularForm(cats[i])
+	}
+	gcc.Args = append(gcc.Args, match_arg)
+
 	match_clause := `
 	AND id IN (
 		SELECT link_id
 		FROM global_cats_fts
 		WHERE global_cats MATCH ?
 		)`
-
-	match_arg := WithOptionalPluralOrSingularForm(cats[0])
-	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + WithOptionalPluralOrSingularForm(cats[i])
-	}
-	// Add optional singular/plural variants
-	// (skip for NOT IN clause otherwise subcats include filters)
-	gcc.Args = append(gcc.Args, match_arg)
-
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"WHERE global_cat != ''",
-		"WHERE global_cat != ''"+
-			not_in_clause+
+		"WHERE global_cat != ''" +
+			not_in_clause +
 			match_clause,
-		1)
+		1,
+	)
 
-	// Move LIMIT arg to end
-	gcc.Args = append(gcc.Args[1:], GLOBAL_CATS_PAGE_LIMIT)
+	gcc.Args = append(gcc.Args, limit_arg)
+
+	return gcc
+}
+
+func (gcc *GlobalCatCounts) WithGlobalSummaryContaining(snippet string) *GlobalCatCounts {
+	// in case either .WithURLContaining or .WithURLLacking was run first
+	if strings.Contains(
+		gcc.Text, 
+		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
+	) {
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url, global_summary)",
+			1,
+		)
+
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"SELECT id, '', global_cats||',', url",
+			"SELECT id, '', global_cats||',', url, global_summary",
+			1,
+		)
+
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"substr(str, instr(str, ',') + 1),\nurl",
+			"substr(str, instr(str, ',') + 1),\nurl,\nglobal_summary",
+			1,
+		)
+	} else {
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str)",
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, global_summary)",
+			1,
+		)
+
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"SELECT id, '', global_cats||','",
+			"SELECT id, '', global_cats||',', global_summary",
+			1,
+		)
+
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"substr(str, instr(str, ',') + 1)",
+			"substr(str, instr(str, ',') + 1),\nglobal_summary",
+			1,
+		)
+	}
+
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"WHERE str != ''",
+		"WHERE str != ''\nAND global_summary LIKE ?",
+		1,
+	)
+
+	// prepend arg
+	gcc.Args = append([]any{"%" + snippet + "%"}, gcc.Args...)
 
 	return gcc
 }
 
 func (gcc *GlobalCatCounts) WithURLContaining(snippet string) *GlobalCatCounts {
-	gcc.Text = strings.Replace(
-		gcc.Text,
-		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str)",
-		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
-		1,
-	)
-	gcc.Text = strings.Replace(
-		gcc.Text,
-		"SELECT id, '', global_cats||','",
-		"SELECT id, '', global_cats||',', url",
-		1,
-	)
-	gcc.Text = strings.Replace(
-		gcc.Text,
-		"substr(str, instr(str, ',') + 1)",
-		"substr(str, instr(str, ',') + 1),\nurl",
-		1,
-	)
-	gcc.Text = strings.Replace(
-		gcc.Text,
-		"GROUP BY LOWER(global_cat)",
-		"\nAND url LIKE ?\nGROUP BY LOWER(global_cat)",
-		1,
-	)
+	// in case .WithGlobalSummaryContaining was run first
+	if strings.Contains(
+		gcc.Text, 
+		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, global_summary)",
+	) {
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, global_summary)",
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url, global_summary)",
+			1,
+		)
 
-	// insert into args in 2nd-to-last position
-	last_arg := gcc.Args[len(gcc.Args)-1]
-	gcc.Args = gcc.Args[:len(gcc.Args)-1]
-	gcc.Args = append(gcc.Args, "%" + snippet + "%")
-	gcc.Args = append(gcc.Args, last_arg)
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"SELECT id, '', global_cats||',', global_summary",
+			"SELECT id, '', global_cats||',', url, global_summary",
+			1,
+		)
 
-	return gcc
-}
-
-func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
-
-	// check if WithURLContaining was already run
-	// (avoid double string replacement)
-	has_url_contains := strings.Contains(
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"substr(str, instr(str, ',') + 1),\nglobal_summary",
+			"substr(str, instr(str, ',') + 1),\nurl,\nglobal_summary",
+			1,
+		)
+	} else if (!strings.Contains(
 		gcc.Text,
 		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
-	) &&
-		strings.Contains(
-		gcc.Text,
-		"SELECT id, '', global_cats||',', url",
-	) &&
-		strings.Contains(
-		gcc.Text,
-		"substr(str, instr(str, ',') + 1),\nurl",
-	)
-
-	if !has_url_contains {
+	)) {
 		gcc.Text = strings.Replace(
 			gcc.Text,
 			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str)",
 			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
 			1,
 		)
+
 		gcc.Text = strings.Replace(
 			gcc.Text,
 			"SELECT id, '', global_cats||','",
 			"SELECT id, '', global_cats||',', url",
 			1,
 		)
+
 		gcc.Text = strings.Replace(
 			gcc.Text,
 			"substr(str, instr(str, ',') + 1)",
@@ -232,16 +280,78 @@ func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
 	
 	gcc.Text = strings.Replace(
 		gcc.Text,
-		"GROUP BY LOWER(global_cat)",
-		"AND url NOT LIKE ?\nGROUP BY LOWER(global_cat)",
+		"WHERE str != ''",
+		"WHERE str != ''\nAND url LIKE ?",
 		1,
 	)
 
-	// insert into args in 2nd-to-last position
-	last_arg := gcc.Args[len(gcc.Args)-1]
-	gcc.Args = gcc.Args[:len(gcc.Args)-1]
-	gcc.Args = append(gcc.Args, "%" + snippet + "%")
-	gcc.Args = append(gcc.Args, last_arg)
+	// prepend arg
+	gcc.Args = append([]any{"%" + snippet + "%"}, gcc.Args...)
+
+	return gcc
+}
+
+func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
+	// in case .WithGlobalSummaryContaining was run first
+	if strings.Contains(
+		gcc.Text, 
+		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, global_summary)",
+	) {
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, global_summary)",
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url, global_summary)",
+			1,
+		)
+
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"SELECT id, '', global_cats||',', global_summary",
+			"SELECT id, '', global_cats||',', url, global_summary",
+			1,
+		)
+
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"substr(str, instr(str, ',') + 1),\nglobal_summary",
+			"substr(str, instr(str, ',') + 1),\nurl,\nglobal_summary",
+			1,
+		)
+	} else if (!strings.Contains(
+		gcc.Text,
+		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url",
+	)) {
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str)",
+			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
+			1,
+		)
+
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"SELECT id, '', global_cats||','",
+			"SELECT id, '', global_cats||',', url",
+			1,
+		)
+
+		gcc.Text = strings.Replace(
+			gcc.Text,
+			"substr(str, instr(str, ',') + 1)",
+			"substr(str, instr(str, ',') + 1),\nurl",
+			1,
+		)
+	}
+	
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"WHERE str != ''",
+		"WHERE str != ''\nAND url NOT LIKE ?",
+		1,
+	)
+
+	// prepend arg
+	gcc.Args = append([]any{"%" + snippet + "%"}, gcc.Args...)
 
 	return gcc
 }

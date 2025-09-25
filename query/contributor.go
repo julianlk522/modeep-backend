@@ -32,6 +32,11 @@ func (c *Contributors) FromRequestParams(params url.Values) *Contributors {
 		c = c.FromCats(cats)
 	}
 
+	summary_contains_params := params.Get("summary_contains")
+	if summary_contains_params != "" {
+		c = c.WithGlobalSummaryContaining(summary_contains_params)
+	}
+
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
 		c = c.WithURLContaining(url_contains_params)
@@ -77,7 +82,7 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 	c.Text = strings.Replace(
 		c.Text,
 		"FROM Links l",
-		"FROM Links l"+CONTRIBUTORS_CATS_FROM,
+		"FROM Links l" + CONTRIBUTORS_CATS_FROM,
 		1,
 	)
 
@@ -90,18 +95,43 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 const CONTRIBUTORS_CATS_FROM = `
 INNER JOIN CatsFilter f ON l.id = f.link_id`
 
-func (c *Contributors) WithURLContaining(snippet string) *Contributors {
+func (c *Contributors) WithGlobalSummaryContaining(snippet string) *Contributors {
+	clause_keyword := "WHERE"
+	if strings.Contains(c.Text, "WHERE url") {
+		clause_keyword = "AND"
+	}
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		"WHERE url LIKE ?\nGROUP BY l.submitted_by",
+		clause_keyword + " global_summary LIKE ?\nGROUP BY l.submitted_by",
 		1,
 	)
 
 	// insert into arg in 2nd-to-last position
-	last_arg := c.Args[len(c.Args)-1]
+	last_arg := c.Args[len(c.Args) - 1]
 	c.Args = c.Args[:len(c.Args)-1]
-	c.Args = append(c.Args, "%"+snippet+"%")
+	c.Args = append(c.Args, "%" + snippet + "%")
+	c.Args = append(c.Args, last_arg)
+
+	return c
+}
+
+func (c *Contributors) WithURLContaining(snippet string) *Contributors {
+	clause_keyword := "WHERE"
+	if strings.Contains(c.Text, "WHERE url") || strings.Contains(c.Text, "WHERE global_summary") {
+		clause_keyword = "AND"
+	}
+	c.Text = strings.Replace(
+		c.Text,
+		"GROUP BY l.submitted_by",
+		clause_keyword + " url LIKE ?\nGROUP BY l.submitted_by",
+		1,
+	)
+
+	// insert into arg in 2nd-to-last position
+	last_arg := c.Args[len(c.Args) - 1]
+	c.Args = c.Args[:len(c.Args) - 1]
+	c.Args = append(c.Args, "%" + snippet + "%")
 	c.Args = append(c.Args, last_arg)
 
 	return c
@@ -109,7 +139,7 @@ func (c *Contributors) WithURLContaining(snippet string) *Contributors {
 
 func (c *Contributors) WithURLLacking(snippet string) *Contributors {
 	clause_keyword := "WHERE"
-	if strings.Contains(c.Text, "WHERE url LIKE") {
+	if strings.Contains(c.Text, "WHERE url") || strings.Contains(c.Text, "WHERE global_summary") {
 		clause_keyword = "AND"
 	}
 	c.Text = strings.Replace(
@@ -120,9 +150,9 @@ func (c *Contributors) WithURLLacking(snippet string) *Contributors {
 	)
 
 	// insert into arg in 2nd-to-last position
-	last_arg := c.Args[len(c.Args)-1]
-	c.Args = c.Args[:len(c.Args)-1]
-	c.Args = append(c.Args, "%"+snippet+"%")
+	last_arg := c.Args[len(c.Args) - 1]
+	c.Args = c.Args[:len(c.Args) - 1]
+	c.Args = append(c.Args, "%" + snippet + "%")
 	c.Args = append(c.Args, last_arg)
 
 	return c
@@ -134,8 +164,7 @@ func (c *Contributors) DuringPeriod(period string) *Contributors {
 	}
 	
 	var clause_keyword string
-	// adapt keyword if .WithURLContaining / .WithURLLacking was called first
-	if strings.Contains(c.Text, "WHERE url") {
+	if strings.Contains(c.Text, "WHERE url") || strings.Contains(c.Text, "WHERE global_summary") {
 		clause_keyword = "AND"
 	} else {
 		clause_keyword = "WHERE"
@@ -157,7 +186,7 @@ func (c *Contributors) DuringPeriod(period string) *Contributors {
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		clause_keyword+" "+period_clause+"\n"+"GROUP BY l.submitted_by",
+		clause_keyword + " " + period_clause + "\n" + "GROUP BY l.submitted_by",
 		1)
 
 	return c

@@ -149,9 +149,9 @@ func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
 		var count int32
 		if err := TestClient.QueryRow(`SELECT count(id) as count 
 		FROM LINKS 
-		WHERE global_cats LIKE '%' || ? || '%'
-		AND global_cats LIKE '%' || ? || '%'
-		AND global_cats LIKE '%' || ? || '%'`,
+		WHERE ',' || global_cats || ',' LIKE '%' || ? || '%'
+		AND ',' || global_cats || ',' LIKE '%' || ? || '%'
+		AND ',' || global_cats || ',' LIKE '%' || ? || '%'`,
 			test_cats[0],
 			test_cats[1],
 			c.Category,
@@ -168,13 +168,111 @@ func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
 	}
 }
 
+func TestNewTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
+	counts_sql := NewTopGlobalCatCounts().WithGlobalSummaryContaining("test")
+	if counts_sql.Error != nil {
+		t.Fatal(counts_sql.Error)
+	}
+
+	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var counts []model.CatCount
+	for rows.Next() {
+		var c model.CatCount
+		if err := rows.Scan(&c.Category, &c.Count); err != nil {
+			t.Fatal(err)
+		}
+		counts = append(counts, c)
+	}
+
+	if len(counts) == 0 {
+		t.Fatal("no top global cats returned")
+	}
+
+	// verify counts
+	for _, c := range counts {
+		var count int32
+		if err := TestClient.QueryRow(`SELECT count(DISTINCT id) as count 
+		FROM LINKS 
+		WHERE ',' || global_cats || ',' LIKE '%,' || ? || ',%'
+		AND global_summary LIKE '%' || ? || '%'`,
+			c.Category,
+			"test",
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		} else if count != c.Count {
+			t.Fatalf(
+				"got %d, want %d for cat %s",
+				count,
+				c.Count,
+				c.Category,
+			)
+		}
+	}
+
+	// verify does not conflict w/ other methods
+	counts_sql = NewTopGlobalCatCounts().
+		SubcatsOfCats("flowers").
+		WithGlobalSummaryContaining("test").
+		WithURLContaining("www").
+		WithURLLacking("donut").
+		More()
+	if counts_sql.Error != nil {
+		t.Fatal(counts_sql.Error)
+	}
+	 
+	rows, err = TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	counts = []model.CatCount{}
+	for rows.Next() {
+		var c model.CatCount
+		if err := rows.Scan(&c.Category, &c.Count); err != nil {
+			t.Fatal(err)
+		}
+		counts = append(counts, c)
+	}
+
+	if len(counts) == 0 {
+		t.Fatal("no top global cats returned")
+	}
+
+	for _, c := range counts {
+		var count int32
+		if err := TestClient.QueryRow(`SELECT count(DISTINCT id) as count 
+		FROM LINKS 
+		WHERE ',' || global_cats || ',' LIKE '%' || ? || '%'
+		AND global_summary LIKE '%' || ? || '%'
+		AND url LIKE '%' || ? || '%'
+		AND url NOT LIKE '%' || ? || '%'`,
+			c.Category,
+			"test",
+			"www",
+			"donut",
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		} else if count != c.Count {
+			t.Fatalf(
+				"got %d, want %d for cat %s",
+				count,
+				c.Count,
+				c.Category,
+			)
+		}
+	}
+}
+
 func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
-	// Verify no conflict with other methods
 	counts := []model.CatCount{}
 
 	counts_sql := NewTopGlobalCatCounts().
 		SubcatsOfCats(strings.Join(test_cats, ",")).
-		// case-insensitive
 		WithURLContaining("GooGlE").
 		More()
 	if counts_sql.Error != nil {
@@ -198,9 +296,61 @@ func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
 		var count int32
 		if err := TestClient.QueryRow(`SELECT count(id) as count 
 		FROM LINKS 
-		WHERE global_cats LIKE '%' || ? || '%'
+		WHERE ',' || global_cats || ',' LIKE '%' || ? || '%'
 		AND url LIKE '%' || ? || '%'`,
 			c.Category,
+			"google",
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		} else if count != c.Count {
+			t.Fatalf(
+				"got %d, want %d for cat %s",
+				count,
+				c.Count,
+				c.Category,
+			)
+		}
+	}
+}
+
+func TestNewTopGlobalCatCountsWithURLLacking(t *testing.T) {
+	counts_sql := NewTopGlobalCatCounts().
+		SubcatsOfCats(strings.Join(test_cats, ",")).
+		WithURLLacking("GooGlE")
+	
+	if counts_sql.Error != nil {
+		t.Fatal(counts_sql.Error)
+	}
+
+	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	counts := []model.CatCount{}
+	for rows.Next() {
+		var c model.CatCount
+		if err := rows.Scan(&c.Category, &c.Count); err != nil {
+			t.Fatal(err)
+		}
+		counts = append(counts, c)
+	}
+
+	for _, c := range counts {
+		var count int32
+		if err := TestClient.QueryRow(`SELECT count(DISTINCT id) as count 
+		FROM LINKS 
+		WHERE ',' || global_cats || ',' LIKE '%' || ? || '%'
+		AND ',' || global_cats || ',' LIKE '%' || ? || '%'
+		AND ',' || global_cats || ',' LIKE '%' || ? || '%'
+		AND global_cats NOT IN (?, ?)
+		AND url NOT LIKE '%' || ? || '%'
+		`,
+			c.Category,
+			test_cats[0],
+			test_cats[1],
+			test_cats[0],
+			test_cats[1],
 			"google",
 		).Scan(&count); err != nil {
 			t.Fatal(err)

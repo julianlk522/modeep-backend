@@ -36,6 +36,7 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	var opts = &model.TmapOptions{}
 	var cats_params, 
 		period_params, 
+		summary_contains_params,
 		url_contains_params, 
 		url_lacks_params, 
 		nsfw_params, 
@@ -57,6 +58,11 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	period_params = params.Get("period")
 	if period_params != "" {
 		opts.Period = period_params
+	}
+
+	summary_contains_params = params.Get("summary_contains")
+	if summary_contains_params != "" {
+		opts.SummaryContains = summary_contains_params
 	}
 
 	url_contains_params = params.Get("url_contains")
