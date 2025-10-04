@@ -153,7 +153,7 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	AND LOWER(global_cat) NOT IN (?`
 
 	// add cat filter args to 2nd-to-last position
-	// (LIMIT stays last no matter what - it is easier to add back after)
+	// (LIMIT stays at the end but is easier to add back after)
 	limit_arg := gcc.Args[len(gcc.Args) - 1]
 	gcc.Args = gcc.Args[:len(gcc.Args) - 1]
 
@@ -280,10 +280,10 @@ func (gcc *GlobalCatCounts) WithURLContaining(snippet string) *GlobalCatCounts {
 			"substr(str, instr(str, ',') + 1),\nurl,\nglobal_summary",
 			1,
 		)
-	} else if (!strings.Contains(
+	} else if !strings.Contains(
 		gcc.Text,
 		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
-	)) {
+	) {
 		gcc.Text = strings.Replace(
 			gcc.Text,
 			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str)",
@@ -345,10 +345,10 @@ func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
 			"substr(str, instr(str, ',') + 1),\nurl,\nglobal_summary",
 			1,
 		)
-	} else if (!strings.Contains(
+	} else if !strings.Contains(
 		gcc.Text,
 		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url",
-	)) {
+	) {
 		gcc.Text = strings.Replace(
 			gcc.Text,
 			"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str)",

@@ -84,16 +84,6 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 		tl.Error = e.ErrNoCats
 		return tl
 	}
-	// Pop limit arg
-	tl.Args = tl.Args[:len(tl.Args)-1]
-
-	// Build and add match arg
-	cats = GetCatsOptionalPluralOrSingularForms(cats)
-	var match_arg = cats[0]
-	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + cats[i]
-	}
-	tl.Args = append(tl.Args, match_arg)
 
 	// Build CTE from match_clause
 	match_clause := `
@@ -121,7 +111,18 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 		1,
 	)
 
-	// Append limit arg
+	// Pop limit arg
+	tl.Args = tl.Args[:len(tl.Args)-1]
+
+	// Build and add match arg
+	cats = GetCatsOptionalPluralOrSingularForms(cats)
+	var match_arg = cats[0]
+	for i := 1; i < len(cats); i++ {
+		match_arg += " AND " + cats[i]
+	}
+	tl.Args = append(tl.Args, match_arg)
+
+	// Re-add limit
 	tl.Args = append(tl.Args, LINKS_PAGE_LIMIT)
 
 	return tl

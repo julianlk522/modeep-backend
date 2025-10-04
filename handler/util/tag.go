@@ -140,7 +140,7 @@ func UserHasTaggedLink(login_name string, link_id string) (bool, error) {
 func TidyCats(cats string) string {
 	split_cats := strings.Split(cats, ",")
 
-	for i := 0; i < len(split_cats); i++ {
+	for i := range split_cats {
 		split_cats[i] = strings.TrimSpace(split_cats[i])
 	}
 

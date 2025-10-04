@@ -104,14 +104,15 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	// unless modified due to 302/401/403/429 etc. redirect
 	url_after_redirects := resp.Request.URL.String()
 	var final_url string
-
-	is_302_redirect := resp.StatusCode == http.StatusFound
+	
 	is_unauthorized := resp.StatusCode == http.StatusUnauthorized
 	is_forbidden := resp.StatusCode == http.StatusForbidden
 	is_too_many_requests := resp.StatusCode == http.StatusTooManyRequests
+	is_302_redirect := resp.StatusCode == http.StatusFound
 	is_google_sorry_page := strings.Contains(url_after_redirects, "google.com/sorry")
 
-	if (is_302_redirect || is_unauthorized || is_forbidden || is_too_many_requests || is_google_sorry_page) {
+	// trim extra characters
+	if (is_unauthorized || is_forbidden || is_too_many_requests || is_302_redirect || is_google_sorry_page) {
 		final_url = strings.TrimSuffix(request.URL, "/")
 	} else {
 		final_url = strings.TrimSuffix(url_after_redirects, "/")

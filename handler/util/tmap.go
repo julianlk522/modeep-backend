@@ -31,7 +31,6 @@ func UserWithIDHasProfilePic(user_id string) bool {
 	return p.Valid
 }
 
-
 func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
 	var opts = &model.TmapOptions{}
 	var cats_params, 
@@ -67,7 +66,7 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 
 	url_contains_params = params.Get("url_contains")
 	if url_contains_params != "" {
-		opts.URLContains =  url_contains_params
+		opts.URLContains = url_contains_params
 	}
 
 	url_lacks_params = params.Get("url_lacks")
@@ -141,8 +140,8 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	var nsfw_links_count int
 	nsfw_links_count_opts := &model.TmapNSFWLinksCountOptions{
 		OnlySection: opts.Section,
-		CatsFilter: opts.Cats,
-		Period: opts.Period,
+		CatsFilter:  opts.Cats,
+		Period:      opts.Period,
 		URLContains: opts.URLContains,
 	}
 	nsfw_links_count_sql := query.
@@ -150,7 +149,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		FromOptions(nsfw_links_count_opts)
 
 	if err := db.Client.QueryRow(
-		nsfw_links_count_sql.Text, 
+		nsfw_links_count_sql.Text,
 		nsfw_links_count_sql.Args...,
 	).Scan(&nsfw_links_count); err != nil {
 		return nil, err
@@ -202,14 +201,14 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 				Links:          &[]T{},
 				Cats:           &[]model.CatCount{},
 				NSFWLinksCount: nsfw_links_count,
-				Pages:       -1,
+				Pages:          -1,
 			}, nil
 		}
 
-		// counting cats and pagination are both done in Go
-		// because merging all the links SQL queries together is a headache
-		// and doesn't make perf thattt much better since tmap contains <= 60
-		// links at a time (single section contains <= 20 links)
+		// counting cats and pagination are done in Go because merging 
+		// all the links SQL queries together is a headache and doesn't make 
+		// perf thattt much better since tmap contains <= 60 links at a time 
+		// (single section contains <= 20 links)
 		cat_counts = GetCatCountsFromTmapLinks(links, cat_counts_opts)
 
 		// Pagination
@@ -237,7 +236,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			NSFWLinksCount: nsfw_links_count,
 		}, nil
 
-		// All sections
+	// All sections
 	} else {
 		submitted_sql := query.
 			NewTmapSubmitted(tmap_owner).
@@ -288,8 +287,8 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			cat_counts_opts,
 		)
 
-		// limit sections to top 20 links
-		// 20+ links: indicate in response so can be paginated
+		// limit to top 20 links / section
+		// sections > 20 links: indicate in response so can be paginated
 		var sections_with_more []string
 		if len(*submitted) > query.LINKS_PAGE_LIMIT {
 			sections_with_more = append(sections_with_more, "submitted")

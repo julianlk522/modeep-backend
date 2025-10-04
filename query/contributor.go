@@ -60,13 +60,6 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 		return c
 	}
 
-	cats = GetCatsOptionalPluralOrSingularForms(cats)
-	match_arg := cats[0]
-	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + cats[i]
-	}
-	c.Args = append(c.Args, match_arg)
-
 	// Build CTE
 	match_clause := " WHERE global_cats MATCH ?"
 	cats_CTE := `WITH CatsFilter AS (
@@ -85,6 +78,13 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 		"FROM Links l" + CONTRIBUTORS_CATS_FROM,
 		1,
 	)
+
+	cats = GetCatsOptionalPluralOrSingularForms(cats)
+	match_arg := cats[0]
+	for i := 1; i < len(cats); i++ {
+		match_arg += " AND " + cats[i]
+	}
+	c.Args = append(c.Args, match_arg)
 
 	// Move page limit arg from first to last
 	c.Args = append(c.Args[1:], c.Args[0])

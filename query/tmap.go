@@ -1166,10 +1166,10 @@ const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
 
 var tmap_order_by_clauses = map[string]string{
 	"times_starred": TMAP_ORDER_BY_TIMES_STARRED,
-	"avg_stars": TMAP_ORDER_BY_AVG_STARS,
-	"newest": TMAP_ORDER_BY_NEWEST,
-	"oldest": TMAP_ORDER_BY_OLDEST,
-	"clicks": TMAP_ORDER_BY_CLICKS,
+	"avg_stars":     TMAP_ORDER_BY_AVG_STARS,
+	"newest":        TMAP_ORDER_BY_NEWEST,
+	"oldest":        TMAP_ORDER_BY_OLDEST,
+	"clicks":        TMAP_ORDER_BY_CLICKS,
 }
 
 const TMAP_ORDER_BY_TIMES_STARRED = `
@@ -1190,7 +1190,6 @@ ORDER BY
 	sc.summary_count DESC, 
 	l.submit_date DESC,
 	l.id DESC`
-
 
 const TMAP_ORDER_BY_NEWEST = `
 ORDER BY 
