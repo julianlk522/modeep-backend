@@ -228,18 +228,23 @@ func CountMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cat
 		return
 	}
 
-	cat_filters := strings.Split(strings.ToLower(cats_params), ",")
+	cat_filters := strings.Split(cats_params, ",")
 
 	for _, link := range *lp.Links {
 		link_cats := strings.Split(link.GetCats(), ",")
-		lc_link_cats := strings.Split(strings.ToLower(link.GetCats()), ",")
 
-		for c, cat := range lc_link_cats {
-			if !slices.Contains(cat_filters, cat) {
+		for i, link_cat := range link_cats {
+			cat_lc := strings.ToLower(link_cat)
+
+			if !slices.Contains(cat_filters, link_cats[i]) {
 				for _, cf := range cat_filters {
-					// preserve original casing
-					if CatsAreSingularOrPluralVariationsOfEachOther(cat, cf) && !slices.Contains(lp.MergedCats, link_cats[c]) {
-						lp.MergedCats = append(lp.MergedCats, link_cats[c])
+					cf_lc := strings.ToLower(cf)
+
+					if (CatsAreSingularOrPluralVariationsOfEachOther(cat_lc, cf_lc) || 
+						// capitalization variants
+						cat_lc == cf_lc && link_cats[i] != cf) && 
+					!slices.Contains(lp.MergedCats, link_cats[i]) {
+						lp.MergedCats = append(lp.MergedCats, link_cats[i])
 					}
 				}
 			}
