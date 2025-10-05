@@ -423,14 +423,9 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) 
 
 func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOptions) *[]model.CatCount {
 	var omitted_cats []string
-	// Use raw_cats_params here to determine omitted_cats because CatsFilter
-	// (from BuildTmapFromOpts) is modified to escape reserved chars and
-	// include singular/plural spelling variations. To correctly count cats
-	// (omitting ones passed in the request), omitted_cats must _not_ have
-	// these modifications applied.
-
-	// Use lowercase so that capitalization variants of cat filters
-	// are still not counted
+	// Use raw_cats_params to determine omitted_cats because CatsFilter
+	// (from BuildTmapFromOpts) is modified to escape reserved chars
+	
 	if opts != nil && opts.RawCatsParams != "" {
 		omitted_cats = strings.Split(strings.ToLower(opts.RawCatsParams), ",")
 	}
@@ -438,55 +433,69 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 
 	counts := []model.CatCount{}
 	all_found_cats := []string{}
-	var found bool
 
 	for _, link := range *links {
-		var cats string
+		var cats_str string
 		switch l := any(link).(type) {
 		case model.TmapLink:
-			cats = l.Cats
+			cats_str = l.Cats
 		case model.TmapLinkSignedIn:
-			cats = l.Cats
+			cats_str = l.Cats
 		}
 
-		link_found_cats := []string{}
-
-		for _, cat := range strings.Split(cats, ",") {
-			lc_cat := strings.ToLower(cat)
-
-			if strings.TrimSpace(cat) == "" || slices.ContainsFunc(link_found_cats, func(c string) bool { return strings.ToLower(c) == lc_cat }) || (has_cat_filter &&
-				slices.Contains(omitted_cats, lc_cat)) {
+		link_cats := strings.Split(cats_str, ",")
+		for i, lc := range link_cats {
+			if strings.TrimSpace(lc) == "" {
 				continue
 			}
-
-			link_found_cats = append(link_found_cats, cat)
-
-			found = false
-			for _, found_cat := range all_found_cats {
-				if found_cat == cat {
-					found = true
-
-					for i, count := range counts {
-						if count.Category == cat {
-							counts[i].Count++
-							break
-						}
+			
+			// skip if resembles a cat filter
+			skip := false
+			if has_cat_filter {
+				for _, oc := range omitted_cats {
+					if strings.EqualFold(lc, oc) ||
+					CatsAreSingularOrPluralVariationsOfEachOther(lc, oc) {
+						skip = true
 					}
 				}
 			}
 
-			if !found {
-				counts = append(counts, model.CatCount{Category: cat, Count: 1})
-				all_found_cats = append(all_found_cats, cat)
+			// skip if resembles another cat from same link
+			if !skip {
+				for _, other_lc := range link_cats[i + 1:] {
+					if strings.EqualFold(lc, other_lc) ||
+					CatsAreSingularOrPluralVariationsOfEachOther(lc, other_lc) {
+						skip = true
+					}
+				}
+			}
+
+			if !skip {
+				// increment count if existing
+				found := false
+				for _, found_cat := range all_found_cats {
+					if found_cat == lc {
+						found = true
+
+						for i, count := range counts {
+							if count.Category == lc {
+								counts[i].Count++
+								break
+							}
+						}
+					}
+				}
+	
+				// or create new count
+				if !found {
+					counts = append(counts, model.CatCount{Category: lc, Count: 1})
+					all_found_cats = append(all_found_cats, lc)
+				}
 			}
 		}
 	}
 
-	slices.SortFunc(counts, model.SortCats)
-
-	if has_cat_filter {
-		MergeCatCountsCapitalizationVariants(&counts, omitted_cats)
-	}
+	MergeCatCountsSpellingVariants(&counts)
 
 	if len(counts) > TMAP_CATS_PAGE_LIMIT {
 		counts = (counts)[:TMAP_CATS_PAGE_LIMIT]
@@ -495,19 +504,18 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	return &counts
 }
 
-func MergeCatCountsCapitalizationVariants(counts *[]model.CatCount, omitted_cats []string) {
-	// e.g. "Music" and "music"
-	
-	for i, count := range *counts {
-		for j := i + 1; j < len(*counts); j++ {
-			if strings.EqualFold(count.Category, (*counts)[j].Category) {
+func MergeCatCountsSpellingVariants(counts *[]model.CatCount) {
+	// sort to ensure most-frequent spelling / casing variants are used
+	slices.SortFunc(*counts, model.SortCats)
 
-				// skip if is some capitalization variant of a cat filter
-				if len(omitted_cats) > 0 && slices.Contains(omitted_cats, strings.ToLower((*counts)[j].Category)) {
-					continue
-				}
+	for i := 0; i < len(*counts); i++ {
+		for j := i + 1; j < len(*counts); {
+			if strings.EqualFold((*counts)[i].Category, (*counts)[j].Category) ||
+				CatsAreSingularOrPluralVariationsOfEachOther((*counts)[i].Category, (*counts)[j].Category) {
 				(*counts)[i].Count += (*counts)[j].Count
 				*counts = append((*counts)[:j], (*counts)[j+1:]...)
+			} else {
+				j++
 			}
 		}
 	}

@@ -111,9 +111,9 @@ func ScanGlobalCatCounts(global_cats_sql *query.GlobalCatCounts) (*[]model.CatCo
 }
 
 func CatsAreSingularOrPluralVariationsOfEachOther(a string, b string) bool {
-	if a == b {
-		return false
-	} else if a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
+	a, b = strings.ToLower(a), strings.ToLower(b)
+
+	if a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
 		return true
 	} else if b + "s" == a || a + "s" == b || a + "es" == a || a + "es" == b {
 		return true

@@ -304,21 +304,46 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 	}
 }
 
-func TestMergeCatCountsCapitalizationVariants(t *testing.T) {
+func TestMergeCatCountsSpellingVariants(t *testing.T) {
 	var counts = []model.CatCount{
 		{Category: "Music", Count: 1},
-		{Category: "music", Count: 1},
-		{Category: "musica", Count: 1},
-		{Category: "musics", Count: 1},
-		{Category: "MODEEP", Count: 5},
-		{Category: "modeep", Count: 5},
+		{Category: "music", Count: 1}, // should get added
+		{Category: "musica", Count: 1}, // should NOT get added
+		{Category: "Musics", Count: 5}, // should get added
+		{Category: "musics", Count: 1}, // should get added
+		{Category: "MODEEP", Count: 6},
+		{Category: "modeep", Count: 5}, // should get added to above
 	}
-	MergeCatCountsCapitalizationVariants(&counts, nil)
-	if counts[0].Count != 2 {
-		t.Fatalf("expected count 2, got %d", counts[0].Count)
+	MergeCatCountsSpellingVariants(&counts)
+
+	// make sure the highest counts go first
+	if counts[0].Category != "MODEEP" &&
+	counts[1].Category != "Musics" &&
+	counts[0].Count < counts[1].Count {
+		t.Fatalf(
+			"largest counts did not go first (counts were %+v)",
+			counts,
+		)
 	}
 
-	if counts[3].Category != "MODEEP" {
-		t.Fatalf("expected MODEEP to have moved up to index 3 because Music and music were combined, got %s", counts[3].Category)
+	// make sure all the "music" variants added their counts
+	if counts[1].Count != 1 + 1 + 5 + 1 {
+		t.Fatalf(
+			"expected count %d, got %d (counts were %+v)", 
+			8, 
+			counts[1].Count,
+			counts,
+		)
+	}
+
+	// make sure all like categories were merged
+	// should be "Music", "musica", and "MODEEP" remaining
+	if len(counts) != 3 {
+		t.Fatalf(
+			"expected count %d, got %d (counts were %+v)", 
+			3, 
+			len(counts),
+			counts,
+		)
 	}
 }
