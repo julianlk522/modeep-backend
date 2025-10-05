@@ -8,6 +8,7 @@ import (
 	mutil "github.com/julianlk522/modeep/model/util"
 )
 
+// TREASURE MAP PROFILE
 type TmapProfile struct {
 	*Query
 }
@@ -30,6 +31,7 @@ const TMAP_PROFILE = `SELECT
 FROM Users 
 WHERE login_name = ?;`
 
+// NSFW LINKS COUNT
 type TmapNSFWLinksCount struct {
 	*Query
 }
@@ -37,7 +39,16 @@ type TmapNSFWLinksCount struct {
 func NewTmapNSFWLinksCount(login_name string) *TmapNSFWLinksCount {
 	return &TmapNSFWLinksCount{
 		&Query{
-			Text: TMAP_NSFW_LINKS_COUNT,
+			Text: "WITH " + NSFW_CATS_CTES + "\n" +
+			USER_STARS_CTE + 
+			`SELECT count(*) as NSFW_link_count
+				FROM Links l` + 
+				NSFW_JOINS + `
+				WHERE 
+					(gc.global_cats IS NOT NULL
+					OR
+					puc.user_cats IS NOT NULL)` +
+				TMAP_NSFW_LINKS_FINAL_AND + ";",
 			Args: []any{
 				login_name, 
 				login_name, 
@@ -46,48 +57,6 @@ func NewTmapNSFWLinksCount(login_name string) *TmapNSFWLinksCount {
 		},
 	}
 }
-
-const TMAP_NSFW_LINKS_COUNT = `WITH PossibleUserCats AS (
-    SELECT 
-		link_id, 
-		cats AS user_cats,
-		(cats IS NOT NULL) AS cats_from_user
-    FROM user_cats_fts
-    WHERE submitted_by = ?
-	AND cats MATCH 'NSFW'
-),
-GlobalCatsFTS AS (
-	SELECT
-		link_id,
-		global_cats
-	FROM global_cats_fts
-	WHERE global_cats MATCH 'NSFW'
-),
-UserStars AS (
-    SELECT s.link_id
-    FROM Stars s
-    INNER JOIN Users u ON u.id = s.user_id
-    WHERE u.login_name = ?
-)
-SELECT count(*) as NSFW_link_count
-FROM Links l
-LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id
-LEFT JOIN GlobalCatsFTS gc ON l.id = gc.link_id
-WHERE 
-	(
-	gc.global_cats IS NOT NULL
-	OR
-	puc.user_cats IS NOT NULL
-	)
-AND (
-	l.submitted_by = ?
-	OR l.id IN UserStars
-	OR l.id IN 
-		(
-		SELECT link_id
-		FROM PossibleUserCats
-		)
-	);`
 
 func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOptions) *TmapNSFWLinksCount {
 	if opts.OnlySection != "" {
@@ -130,16 +99,8 @@ func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOption
 func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
-		`(
-	l.submitted_by = ?
-	OR l.id IN UserStars
-	OR l.id IN 
-		(
-		SELECT link_id
-		FROM PossibleUserCats
-		)
-	)`,
-		"l.submitted_by = ?",
+		TMAP_NSFW_LINKS_FINAL_AND,
+		"\nAND l.submitted_by = ?",
 		1,
 	)
 
@@ -149,16 +110,8 @@ func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
 func (tnlc *TmapNSFWLinksCount) StarredOnly() *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
-		`(
-	l.submitted_by = ?
-	OR l.id IN UserStars
-	OR l.id IN 
-		(
-		SELECT link_id
-		FROM PossibleUserCats
-		)
-	)`,
-		"l.id IN UserStars",
+		TMAP_NSFW_LINKS_FINAL_AND,
+		"\nAND l.id IN (SELECT link_id FROM UserStars)",
 		1,
 	)
 
@@ -170,46 +123,79 @@ func (tnlc *TmapNSFWLinksCount) StarredOnly() *TmapNSFWLinksCount {
 func (tnlc *TmapNSFWLinksCount) TaggedOnly() *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
-		`
-	l.submitted_by = ?
-	OR l.id IN UserStars
-	OR l.id IN 
-		(
-		SELECT link_id
-		FROM PossibleUserCats
-		)
-	`,
-		`
-	l.submitted_by != ?
-	AND l.id IN 
-		(
-		SELECT link_id
-		FROM PossibleUserCats
-		)
-	`,
+		TMAP_NSFW_LINKS_FINAL_AND,
+		TAGGED_AND,
 		1,
 	)
 
 	return tnlc
 }
 
+const TMAP_NSFW_LINKS_FINAL_AND = `
+AND (
+	l.submitted_by = ?
+	OR l.id IN (SELECT link_id FROM UserStars)
+	OR l.id IN 
+		(
+		SELECT link_id
+		FROM PossibleUserCats_NSFW
+		)
+	)`
+
 func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 	if len(cats) == 0 || cats[0] == "" {
 		return tnlc
 	}
 
-	tnlc.Text = strings.ReplaceAll(tnlc.Text, "'NSFW'", "?")
+	// Insert CTEs
+	cat_filter_ctes_no_cats_from_user := strings.Replace(
+		CAT_FILTER_CTES,
+		`,
+		(cats IS NOT NULL) AS cats_from_user`,
+		"",
+		1,
+	)
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		"UserStars AS",
+		cat_filter_ctes_no_cats_from_user + ",\n" + "UserStars AS",
+		1,
+	)
+
+	// Insert joins
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		"LEFT JOIN GlobalCatsFTS_NSFW gc ON l.id = gc.link_id",
+		"LEFT JOIN GlobalCatsFTS_NSFW gc ON l.id = gc.link_id" + CAT_FILTER_JOINS,
+		1,
+	)
+
+	// add necessary cats condition
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		"puc.user_cats IS NOT NULL)",
+		`puc.user_cats IS NOT NULL)
+		AND (gco.global_cats IS NOT NULL OR puco.user_cats IS NOT NULL)`,
+		1,
+	)
 
 	// Build MATCH clause
-	match_arg := "NSFW AND " + cats[0]
+	match_arg := cats[0]
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " + cats[i]
 	}
 
-	// Insert match_arg arg * 2 after first login_name arg and before last 2 args
+	// Insert args
+	// since other methods push new args to end of slice,
+	// better to insert these from the start (always after the first 1,
+	// which is login_name)
+	login_name := tnlc.Args[0]
+	
 	trailing_args := make([]any, len(tnlc.Args[1:]))
 	copy(trailing_args, tnlc.Args[1:])
-	tnlc.Args = append(tnlc.Args[:1], match_arg, match_arg)
+	
+	// args to add: login_name, match arg, match arg (again)
+	tnlc.Args = append(tnlc.Args[:1], login_name, match_arg, match_arg)
 	tnlc.Args = append(tnlc.Args, trailing_args...)
 
 	return tnlc
@@ -244,6 +230,18 @@ func (tnlc *TmapNSFWLinksCount) DuringPeriod(period string) *TmapNSFWLinksCount 
 }
 
 func (tnlc *TmapNSFWLinksCount) WithSummaryContaining(snippet string) *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER,
+		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER + "," + POSSIBLE_USER_SUMMARY_CTE,
+		1,
+	)
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
+		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id" + "\n" + "LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id",
+		1,
+	)
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		";",
@@ -282,6 +280,7 @@ func (tnlc *TmapNSFWLinksCount) WithURLLacking(snippet string) *TmapNSFWLinksCou
 	return tnlc
 }
 
+// LINKS
 type TmapSubmitted struct {
 	*Query
 }
@@ -289,26 +288,30 @@ type TmapSubmitted struct {
 func NewTmapSubmitted(login_name string) *TmapSubmitted {
 	return &TmapSubmitted{
 		Query: &Query{
-			Text: "WITH " + TMAP_BASE_CTES + "," +
+			Text: "WITH " + TMAP_BASE_CTES + "\n" +
+				NSFW_CATS_CTES +
 				POSSIBLE_USER_CATS_CTE + "," +
 				POSSIBLE_USER_SUMMARY_CTE +
 				TMAP_BASE_FIELDS +
 				TMAP_FROM +
 				TMAP_BASE_JOINS +
+				NSFW_JOINS + "\n" +
 				TMAP_NO_NSFW_CATS_WHERE +
-				SUBMITTED_WHERE +
+				SUBMITTED_AND +
 				TMAP_ORDER_BY_TIMES_STARRED,
 			Args: []any{
 				mutil.EARLIEST_STARRERS_LIMIT, 
 				login_name, 
 				login_name, 
 				login_name,
+				login_name,
+				login_name,
 			},
 		},
 	}
 }
 
-const SUBMITTED_WHERE = `
+const SUBMITTED_AND = `
 AND l.submitted_by = ?`
 
 func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
@@ -348,18 +351,61 @@ func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) *TmapSubmitted {
 }
 
 func (ts *TmapSubmitted) FromCats(cats []string) *TmapSubmitted {
-	ts.Query = FromUserOrGlobalCats(ts.Query, cats)
+	// add CTEs and joins
+	ts.Text = strings.Replace(
+		ts.Text,
+		POSSIBLE_USER_CATS_CTE,
+		CAT_FILTER_CTES,
+		1,
+	)
+	ts.Text = strings.Replace(
+		ts.Text,
+		"LEFT JOIN PossibleUserCats_Other puco ON l.id = puco.link_id",
+		CAT_FILTER_JOINS,
+		1,
+	)
+	// add necessary cats condition
+	ts.Text = strings.Replace(
+		ts.Text,
+		TMAP_NO_NSFW_CATS_WHERE,
+		TMAP_NO_NSFW_CATS_WHERE + `
+		AND (gco.global_cats IS NOT NULL OR puco.user_cats IS NOT NULL)`,
+		1,
+	)
+
+	// build match arg
+	match_arg := cats[0]
+	for i := 1; i < len(cats); i++ {
+		match_arg += " AND " + cats[i]
+	}
+
+	// insert args	
+	// old: [{earliest_starrers_limit}, login_name x 5]
+	// new: [{earliest_starrers_limit}, login_name x 2, 
+	// match_arg x 2, login_name x 3]
+	first_3_args := make([]any, 3)
+	copy(first_3_args, ts.Args[:3])
+
+	new_args := make([]any, 0, len(ts.Args) + 3)
+	new_args = append(new_args, first_3_args...)
+	new_args = append(new_args, match_arg, match_arg)
+	new_args = append(new_args, ts.Args[3:]...)
+
+	ts.Args = new_args
 	return ts
 }
 
 func (ts *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + "," + TMAP_AUTH_CTE,
+		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
 		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
 		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
+		// in case TMAP_BASE_JOINS are modified by .FromCats
+		CAT_FILTER_JOINS, CAT_FILTER_JOINS + TMAP_AUTH_JOIN,
 	)
 	ts.Text = fields_replacer.Replace(ts.Text)
 
+	// Insert args after first index
 	new_args := make([]any, 0, len(ts.Args)+1)
 
 	first_arg := ts.Args[0]
@@ -380,14 +426,32 @@ func (ts *TmapSubmitted) NSFW() *TmapSubmitted {
 		"",
 		1,
 	)
-
-	// Swap AND to WHERE in WHERE clause
-	ts.Text = strings.Replace(
+	// swap following AND to WHERE
+	if strings.Contains(
 		ts.Text,
-		"AND l.submitted_by",
-		"WHERE l.submitted_by",
-		1,
-	)
+		"AND (gco.global_cats IS NOT NULL OR puco.user_cats IS NOT NULL)",
+	) {
+		ts.Text = strings.Replace(
+			ts.Text,
+			"AND (gco.global_cats",
+			"WHERE (gco.global_cats",
+			1,
+		)
+	} else {
+		ts.Text = strings.Replace(
+			ts.Text,
+			SUBMITTED_AND,
+			`
+WHERE l.submitted_by = ?`,
+			1,
+		)
+	}
+	
+	// Remove login_name arg (it should always be last if this is called 
+	// before .WithBlahBlah methods, which it should always be per the order
+	// of TmapSubmitted.FromOptions())
+	ts.Args = ts.Args[:len(ts.Args) - 1]
+
 	return ts
 }
 
@@ -446,13 +510,12 @@ func (ts *TmapSubmitted) WithSummaryContaining(snippet string) *TmapSubmitted {
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"\nAND " + "summary LIKE ?" + order_by_clause,
+			"\nAND summary LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
 
 	ts.Args = append(ts.Args, "%" + snippet + "%")
-
 	return ts
 }
 
@@ -493,22 +556,26 @@ type TmapStarred struct {
 func NewTmapStarred(login_name string) *TmapStarred {
 	q := &TmapStarred{
 		Query: &Query{
-			Text: "WITH " + USER_STARS_CTE + ",\n" +
-				TMAP_BASE_CTES + "," +
-				POSSIBLE_USER_CATS_CTE + "," +
+			Text: "WITH " + TMAP_BASE_CTES + "\n" +
+				NSFW_CATS_CTES + "\n" +
+				USER_STARS_CTE + "," +
+				POSSIBLE_USER_CATS_CTE + ",\n" +
 				POSSIBLE_USER_SUMMARY_CTE +
 				TMAP_BASE_FIELDS +
 				TMAP_FROM +
 				STARRED_JOIN +
 				TMAP_BASE_JOINS +
+				NSFW_JOINS + "\n" +
 				TMAP_NO_NSFW_CATS_WHERE +
-				STARRED_WHERE +
+				STARRED_AND +
 				TMAP_ORDER_BY_TIMES_STARRED,
 			Args: []any{
-				login_name, 
 				mutil.EARLIEST_STARRERS_LIMIT, 
+				login_name, 
+				login_name,
 				login_name,
 				login_name, 
+				login_name,
 				login_name,
 			},
 		},
@@ -517,104 +584,159 @@ func NewTmapStarred(login_name string) *TmapStarred {
 	return q
 }
 
-const STARRED_JOIN = `
-INNER JOIN UserStars us ON l.id = us.link_id`
-
-const STARRED_WHERE = ` 
+const STARRED_AND = ` 
 AND l.submitted_by != ?`
 
-func (tc *TmapStarred) FromOptions(opts *model.TmapOptions) *TmapStarred {
+func (ts *TmapStarred) FromOptions(opts *model.TmapOptions) *TmapStarred {
 	if len(opts.Cats) > 0 {
-		tc.FromCats(opts.Cats)
+		ts.FromCats(opts.Cats)
 	}
 
 	if opts.AsSignedInUser != "" {
-		tc.AsSignedInUser(opts.AsSignedInUser)
+		ts.AsSignedInUser(opts.AsSignedInUser)
 	}
 
 	if opts.SortBy != "" {
-		tc.SortBy(opts.SortBy)
+		ts.SortBy(opts.SortBy)
 	}
 
 	if opts.IncludeNSFW {
-		tc.NSFW()
+		ts.NSFW()
 	}
 
 	if opts.Period != "" {
-		tc.DuringPeriod(opts.Period)
+		ts.DuringPeriod(opts.Period)
 	}
 
 	if opts.SummaryContains != "" {
-		tc.WithSummaryContaining(opts.SummaryContains)
+		ts.WithSummaryContaining(opts.SummaryContains)
 	}
 
 	if opts.URLContains != "" {
-		tc.WithURLContaining(opts.URLContains)
+		ts.WithURLContaining(opts.URLContains)
 	}
 
 	if opts.URLLacks != "" {
-		tc.WithURLLacking(opts.URLLacks)
+		ts.WithURLLacking(opts.URLLacks)
 	}
 
-	return tc
+	return ts
 }
 
-func (tc *TmapStarred) FromCats(cats []string) *TmapStarred {
-	tc.Query = FromUserOrGlobalCats(tc.Query, cats)
-	return tc
-}
-
-func (tc *TmapStarred) AsSignedInUser(req_user_id string) *TmapStarred {
-	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + "," + TMAP_AUTH_CTE,
-		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
-		STARRED_JOIN, STARRED_JOIN + TMAP_AUTH_JOIN,
+func (ts *TmapStarred) FromCats(cats []string) *TmapStarred {
+	// add CTEs and joins
+	ts.Text = strings.Replace(
+		ts.Text,
+		POSSIBLE_USER_CATS_CTE,
+		CAT_FILTER_CTES,
+		1,
 	)
-	tc.Text = fields_replacer.Replace(tc.Text)
+	ts.Text = strings.Replace(
+		ts.Text,
+		"LEFT JOIN PossibleUserCats_Other puco ON l.id = puco.link_id",
+		CAT_FILTER_JOINS,
+		1,
+	)
+	// add necessary cats condition
+	ts.Text = strings.Replace(
+		ts.Text,
+		TMAP_NO_NSFW_CATS_WHERE,
+		TMAP_NO_NSFW_CATS_WHERE + `
+		AND (gco.global_cats IS NOT NULL OR puco.user_cats IS NOT NULL)`,
+		1,
+	)
 
-	new_args := make([]any, 0, len(tc.Args)+1)
-	
-	// login_name, earliest starrers limit
-	first_2_args := make([]any, 2)
-	copy(first_2_args, tc.Args[:2])
+	// build match arg
+	match_arg := cats[0]
+	for i := 1; i < len(cats); i++ {
+		match_arg += " AND " + cats[i]
+	}
 
-	trailing_args := tc.Args[2:]
+	// insert args	
+	// old: [{earliest_starrers_limit}, login_name x 6]
+	// new: [{earliest_starrers_limit}, login_name x 3, 
+	// match_arg x 2, login_name x 3]
+	// so insert before last 3
+	last_3_args := ts.Args[len(ts.Args) - 3:]
+	new_args := append([]any{}, ts.Args[:len(ts.Args) - 3]...)
+	new_args = append(new_args, match_arg, match_arg)
+	new_args = append(new_args, last_3_args...)
+	ts.Args = new_args
 
-	new_args = append(new_args, first_2_args...)
-	new_args = append(new_args, req_user_id)
+	return ts
+}
+
+func (ts *TmapStarred) AsSignedInUser(req_user_id string) *TmapStarred {
+	fields_replacer := strings.NewReplacer(
+		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
+		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
+		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
+		// in case TMAP_BASE_JOINS are modified by .FromCats
+		CAT_FILTER_JOINS, CAT_FILTER_JOINS + TMAP_AUTH_JOIN,
+	)
+	ts.Text = fields_replacer.Replace(ts.Text)
+
+	// insert args:
+	// old: [[{earliest_starrers_limit} login_name x 3, 
+	// match_arg x 2, login_name x 3]
+	// new: {earliest_starrers_limit}, req_user_id, login_name x 3,
+	// match_arg x 2, login_name x 3] 
+	// so insert req_user_id after earliest_starrers_limit
+	first_arg := ts.Args[0]
+	trailing_args := ts.Args[1:]
+
+	new_args := make([]any, 0, len(ts.Args) + 1)
+	new_args = append(new_args, first_arg, req_user_id)
 	new_args = append(new_args, trailing_args...)
 
-	tc.Args = new_args
-	return tc
+	ts.Args = new_args
+	return ts
 }
 
-func (tc *TmapStarred) NSFW() *TmapStarred {
+func (ts *TmapStarred) NSFW() *TmapStarred {
 	// Remove NSFW clause
-	tc.Text = strings.Replace(
-		tc.Text,
+	ts.Text = strings.Replace(
+		ts.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
 		"",
 		1,
 	)
 
-	// Swap AND to WHERE in WHERE clause
-	tc.Text = strings.Replace(
-		tc.Text,
-		"AND l.submitted_by !=",
-		"WHERE l.submitted_by !=",
-		1,
-	)
-	return tc
+	// Swap following condition keyword
+	if strings.Contains(
+		ts.Text,
+		"AND (gco.global_cats IS NOT NULL OR puco.user_cats IS NOT NULL)",
+	) {
+		ts.Text = strings.Replace(
+			ts.Text,
+			"AND (gco.global_cats",
+			"WHERE (gco.global_cats",
+			1,
+		)
+	} else {
+		ts.Text = strings.Replace(
+			ts.Text,
+			STARRED_AND,
+			` 
+WHERE l.submitted_by != ?`,
+			1,
+		)
+	}
+
+	// Remove login_name arg used in TMAP_NO_NSFW_CATS_WHERE
+	ts.Args = ts.Args[:len(ts.Args) - 1]
+	
+	return ts
 }
 
-func (tc *TmapStarred) SortBy(metric string) *TmapStarred {
+func (ts *TmapStarred) SortBy(metric string) *TmapStarred {
 	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
-			tc.Error = e.ErrInvalidSortByParams
+			ts.Error = e.ErrInvalidSortByParams
 		} else {
-			tc.Text = strings.Replace(
-				tc.Text,
+			ts.Text = strings.Replace(
+				ts.Text,
 				TMAP_ORDER_BY_TIMES_STARRED,
 				order_by_clause,
 				1,
@@ -622,18 +744,18 @@ func (tc *TmapStarred) SortBy(metric string) *TmapStarred {
 		}
 	}
 
-	return tc
+	return ts
 }
 
-func (tc *TmapStarred) DuringPeriod(period string) *TmapStarred {
+func (ts *TmapStarred) DuringPeriod(period string) *TmapStarred {
 	if period == "all" {
-		return tc
+		return ts
 	}
 	
 	period_clause, err := GetPeriodClause(period)
 	if err != nil {
-		tc.Error = err
-		return tc
+		ts.Error = err
+		return ts
 	}
 
 	period_clause = strings.Replace(
@@ -644,60 +766,59 @@ func (tc *TmapStarred) DuringPeriod(period string) *TmapStarred {
 	)
 
 	for _, order_by_clause := range tmap_order_by_clauses {
-		tc.Text = strings.Replace(
-			tc.Text,
+		ts.Text = strings.Replace(
+			ts.Text,
 			order_by_clause,
 			"\nAND " + period_clause + order_by_clause,
 			1,
 		)
 	}
 
-	return tc
+	return ts
 }
 
-func (tc *TmapStarred) WithSummaryContaining(snippet string) *TmapStarred {
+func (ts *TmapStarred) WithSummaryContaining(snippet string) *TmapStarred {
 	for _, order_by_clause := range tmap_order_by_clauses {
-		tc.Text = strings.Replace(
-			tc.Text,
+		ts.Text = strings.Replace(
+			ts.Text,
 			order_by_clause,
-			"\nAND " + "summary LIKE ?" + order_by_clause,
+			"\nAND summary LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
 
-	tc.Args = append(tc.Args, "%" + snippet + "%")
-
-	return tc
+	ts.Args = append(ts.Args, "%" + snippet + "%")
+	return ts
 }
 
-func (tc *TmapStarred) WithURLContaining(snippet string) *TmapStarred {
+func (ts *TmapStarred) WithURLContaining(snippet string) *TmapStarred {
 	for _, order_by_clause := range tmap_order_by_clauses {
-		tc.Text = strings.Replace(
-			tc.Text,
+		ts.Text = strings.Replace(
+			ts.Text,
 			order_by_clause,
 			"\nAND " + "url LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
 
-	tc.Args = append(tc.Args, "%" + snippet + "%")
+	ts.Args = append(ts.Args, "%" + snippet + "%")
 
-	return tc
+	return ts
 }
 
-func (tc *TmapStarred) WithURLLacking(snippet string) *TmapStarred {
+func (ts *TmapStarred) WithURLLacking(snippet string) *TmapStarred {
 	for _, order_by_clause := range tmap_order_by_clauses {
-		tc.Text = strings.Replace(
-			tc.Text,
+		ts.Text = strings.Replace(
+			ts.Text,
 			order_by_clause,
 			"AND url NOT LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
 
-	tc.Args = append(tc.Args, "%" + snippet + "%")
+	ts.Args = append(ts.Args, "%" + snippet + "%")
 
-	return tc
+	return ts
 }
 
 type TmapTagged struct {
@@ -707,22 +828,26 @@ type TmapTagged struct {
 func NewTmapTagged(login_name string) *TmapTagged {
 	q := &TmapTagged{
 		Query: &Query{
-			Text: "WITH " + TMAP_BASE_CTES + ",\n" +
-				USER_CATS_CTE + "," +
-				POSSIBLE_USER_SUMMARY_CTE + ",\n" +
-				USER_STARS_CTE +
+			Text: "WITH " +
+				TMAP_BASE_CTES + "\n" +
+				NSFW_CATS_CTES + "\n" +
+				USER_CATS_CTE + ",\n" +
+				USER_STARS_CTE + "," +
+				POSSIBLE_USER_SUMMARY_CTE + "\n" +
 				TAGGED_FIELDS +
 				TMAP_FROM +
 				TAGGED_JOINS +
+				NSFW_JOINS + "\n" +
 				TMAP_NO_NSFW_CATS_WHERE +
-				TAGGED_WHERE +
+				TAGGED_AND +
 				TMAP_ORDER_BY_TIMES_STARRED,
-			// login_name used in UserCats, PossibleUserSummary, UserStars, where
 			Args: []any{
 				mutil.EARLIEST_STARRERS_LIMIT, 
 				login_name, 
 				login_name, 
 				login_name, 
+				login_name,
+				login_name,
 				login_name,
 			},
 		},
@@ -735,18 +860,18 @@ func NewTmapTagged(login_name string) *TmapTagged {
 var TAGGED_FIELDS = strings.Replace(
 	strings.Replace(
 		TMAP_BASE_FIELDS,
-		"COALESCE(puc.user_cats, l.global_cats) AS cats",
+		"COALESCE(puco.user_cats, l.global_cats) AS cats",
 		"uct.user_cats",
 		1,
 	),
-	`COALESCE(puc.cats_from_user,0) AS cats_from_user`,
+	`COALESCE(puco.cats_from_user,0) AS cats_from_user`,
 	"1 AS cats_from_user",
 	1,
 )
 
 var TAGGED_JOINS = strings.Replace(
 	TMAP_BASE_JOINS,
-	"LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id",
+	"LEFT JOIN PossibleUserCats_Other puco ON l.id = puco.link_id",
 	"INNER JOIN UserCats uct ON l.id = uct.link_id",
 	1,
 ) + strings.Replace(
@@ -756,7 +881,7 @@ var TAGGED_JOINS = strings.Replace(
 	1,
 )
 
-const TAGGED_WHERE = `
+const TAGGED_AND = `
 AND l.submitted_by != ?
 AND l.id NOT IN
 	(SELECT link_id FROM UserStars)`
@@ -806,6 +931,8 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 	match_clause := `
 	AND uct.user_cats MATCH ?`
 
+	// .SortBy hasn't been called yet - can safely assume
+	// it will have this one
 	tt.Text = strings.Replace(
 		tt.Text,
 		TMAP_ORDER_BY_TIMES_STARRED,
@@ -825,7 +952,7 @@ func (tt *TmapTagged) FromCats(cats []string) *TmapTagged {
 
 func (tt *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + ","+TMAP_AUTH_CTE,
+		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
 		TAGGED_FIELDS, TAGGED_FIELDS + TMAP_AUTH_FIELD,
 		TAGGED_JOINS, TAGGED_JOINS + TMAP_AUTH_JOIN,
 	)
@@ -840,6 +967,7 @@ func (tt *TmapTagged) AsSignedInUser(req_user_id string) *TmapTagged {
 	new_args = append(new_args, trailing_args...)
 
 	tt.Args = new_args
+
 	return tt
 }
 
@@ -852,13 +980,32 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 		1,
 	)
 
-	// Swap AND to WHERE in WHERE clause
-	tt.Text = strings.Replace(
+	// swap following AND to WHERE
+	if strings.Contains(
 		tt.Text,
-		"AND l.submitted_by !=",
-		"WHERE l.submitted_by !=",
-		1,
-	)
+		"AND (gco.global_cats IS NOT NULL OR puco.user_cats IS NOT NULL)",
+	) {
+		tt.Text = strings.Replace(
+			tt.Text,
+			"AND (gco.global_cats",
+			"WHERE (gco.global_cats",
+			1,
+		)
+	} else {
+		tt.Text = strings.Replace(
+			tt.Text,
+			TAGGED_AND,
+			`
+WHERE l.submitted_by != ?
+AND l.id NOT IN
+	(SELECT link_id FROM UserStars)`,
+			1,
+		)
+	}
+	
+	// Remove login_name arg used in TMAP_NO_NSFW_CATS_WHERE
+	tt.Args = tt.Args[:len(tt.Args) - 1]
+
 	return tt
 }
 
@@ -916,7 +1063,7 @@ func (tt *TmapTagged) WithSummaryContaining(snippet string) *TmapTagged {
 		tt.Text = strings.Replace(
 			tt.Text,
 			order_by_clause,
-			"\nAND " + "summary LIKE ?" + order_by_clause,
+			"\nAND summary LIKE ?" + order_by_clause,
 			1,
 		)
 	} 
@@ -955,115 +1102,8 @@ func (tt *TmapTagged) WithURLLacking(snippet string) *TmapTagged {
 
 	return tt
 }
-
-func FromUserOrGlobalCats(q *Query, cats []string) *Query {
-	if len(cats) == 0 || cats[0] == "" {
-		return q
-	}
-
-	// Append MATCH clause to PossibleUserCats CTE
-	PUC_WHERE := "WHERE submitted_by = ?"
-	q.Text = strings.Replace(
-		q.Text,
-		PUC_WHERE,
-		PUC_WHERE + `
-		AND cats MATCH ?`,
-		1,
-	)
-
-	// Insert GlobalCatsFTS CTE
-	q.Text = strings.Replace(
-		q.Text,
-		TMAP_BASE_FIELDS,
-		GLOBAL_CATS_CTE + TMAP_BASE_FIELDS,
-		1,
-	)
-
-	// Build MATCH arg
-	match_arg := cats[0]
-	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + cats[i]
-	}
-
-	// Rebuild args with match_arg * 2 (once for PossibleUserCats CTE, once
-	// for GlobalCatsFTS CTE)
-
-	// TmapSubmitted args order: starrers limit, starrers limit, login_name, MATCH, login_name, MATCH, login_name
-	// TmapStarred args order: login_name, starrers limit, starrers limit,  login_name, MATCH, login_name, MATCH, login_name
-
-	// (Only TmapStarred and TmapTagged contain USER_STARS_CTE, and TmapTagged
-	// does not call this method, so can check for presence of USER_STARS_CTE
-	// to determine whether TmapSubmitted or TmapStarred)
-
-	// 4th arg is login_name regardless
-	login_name := q.Args[3].(string)
-
-	// TmapStarred
-	if strings.Contains(q.Text, USER_STARS_CTE) {
-		q.Args = []any{
-			login_name, 
-			mutil.EARLIEST_STARRERS_LIMIT, 
-			login_name, 
-			match_arg, 
-			login_name, match_arg, 
-			login_name,
-		}
-		// TmapSubmitted
-	} else {
-		q.Args = []any{
-			mutil.EARLIEST_STARRERS_LIMIT, 
-			login_name, 
-			match_arg, 
-			login_name, 
-			match_arg, 
-			login_name,
-		}
-	}
-
-	// Insert GLOBAL_CATS_JOIN
-	q.Text = strings.Replace(
-		q.Text,
-		TMAP_BASE_JOINS,
-		TMAP_BASE_JOINS + GLOBAL_CATS_JOIN,
-		1,
-	)
-
-	// Insert final AND clause
-	and_clause := `
-	AND (
-	gc.global_cats IS NOT NULL
-	OR
-	puc.user_cats IS NOT NULL
-)`
-	q.Text = strings.Replace(
-		q.Text,
-		TMAP_ORDER_BY_TIMES_STARRED,
-		and_clause + TMAP_ORDER_BY_TIMES_STARRED,
-		1,
-	)
-
-	return q
-}
-
-const GLOBAL_CATS_CTE = `,
-	GlobalCatsFTS AS (
-		SELECT
-			link_id,
-			global_cats
-		FROM global_cats_fts
-		WHERE global_cats MATCH ?
-	)`
-
-const GLOBAL_CATS_JOIN = `
-LEFT JOIN GlobalCatsFTS gc ON l.id = gc.link_id`
-
-const USER_CATS_CTE = `UserCats AS (
-    SELECT link_id, cats as user_cats
-    FROM user_cats_fts
-    WHERE submitted_by = ?
-)`
-
-// Base
+	
+// Treasure Map Base
 const TMAP_BASE_CTES = `SummaryCount AS (
     SELECT link_id, COUNT(*) AS summary_count
     FROM Summaries
@@ -1104,34 +1144,23 @@ TagCount AS (
     SELECT link_id, COUNT(*) AS tag_count
     FROM Tags
     GROUP BY link_id
-)`
+),`
 
-const POSSIBLE_USER_CATS_CTE = `
-PossibleUserCats AS (
+const NSFW_CATS_CTES = `PossibleUserCats_NSFW AS (
     SELECT 
 		link_id, 
-		cats AS user_cats,
-		(cats IS NOT NULL) AS cats_from_user
+		cats AS user_cats
     FROM user_cats_fts
     WHERE submitted_by = ?
-)`
-
-const POSSIBLE_USER_SUMMARY_CTE = `
-PossibleUserSummary AS (
-    SELECT
-        link_id, 
-		text as user_summary
-    FROM Summaries
-    INNER JOIN Users u ON u.id = submitted_by
-	WHERE u.login_name = ?
-)`
-
-const USER_STARS_CTE = `UserStars AS (
-    SELECT s.link_id
-    FROM Stars s
-    INNER JOIN Users u ON u.id = s.user_id
-    WHERE u.login_name = ?
-)`
+	AND cats MATCH 'NSFW'
+),
+GlobalCatsFTS_NSFW AS (
+	SELECT
+		link_id,
+		global_cats
+	FROM global_cats_fts
+	WHERE global_cats MATCH 'NSFW'
+),`
 
 const TMAP_BASE_FIELDS = `
 SELECT 
@@ -1139,8 +1168,8 @@ SELECT
     l.url,
     l.submitted_by AS login_name,
     l.submit_date,
-    COALESCE(puc.user_cats, l.global_cats) AS cats,
-    COALESCE(puc.cats_from_user,0) AS cats_from_user,
+    COALESCE(puco.user_cats, l.global_cats) AS cats,
+    COALESCE(puco.cats_from_user,0) AS cats_from_user,
     COALESCE(pus.user_summary, l.global_summary, '') AS summary,
     COALESCE(sc.summary_count, 0) AS summary_count,
     COALESCE(ts.times_starred, 0) AS times_starred,
@@ -1153,16 +1182,25 @@ SELECT
 const TMAP_FROM = LINKS_FROM
 
 const TMAP_BASE_JOINS = `
-LEFT JOIN PossibleUserCats puc ON l.id = puc.link_id
+LEFT JOIN PossibleUserCats_Other puco ON l.id = puco.link_id
 LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
 LEFT JOIN TimesStarred ts ON l.id = ts.link_id
 LEFT JOIN AverageStars avs ON l.id = avs.link_id
 LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
-LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
+LEFT JOIN SummaryCount sc ON l.id = sc.link_id
+`
 
-const TMAP_NO_NSFW_CATS_WHERE = LINKS_NO_NSFW_CATS_WHERE
+const NSFW_JOINS = `
+LEFT JOIN PossibleUserCats_NSFW puc ON l.id = puc.link_id
+LEFT JOIN GlobalCatsFTS_NSFW gc ON l.id = gc.link_id`
+
+const TMAP_NO_NSFW_CATS_WHERE = `WHERE l.id NOT IN (
+	SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
+	UNION
+	SELECT link_id FROM user_cats_fts WHERE cats MATCH 'NSFW' AND submitted_by = ?
+)`
 
 var tmap_order_by_clauses = map[string]string{
 	"times_starred": TMAP_ORDER_BY_TIMES_STARRED,
@@ -1230,4 +1268,69 @@ const TMAP_AUTH_FIELD = `,
 	COALESCE(sa.stars_assigned,0) AS stars_assigned`
 
 const TMAP_AUTH_JOIN = `
-	LEFT JOIN StarsAssigned sa ON l.id = sa.link_id`
+LEFT JOIN StarsAssigned sa ON l.id = sa.link_id
+`
+
+
+
+// Shared building blocks
+const USER_CATS_CTE = `UserCats AS (
+    SELECT link_id, cats as user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+)`
+	
+const USER_STARS_CTE = `UserStars AS (
+	SELECT s.link_id
+	FROM Stars s
+	INNER JOIN Users u ON u.id = s.user_id
+	WHERE u.login_name = ?
+)`
+
+const POSSIBLE_USER_CATS_CTE = `
+PossibleUserCats_Other AS (
+	SELECT 
+		link_id, 
+		cats AS user_cats,
+		(cats IS NOT NULL) AS cats_from_user
+	FROM user_cats_fts
+	WHERE submitted_by = ?
+)`
+
+var POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER = strings.Replace(
+	POSSIBLE_USER_CATS_CTE,
+	`,
+	(cats IS NOT NULL) AS cats_from_user`,
+	"",
+	1,
+)
+
+const POSSIBLE_USER_SUMMARY_CTE = `
+PossibleUserSummary AS (
+	SELECT
+		link_id, 
+		text as user_summary
+	FROM Summaries
+	INNER JOIN Users u ON u.id = submitted_by
+	WHERE u.login_name = ?
+)`
+
+var CAT_FILTER_CTES = strings.Replace(
+	POSSIBLE_USER_CATS_CTE,
+	"WHERE submitted_by = ?", `WHERE submitted_by = ?
+	AND cats MATCH ?`, 
+	1) + `,
+GlobalCatsFTS_Other AS (
+    SELECT
+        link_id,
+        global_cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH ?
+)`
+
+const CAT_FILTER_JOINS = `
+LEFT JOIN PossibleUserCats_Other puco ON l.id = puco.link_id
+LEFT JOIN GlobalCatsFTS_Other gco ON l.id = gco.link_id`
+
+const STARRED_JOIN = `
+INNER JOIN UserStars us ON l.id = us.link_id`
