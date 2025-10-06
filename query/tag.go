@@ -37,7 +37,7 @@ func (tr *TagRankings) Public() *TagRankings {
 	tr.Text = strings.Replace(
 		tr.Text,
 		TAG_RANKINGS_BASE_FIELDS,
-		TAG_RANKINGS_BASE_FIELDS + TAG_RANKINGS_PUBLIC_FIELDS,
+		TAG_RANKINGS_BASE_FIELDS+TAG_RANKINGS_PUBLIC_FIELDS,
 		1,
 	)
 
@@ -78,7 +78,7 @@ RawCatCounts AS (
     SELECT global_cat, count(DISTINCT id) as count
     FROM GlobalCatsSplit
     WHERE global_cat != ''
-    GROUP BY global_cat
+    GROUP BY LOWER(global_cat)
 ),
 NormalizedGlobalCats AS (
     SELECT 
@@ -94,7 +94,7 @@ NormalizedGlobalCats AS (
 IdealSpellingVariants AS (
     SELECT 
         normalized_global_cat,
-        MAX(count) as max_count,
+        SUM(count) as max_count,
         (
 			SELECT global_cat FROM NormalizedGlobalCats ngc2 
          	WHERE ngc2.normalized_global_cat = ngc1.normalized_global_cat 
@@ -153,7 +153,7 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	AND LOWER(global_cat) NOT IN (?`
 
 	// add cat filter args to 2nd-to-last position
-	// (LIMIT stays at the end but is easier to add back after)
+	// (LIMIT stays at the end - it is easier to add back after)
 	limit_arg := gcc.Args[len(gcc.Args) - 1]
 	gcc.Args = gcc.Args[:len(gcc.Args) - 1]
 
@@ -165,7 +165,7 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	not_in_clause += ")"
 
 	// Add optional singular/plural variants
-	// (skip for NOT IN clause otherwise subcats include filters)
+	// (skipped for NOT IN clause otherwise subcats include filters)
 	match_arg := WithOptionalPluralOrSingularForm(cats[0])
 	for i := 1; i < len(cats); i++ {
 		match_arg += " AND " + WithOptionalPluralOrSingularForm(cats[i])
