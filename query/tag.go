@@ -68,18 +68,46 @@ const GLOBAL_CATS_BASE = `WITH RECURSIVE GlobalCatsSplit(id, global_cat, str) AS
     SELECT id, '', global_cats||','
     FROM Links
     UNION ALL SELECT
-	id,
-    substr(str, 0, instr(str, ',')),
-    substr(str, instr(str, ',') + 1)
+        id,
+        substr(str, 0, instr(str, ',')),
+        substr(str, instr(str, ',') + 1)
     FROM GlobalCatsSplit
     WHERE str != ''
+),
+RawCatCounts AS (
+    SELECT global_cat, count(DISTINCT id) as count
+    FROM GlobalCatsSplit
+    WHERE global_cat != ''
+    GROUP BY global_cat
+),
+NormalizedGlobalCats AS (
+    SELECT 
+        global_cat,
+        count,
+        CASE
+            WHEN LOWER(global_cat) LIKE '%sses' THEN substr(LOWER(global_cat), 1, length(LOWER(global_cat)) - 2)
+            WHEN LOWER(global_cat) LIKE '%s' AND NOT LOWER(global_cat) LIKE '%ss' THEN substr(LOWER(global_cat), 1, length(LOWER(global_cat)) - 1)
+            ELSE LOWER(global_cat)
+        END as normalized_global_cat
+    FROM RawCatCounts
+),
+IdealSpellingVariants AS (
+    SELECT 
+        normalized_global_cat,
+        MAX(count) as max_count,
+        (
+			SELECT global_cat FROM NormalizedGlobalCats ngc2 
+         	WHERE ngc2.normalized_global_cat = ngc1.normalized_global_cat 
+         	ORDER BY count DESC, length(global_cat) DESC, global_cat DESC 
+         	LIMIT 1
+		) as ideal_cat_spelling
+    FROM NormalizedGlobalCats ngc1
+    GROUP BY normalized_global_cat
 )
-SELECT global_cat, count(DISTINCT id) as count
-FROM GlobalCatsSplit
-WHERE global_cat != ''
-GROUP BY LOWER(global_cat)
-ORDER BY count DESC, LOWER(global_cat) ASC
-LIMIT ?`
+SELECT ideal_cat_spelling as global_cat, max_count as count
+FROM IdealSpellingVariants
+ORDER BY max_count DESC
+LIMIT ?;`
 
 func (gcc *GlobalCatCounts) FromRequestParams(params url.Values) *GlobalCatCounts {
 	cats_params := params.Get("cats")
