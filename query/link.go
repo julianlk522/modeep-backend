@@ -537,12 +537,13 @@ var links_order_by_clauses = map[string]string{
 
 const LINKS_ORDER_BY_TIMES_STARRED = ` 
 ORDER BY 
-    times_starred DESC, 
+	times_starred DESC, 
+	avg_stars DESC,
 	click_count DESC,
 	tag_count DESC,
-    summary_count DESC, 
+	summary_count DESC, 
 	submit_date DESC,
-    l.id DESC`
+	l.id DESC`
 
 const LINKS_ORDER_BY_AVG_STARS = `
 ORDER BY 
@@ -558,6 +559,7 @@ const LINKS_ORDER_BY_NEWEST = `
 ORDER BY 
 	submit_date DESC, 
 	times_starred DESC, 
+	avg_stars DESC,
 	click_count DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
@@ -567,6 +569,7 @@ const LINKS_ORDER_BY_OLDEST = `
 ORDER BY 
 	submit_date ASC, 
 	times_starred DESC, 
+	avg_stars DESC,
 	click_count DESC, 
 	tag_count DESC, 
 	summary_count DESC, 
@@ -576,6 +579,7 @@ const LINKS_ORDER_BY_CLICKS = `
 ORDER BY 
 	click_count DESC, 
 	times_starred DESC, 
+	avg_stars DESC,
 	tag_count DESC, 
 	summary_count DESC, 
 	l.id DESC`

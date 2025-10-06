@@ -1213,6 +1213,7 @@ var tmap_order_by_clauses = map[string]string{
 const TMAP_ORDER_BY_TIMES_STARRED = `
 ORDER BY 
 	ts.times_starred DESC, 
+	avs.avg_stars DESC,
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, l.id DESC,
@@ -1233,6 +1234,7 @@ const TMAP_ORDER_BY_NEWEST = `
 ORDER BY 
 	l.submit_date DESC, 
 	ts.times_starred DESC, 
+	avs.avg_stars DESC,
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
@@ -1242,15 +1244,17 @@ const TMAP_ORDER_BY_OLDEST = `
 ORDER BY 
 	l.submit_date ASC, 
 	ts.times_starred DESC, 
+	avs.avg_stars DESC,
 	clc.click_count DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
 	l.id DESC;`
 
 const TMAP_ORDER_BY_CLICKS = `
-ORDER BY 
+ORDER BY
 	clc.click_count DESC, 
 	ts.times_starred DESC, 
+	avs.avg_stars DESC,
 	tc.tag_count DESC,
 	sc.summary_count DESC, 
 	l.id DESC;`
