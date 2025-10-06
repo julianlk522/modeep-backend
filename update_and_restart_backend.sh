@@ -26,26 +26,9 @@ go mod tidy
 ./build.sh
 log "build complete"
 
-# identify running server process
+# gracefully stop running server process
 PID=$(pgrep -f modeep)
-
-# send SIGTERM signal to gracefully stop
 kill $PID
-
-# while process exists, try to kill it
-countdown=10
-## (kill -0 evals to status 0 if process exists and 1 if process does not exist)
-## (2>/dev/null redirects stderr to null device file to suppress)
-while kill -0 $PID 2>/dev/null; do
-    ## force if stuck
-    if [ $countdown -le 0 ]; then
-        kill -9 $PID
-        break
-    fi
-    sleep 1
-    ((countdown--))
-done
-log "stopped process $PID"
 
 # start tmux session if one doesn't already exist
 if ! tmux has-session -t modeep-backend 2>/dev/null; then
@@ -53,7 +36,7 @@ if ! tmux has-session -t modeep-backend 2>/dev/null; then
     tmux new-session -d -s modeep-backend
 fi
 
-# run fresh binary in tmux session
+# run fresh binary 
 tmux send-keys -t modeep-backend "cd $MODEEP_BACKEND_ROOT && ./modeep" ENTER
 
 # detach
