@@ -115,9 +115,7 @@ func CatsAreSingularOrPluralVariationsOfEachOther(a string, b string) bool {
 
 	if a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
 		return true
-	} else if b + "s" == a || a + "s" == b || a + "es" == a || a + "es" == b {
-		return true
-	}
+	} 
 
 	return false
 }

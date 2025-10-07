@@ -257,6 +257,36 @@ func TestScanGlobalCatCounts(t *testing.T) {
 	}
 }
 
+func TestCatsAreSingularOrPluralVariationsOfEachOther(t *testing.T) {
+	var test_cats = []struct {
+		CatA string
+		CatB string
+		ExpectedResult bool
+	}{
+		{"test", "tests", true},
+		{"dresses", "dress", true},
+		{"game", "games", true},
+		{"glitch", "glitches", true},
+		{"test", "abc", false},
+		// does not report true if same form but different case 
+		{"abc", "abc", false},
+		{"abc", "ABC", false},
+	}
+
+	for _, c := range test_cats {
+		got := CatsAreSingularOrPluralVariationsOfEachOther(c.CatA, c.CatB)
+		if c.ExpectedResult != got {
+			t.Fatalf(
+				"expected %t, got %t for cats %s and %s",
+				c.ExpectedResult,
+				got,
+				c.CatA,
+				c.CatB,
+			)
+		}
+	}
+}
+
 func TestUserHasTaggedLink(t *testing.T) {
 	var test_links = []struct {
 		ID               string
