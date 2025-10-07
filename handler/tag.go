@@ -163,11 +163,25 @@ func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spfx_sql := query.NewSpellfixMatchesForSnippet(snippet)
+	
+	from_tmap_params := r.URL.Query().Get("from_tmap")
+	if from_tmap_params != "" {
+		user_exists, err := util.UserExists(from_tmap_params)
+		if err != nil {
+			render.Render(w, r, e.ErrInternalServerError(err))
+			return
+		} else if !user_exists {
+			render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserWithLoginName))
+			return
+		}
+
+		spfx_sql.FromTmap(from_tmap_params)
+	}
 
 	omitted_params := r.URL.Query().Get("omitted")
 	if omitted_params != "" {
 
-		// lowercase to ensure all case variations are returned
+		// lowercase to ensure all case variations matched 
 		omitted_words := strings.Split(strings.ToLower(omitted_params), ",")
 		err := spfx_sql.OmitCats(omitted_words)
 		if err != nil {
@@ -175,7 +189,7 @@ func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
+	
 	rows, err := db.Client.Query(spfx_sql.Text, spfx_sql.Args...)
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))

@@ -2,6 +2,7 @@ package query
 
 import (
 	"database/sql"
+	"slices"
 	"strings"
 	"testing"
 
@@ -451,6 +452,86 @@ func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 			t.Fatal(err)
 		} else if expected_rankings[word] != rank {
 			t.Fatalf("got %d, want %d for word %s", rank, expected_rankings[word], word)
+		}
+	}
+}
+
+func TestSpellfixMatchesFromTmap(t *testing.T) {
+	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).FromTmap(TEST_LOGIN_NAME) 
+	if matches_sql.Error != nil {
+		t.Fatal(matches_sql.Error)
+	}
+	
+	rows, err := TestClient.Query(matches_sql.Text, matches_sql.Args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var found_cats []model.CatCount
+	
+	for rows.Next() {
+		var word string
+		var count int32
+		if err := rows.Scan(&word, &count); err != nil {
+			t.Fatal(err)
+		}
+
+		found_cats = append(found_cats, model.CatCount{
+			Category: word,
+			Count:    count,
+		})
+	}
+
+	// verify all found cats are on test user's Treasure Map
+	var submitted_sql = NewTmapSubmitted(TEST_LOGIN_NAME)
+	var starred_sql = NewTmapStarred(TEST_LOGIN_NAME)
+	var tagged_sql = NewTmapTagged(TEST_LOGIN_NAME)
+
+	var all_tmap_links []model.TmapLink
+	for _, sql := range []struct{ Text string; Args []any }{
+	    {submitted_sql.Text, submitted_sql.Args},
+	    {starred_sql.Text, starred_sql.Args},
+	    {tagged_sql.Text, tagged_sql.Args},
+	}{
+		rows, err := TestClient.Query(sql.Text, sql.Args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for rows.Next() {
+			var l model.TmapLink
+			if err := rows.Scan(
+				&l.ID,
+				&l.URL,
+				&l.SubmittedBy,
+				&l.SubmitDate,
+				&l.Cats,
+				&l.CatsFromUser,
+				&l.Summary,
+				&l.SummaryCount,
+				&l.TimesStarred,
+				&l.AvgStars,
+				&l.EarliestStarrers,
+				&l.ClickCount,
+				&l.TagCount,
+				&l.PreviewImgFilename,
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			all_tmap_links = append(all_tmap_links, l)
+		}
+	}
+
+	var all_tmap_cats []string
+	for _, l := range all_tmap_links {
+		// doesn't really matter if this collects duplicates
+		all_tmap_cats = append(all_tmap_cats, strings.Split(l.Cats, ",")...)
+	} 
+	
+	for _, cat := range found_cats {
+		if !slices.Contains(all_tmap_cats, cat.Category) {
+			t.Fatalf("cat %s not found on user's Tmap", cat.Category)
 		}
 	}
 }

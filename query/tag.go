@@ -496,39 +496,11 @@ type SpellfixMatches struct {
 }
 
 func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
-	// oddly, "WHERE word MATCH "%s OR %s*" doesn't work very well here
-	// hence the UNION
 	return (&SpellfixMatches{
 		Query: &Query{
-			Text: `WITH CombinedResults AS (
-		SELECT word, rank, distance
-		FROM global_cats_spellfix
-		WHERE word MATCH ?
-		UNION ALL
-		SELECT word, rank, distance
-		FROM global_cats_spellfix
-		WHERE word MATCH ? || '*'
-			),
-		RankedResults AS (
-			SELECT 
-				word, 
-				rank,
-				distance,
-				ROW_NUMBER() OVER (PARTITION BY word ORDER BY distance) AS row_num
-			FROM CombinedResults
-		),
-		TopResults AS (
-			SELECT word, rank, distance
-			FROM RankedResults
-			WHERE row_num = 1
-			AND distance <= ?
-			ORDER BY distance, rank DESC
-		)
-		SELECT word, SUM(rank) as rank
-		FROM TopResults
-		GROUP BY LOWER(word)
-		ORDER BY distance, rank DESC
-		LIMIT ?;`,
+			Text: "WITH " +
+				SPELLFIX_BASE_CTE +
+				REST_OF_SPELLFIX_BASE_QUERY,
 			Args: []any{
 				snippet,
 				snippet,
@@ -539,13 +511,115 @@ func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
 	})
 }
 
+func (sm *SpellfixMatches) FromTmap(tmap_owner_login_name string) *SpellfixMatches {
+	sm.Text = strings.Replace(
+		sm.Text,
+		SPELLFIX_BASE_CTE,
+		`RECURSIVE CatsSplit(tag_id, link_id, submitted_by, cat, remaining) AS (
+	SELECT 
+		tag_id, 
+		link_id, 
+		submitted_by,
+		'',
+		cats || ','
+	FROM user_cats_fts
+	WHERE submitted_by = ?
+	UNION ALL 
+	SELECT 
+		tag_id,
+		link_id,
+		submitted_by,
+		SUBSTR(remaining, 0, INSTR(remaining, ',')),
+		SUBSTR(remaining, INSTR(remaining, ',') + 1)
+	FROM CatsSplit
+	WHERE remaining != ''
+),
+CatRanks AS (
+	SELECT cat, COUNT(*) as local_rank
+	FROM CatsSplit
+	WHERE cat != ''
+	GROUP BY cat
+),
+SpellfixMatches AS (
+	SELECT gcs.word, cr.local_rank, gcs.distance
+	FROM global_cats_spellfix gcs
+	INNER JOIN CatRanks cr ON LOWER(gcs.word) = LOWER(cr.cat)
+	WHERE gcs.word MATCH ?
+	UNION ALL
+	SELECT gcs.word, cr.local_rank, gcs.distance
+	FROM global_cats_spellfix gcs
+	INNER JOIN CatRanks cr ON LOWER(gcs.word) = LOWER(cr.cat)
+	WHERE gcs.word MATCH ? || '*'
+)`,
+		1,
+	)
+
+	// edit rest of query to use "local_rank"
+	// this is not strictly necessary - could use "rank" as in the base query,
+	// but this is a bit more clear.
+	new_rest_of_query := strings.ReplaceAll(
+		REST_OF_SPELLFIX_BASE_QUERY,
+		"rank",
+		"local_rank",
+	)
+	
+	sm.Text = strings.Replace(
+		sm.Text,
+		REST_OF_SPELLFIX_BASE_QUERY,
+		new_rest_of_query,
+		1,
+	)
+
+	// prepend arg
+	sm.Args = append([]any{tmap_owner_login_name}, sm.Args...)
+
+	return sm
+}
+
+// oddly, "WHERE word MATCH "%s OR %s*" doesn't work very well here
+// hence the UNION
+const SPELLFIX_BASE_CTE = `SpellfixMatches AS (
+	SELECT word, rank, distance
+	FROM global_cats_spellfix
+	WHERE word MATCH ?
+	UNION ALL
+	SELECT word, rank, distance
+	FROM global_cats_spellfix
+	WHERE word MATCH ? || '*'
+)`
+
+const REST_OF_SPELLFIX_BASE_QUERY = `,
+RankedMatches AS (
+	SELECT 
+		word, 
+		rank,
+		distance,
+		ROW_NUMBER() OVER (PARTITION BY word ORDER BY distance, rank DESC) AS row_num
+	FROM SpellfixMatches
+),
+TopMatches AS (
+	SELECT 
+		word, 
+		rank, 
+		distance
+	FROM RankedMatches
+	WHERE row_num = 1
+	AND distance <= ?
+	ORDER BY distance, rank DESC
+)
+SELECT word, SUM(rank) as rank
+FROM TopMatches
+GROUP BY LOWER(word)
+ORDER BY distance, rank DESC
+LIMIT ?;`
+
 func (sm *SpellfixMatches) OmitCats(cats []string) error {
 	if len(cats) == 0 || cats[0] == "" {
 		return e.ErrNoOmittedCats
 	}
 
 	// Pop SPELLFIX_MATCHES_LIMIT arg
-	sm.Args = sm.Args[0 : len(sm.Args)-1]
+	sm.Args = sm.Args[0 : len(sm.Args) - 1]
 
 	not_in_clause := `
 	AND LOWER(word) NOT IN (?`
@@ -561,7 +635,7 @@ func (sm *SpellfixMatches) OmitCats(cats []string) error {
 	sm.Text = strings.Replace(
 		sm.Text,
 		distance_clause,
-		distance_clause+not_in_clause,
+		distance_clause + not_in_clause,
 		1,
 	)
 
