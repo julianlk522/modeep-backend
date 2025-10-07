@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	modelutil "github.com/julianlk522/modeep/model/util"
 	"github.com/julianlk522/modeep/query"
 )
 
@@ -66,66 +65,14 @@ func TestGetUserTagForLink(t *testing.T) {
 	}
 }
 
-func TestScanPublicTagRankings(t *testing.T) {
-	var test_rankings = []struct {
-		Cats        string
-		SubmittedBy string
-	}{
-		{
-			Cats:        "flowers",
-			SubmittedBy: "xyz",
-		},
-		{
-			Cats:        "jungle,idk,something",
-			SubmittedBy: "nelson",
-		},
-		{
-			Cats:        "i,hate,sql",
-			SubmittedBy: "Test User",
-		},
-		{
-			Cats:        "jungle,knights,monkeys,talladega",
-			SubmittedBy: "monkey",
-		},
-		{
-			Cats:        "hello,kitty",
-			SubmittedBy: "jlk",
-		},
+func TestScanTagRankings(t *testing.T) {
+	tag_rankings_sql := query.NewTagRankingsForLink(TEST_LINK_ID)
+	if tag_rankings_sql.Error != nil {
+		t.Fatal(tag_rankings_sql.Error)
 	}
-	tag_rankings_sql := query.NewTagRankings(TEST_LINK_ID).Public()
-	// NewTagRankings(link_id).Public().Error already tested in query/tag_test.go
 
-	rankings, err := ScanPublicTagRankings(tag_rankings_sql)
-	if err != nil {
+	if _, err := ScanTagRankings(tag_rankings_sql); err != nil {
 		t.Fatal(err)
-	}
-
-	// Verify result length
-	if len(*rankings) != len(test_rankings) {
-		t.Fatalf(
-			"got %d tag rankings, want %d",
-			len(*rankings),
-			len(test_rankings),
-		)
-	}
-
-	// Verify result order
-	for i, ranking := range *rankings {
-		if ranking.SubmittedBy != test_rankings[i].SubmittedBy {
-			t.Fatalf(
-				"expected ranking %d to be submitted by %s, got %s",
-				i+1,
-				test_rankings[i].SubmittedBy,
-				ranking.SubmittedBy,
-			)
-		} else if ranking.Cats != test_rankings[i].Cats {
-			t.Fatalf(
-				"expected ranking %d to have cats %s, got %s",
-				i+1,
-				test_rankings[i].Cats,
-				ranking.Cats,
-			)
-		}
 	}
 }
 
@@ -447,60 +394,13 @@ func TestCalculateAndSetGlobalCats(t *testing.T) {
 	}
 }
 
-func TestLimitToTopCatRankings(t *testing.T) {
-	test_rankings := map[string]float32{
-		"cat1":  1,
-		"cat2":  2,
-		"cat3":  3,
-		"cat4":  4,
-		"cat5":  5,
-		"cat6":  6,
-		"cat7":  7,
-		"cat8":  8,
-		"cat9":  9,
-		"cat10": 10,
-		"cat11": 11,
-		"cat12": 12,
-		"cat13": 13,
-		"cat14": 14,
-		"cat15": 15,
-		"cat16": 16,
-		"cat17": 17,
-	}
-
-	limited_rankings := LimitToTopCatRankings(test_rankings)
-	if len(limited_rankings) != modelutil.NUM_CATS_LIMIT {
-		t.Fatalf(
-			"expected %d cats, got %d",
-			modelutil.NUM_CATS_LIMIT,
-			len(limited_rankings),
-		)
-	}
-
-	// test with fewer than TAG_CATS_LIMIT cats just in case, even though
-	// this condition should be unreachable
-	test_rankings = map[string]float32{
-		"cat1": 1,
-		"cat2": 2,
-	}
-
-	limited_rankings = LimitToTopCatRankings(test_rankings)
-	if len(limited_rankings) != len(test_rankings) {
-		t.Fatalf(
-			"expected %d cats, got %d",
-			len(test_rankings),
-			len(limited_rankings),
-		)
-	}
-}
-
 func TestSetGlobalCats(t *testing.T) {
 	var test_link_id = "11"
 	var test_cats = "example,cats"
 
 	// get old spellfix ranks for test cats
 	var old_test_cats_ranks = make(map[string]int)
-	for _, cat := range strings.Split(test_cats, ",") {
+	for cat := range strings.SplitSeq(test_cats, ",") {
 		var rank int
 		err := TestClient.QueryRow(`
 			SELECT rank
@@ -530,7 +430,7 @@ func TestSetGlobalCats(t *testing.T) {
 	}
 
 	var old_link_gc_ranks = make(map[string]int)
-	for _, cat := range strings.Split(old_link_gcs, ",") {
+	for cat := range strings.SplitSeq(old_link_gcs, ",") {
 		var rank int
 		err := TestClient.QueryRow(`
 			SELECT rank

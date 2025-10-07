@@ -8,8 +8,6 @@ import (
 	"github.com/julianlk522/modeep/db"
 	"github.com/julianlk522/modeep/model"
 	"github.com/julianlk522/modeep/query"
-
-	mutil "github.com/julianlk522/modeep/model/util"
 )
 
 func GetUserTagForLink(login_name string, link_id string) (*model.Tag, error) {
@@ -34,7 +32,7 @@ func GetUserTagForLink(login_name string, link_id string) (*model.Tag, error) {
 	}, nil
 }
 
-func ScanTagRankings(tag_rankings_sql *query.TagRankings) (*[]model.TagRanking, error) {
+func ScanTagRankings(tag_rankings_sql *query.TagRankingsForLink) (*[]model.TagRanking, error) {
 	rows, err := db.Client.Query(tag_rankings_sql.Text, tag_rankings_sql.Args...)
 	if err != nil {
 		return nil, err
@@ -45,30 +43,6 @@ func ScanTagRankings(tag_rankings_sql *query.TagRankings) (*[]model.TagRanking, 
 
 	for rows.Next() {
 		var tag model.TagRanking
-		err = rows.Scan(
-			&tag.LifeSpanOverlap,
-			&tag.Cats,
-		)
-		if err != nil {
-			return nil, err
-		}
-		tag_rankings = append(tag_rankings, tag)
-	}
-
-	return &tag_rankings, nil
-}
-
-func ScanPublicTagRankings(tag_rankings_sql *query.TagRankings) (*[]model.TagRankingPublic, error) {
-	rows, err := db.Client.Query(tag_rankings_sql.Text, tag_rankings_sql.Args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	tag_rankings := []model.TagRankingPublic{}
-
-	for rows.Next() {
-		var tag model.TagRankingPublic
 		err = rows.Scan(
 			&tag.LifeSpanOverlap,
 			&tag.Cats,
@@ -85,7 +59,7 @@ func ScanPublicTagRankings(tag_rankings_sql *query.TagRankings) (*[]model.TagRan
 }
 
 // GetTopGlobalCats
-func ScanGlobalCatCounts(global_cats_sql *query.GlobalCatCounts) (*[]model.CatCount, error) {
+func ScanGlobalCatCounts(global_cats_sql *query.TopGlobalCatCounts) (*[]model.CatCount, error) {
 	if global_cats_sql.Error != nil {
 		return nil, global_cats_sql.Error
 	}
@@ -110,16 +84,6 @@ func ScanGlobalCatCounts(global_cats_sql *query.GlobalCatCounts) (*[]model.CatCo
 	return &counts, nil
 }
 
-func CatsAreSingularOrPluralVariationsOfEachOther(a string, b string) bool {
-	a, b = strings.ToLower(a), strings.ToLower(b)
-
-	if a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
-		return true
-	} 
-
-	return false
-}
-
 // AddTag
 func UserHasTaggedLink(login_name string, link_id string) (bool, error) {
 	var t sql.NullString
@@ -133,23 +97,6 @@ func UserHasTaggedLink(login_name string, link_id string) (bool, error) {
 
 	return true, nil
 
-}
-
-func TidyCats(cats string) string {
-	split_cats := strings.Split(cats, ",")
-
-	for i := range split_cats {
-		split_cats[i] = strings.TrimSpace(split_cats[i])
-	}
-
-	slices.SortFunc(split_cats, func(i, j string) int {
-		if strings.ToLower(i) < strings.ToLower(j) {
-			return -1
-		}
-		return 1
-	})
-
-	return strings.Join(split_cats, ",")
 }
 
 // EditTag
@@ -211,53 +158,46 @@ func IsOnlyTag(tag_id string) (bool, error) {
 	return true, nil
 }
 
-func CalculateAndSetGlobalCats(link_id string) error {
-	tag_rankings_sql := query.NewTagRankings(link_id)
-	if tag_rankings_sql.Error != nil {
-		return tag_rankings_sql.Error
+// Shared
+func CatsAreSingularOrPluralVariationsOfEachOther(a string, b string) bool {
+	a, b = strings.ToLower(a), strings.ToLower(b)
+
+	if a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
+		return true
+	} 
+
+	return false
+}
+
+func TidyCats(cats string) string {
+	split_cats := strings.Split(cats, ",")
+
+	for i := range split_cats {
+		split_cats[i] = strings.TrimSpace(split_cats[i])
 	}
 
-	tags_for_link, err := ScanTagRankings(tag_rankings_sql)
+	slices.SortFunc(split_cats, func(i, j string) int {
+		if strings.ToLower(i) < strings.ToLower(j) {
+			return -1
+		}
+		return 1
+	})
+
+	return strings.Join(split_cats, ",")
+}
+
+func CalculateAndSetGlobalCats(link_id string) error {
+	global_cats_sql := query.NewGlobalCatsForLink(link_id)
+	if global_cats_sql.Error != nil {
+		return global_cats_sql.Error
+	}
+	
+	var new_global_cats string
+	err := db.Client.QueryRow(
+		global_cats_sql.Text, 
+		global_cats_sql.Args...).Scan(&new_global_cats)
 	if err != nil {
 		return err
-	}
-
-	cat_rankings := make(map[string]float32)
-	var max_cat_score float32
-
-	for _, tag := range *tags_for_link {
-		// multiple cats
-		if strings.Contains(tag.Cats, ",") {
-			cats := strings.Split(tag.Cats, ",")
-			for _, cat := range cats {
-				cat_rankings[cat] += tag.LifeSpanOverlap
-				if cat_rankings[cat] > max_cat_score {
-					max_cat_score = cat_rankings[cat]
-				}
-			}
-		// single cat
-		} else {
-			cat_rankings[tag.Cats] += tag.LifeSpanOverlap
-			if cat_rankings[tag.Cats] > max_cat_score {
-				max_cat_score = cat_rankings[tag.Cats]
-			}
-		}
-	}
-
-	if len(cat_rankings) > mutil.NUM_CATS_LIMIT {
-		cat_rankings = LimitToTopCatRankings(cat_rankings)
-	}
-
-	var new_global_cats string
-	for _, cat := range AlphabetizeCatRankings(cat_rankings) {
-		if cat_rankings[cat] >= max_cat_score * (PERCENT_OF_MAX_CAT_SCORE_NEEDED_FOR_ASSIGNMENT / 100) {
-			new_global_cats += cat + ","
-		}
-	}
-
-	// remove trailing comma
-	if len(new_global_cats) > 0 {
-		new_global_cats = new_global_cats[:len(new_global_cats)-1]
 	}
 
 	if err = SetGlobalCats(link_id, new_global_cats); err != nil {
@@ -265,55 +205,6 @@ func CalculateAndSetGlobalCats(link_id string) error {
 	}
 
 	return nil
-}
-
-func LimitToTopCatRankings(cat_rankings map[string]float32) map[string]float32 {
-	// should never happen but just in case...
-	if len(cat_rankings) <= mutil.NUM_CATS_LIMIT {
-		return cat_rankings
-	}
-
-	// sort (by value) before limit
-	sorted_rankings := make([]model.CatRanking, 0, len(cat_rankings))
-	for cat, score := range cat_rankings {
-		sorted_rankings = append(sorted_rankings, model.CatRanking{
-			Cat:   cat,
-			Score: score,
-		})
-	}
-	slices.SortFunc(sorted_rankings, func(i, j model.CatRanking) int {
-		if i.Score > j.Score {
-			return -1
-		} else if i.Score == j.Score && strings.ToLower(i.Cat) < strings.ToLower(j.Cat) {
-			return -1
-		}
-		return 1
-	})
-
-	limited_rankings := make(map[string]float32, mutil.NUM_CATS_LIMIT)
-	for i := 0; i < mutil.NUM_CATS_LIMIT; i++ {
-		limited_rankings[sorted_rankings[i].Cat] = sorted_rankings[i].Score
-	}
-
-	return limited_rankings
-}
-
-func AlphabetizeCatRankings(scores map[string]float32) []string {
-	cats := make([]string, 0, len(scores))
-	for cat := range scores {
-		cats = append(cats, cat)
-	}
-
-	slices.SortFunc(cats, func(i, j string) int {
-		if scores[i] > scores[j] {
-			return -1
-		} else if scores[i] == scores[j] && strings.ToLower(i) < strings.ToLower(j) {
-			return -1
-		}
-		return 1
-	})
-
-	return cats
 }
 
 func SetGlobalCats(link_id string, new_global_cats string) error {

@@ -51,13 +51,13 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tag_rankings_sql := query.NewTagRankings(link_id).Public()
+	tag_rankings_sql := query.NewTagRankingsForLink(link_id)
 	if tag_rankings_sql.Error != nil {
 		render.Render(w, r, e.ErrInvalidRequest(tag_rankings_sql.Error))
 		return
 	}
 
-	tag_rankings, err := util.ScanPublicTagRankings(tag_rankings_sql)
+	tag_rankings, err := util.ScanTagRankings(tag_rankings_sql)
 	if err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(err))
 		return

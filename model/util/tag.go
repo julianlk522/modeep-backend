@@ -6,9 +6,9 @@ import (
 )
 
 func HasTooLongCats(cats string) bool {
-	split_cats := strings.Split(cats, ",")
+	split_cats := strings.SplitSeq(cats, ",")
 
-	for _, cat := range split_cats {
+	for cat := range split_cats {
 		if len(cat) > CAT_CHAR_LIMIT {
 			return true
 		}
@@ -18,7 +18,7 @@ func HasTooLongCats(cats string) bool {
 }
 
 func HasTooManyCats(cats string) bool {
-	return strings.Count(cats, ",")+1 > NUM_CATS_LIMIT
+	return strings.Count(cats, ",") + 1 > CATS_PER_LINK_LIMIT
 }
 
 func HasDuplicateCats(cats string) bool {
@@ -26,7 +26,7 @@ func HasDuplicateCats(cats string) bool {
 
 	var found_cats = []string{}
 
-	for i := 0; i < len(split_cats); i++ {
+	for i := range split_cats {
 		if !slices.Contains(found_cats, split_cats[i]) {
 			found_cats = append(found_cats, split_cats[i])
 		} else {
@@ -40,7 +40,7 @@ func HasDuplicateCats(cats string) bool {
 func CapitalizeNSFWCatIfNotAlready(cats string) string {
 	split_cats := strings.Split(cats, ",")
 
-	for i := 0; i < len(split_cats); i++ {
+	for i := range split_cats {
 		if split_cats[i] == "nsfw" {
 			split_cats[i] = "NSFW"
 		}

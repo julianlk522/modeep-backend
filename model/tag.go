@@ -33,12 +33,8 @@ func SortCats(i, j CatCount) int {
 }
 
 type TagRanking struct {
-	Cats            string
 	LifeSpanOverlap float32
-}
-
-type TagRankingPublic struct {
-	TagRanking
+	Cats            string
 	SubmittedBy string
 	LastUpdated string
 }
@@ -56,7 +52,7 @@ type GlobalCatsDiff struct {
 type TagPage[T Link | LinkSignedIn] struct {
 	Link        *T
 	UserTag     *Tag
-	TagRankings *[]TagRankingPublic
+	TagRankings *[]TagRanking
 }
 
 type NewTag struct {
@@ -81,7 +77,7 @@ func (ntr *NewTagRequest) Bind(r *http.Request) error {
 	case util.HasTooLongCats(ntr.NewTag.Cats):
 		return e.CatCharsExceedLimit(util.CAT_CHAR_LIMIT)
 	case util.HasTooManyCats(ntr.NewTag.Cats):
-		return e.NumCatsExceedsLimit(util.NUM_CATS_LIMIT)
+		return e.NumCatsExceedsLimit(util.CATS_PER_LINK_LIMIT)
 	case util.HasDuplicateCats(ntr.NewTag.Cats):
 		return e.ErrDuplicateCats
 	}
@@ -111,7 +107,7 @@ func (etr *EditTagRequest) Bind(r *http.Request) error {
 	case util.HasTooLongCats(etr.Cats):
 		return e.CatCharsExceedLimit(util.CAT_CHAR_LIMIT)
 	case util.HasTooManyCats(etr.Cats):
-		return e.NumCatsExceedsLimit(util.NUM_CATS_LIMIT)
+		return e.NumCatsExceedsLimit(util.CATS_PER_LINK_LIMIT)
 	case util.HasDuplicateCats(etr.Cats):
 		return e.ErrDuplicateCats
 	}

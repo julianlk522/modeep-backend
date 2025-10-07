@@ -92,7 +92,7 @@ func (nlr *NewLinkRequest) Bind(r *http.Request) error {
 	case util.HasTooLongCats(nlr.Cats):
 		return e.CatCharsExceedLimit(util.CAT_CHAR_LIMIT)
 	case util.HasTooManyCats(nlr.Cats):
-		return e.NumCatsExceedsLimit(util.NUM_CATS_LIMIT)
+		return e.NumCatsExceedsLimit(util.CATS_PER_LINK_LIMIT)
 	case util.HasDuplicateCats(nlr.Cats):
 		return e.ErrDuplicateCats
 	}

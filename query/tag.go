@@ -6,65 +6,141 @@ import (
 	"strings"
 
 	e "github.com/julianlk522/modeep/error"
+	mutil "github.com/julianlk522/modeep/model/util"
 )
 
-type TagRankings struct {
+type TagRankingsForLink struct {
 	*Query
 }
 
-func NewTagRankings(link_id string) *TagRankings {
-	return (&TagRankings{Query: 
-		&Query{
-			Text: TAG_RANKINGS_BASE,
-			Args: []any{link_id, NUM_TAGS_TO_SEARCH_FOR_TOP_CATS},
+func NewTagRankingsForLink(link_id string) *TagRankingsForLink {
+	return (&TagRankingsForLink{
+		Query: &Query{
+			Text: `SELECT
+	(julianday('now') - julianday(t.last_updated)) / (julianday('now') - julianday(l.submit_date)) * 100 AS lifespan_overlap, 
+	t.cats, 
+	t.submitted_by, 
+	t.last_updated
+FROM Tags t
+INNER JOIN Links l
+ON l.id = t.link_id
+WHERE t.link_id = ?
+ORDER BY lifespan_overlap DESC
+LIMIT ?;`,
+			Args: []any{
+				link_id, 
+				TAGS_PAGE_LIMIT,
+			},
 		},
 	})
 }
 
-const TAG_RANKINGS_BASE_FIELDS = `SELECT
-	(julianday('now') - julianday(last_updated)) / (julianday('now') - julianday(submit_date)) * 100 AS lifespan_overlap, 
-	cats`
-
-var TAG_RANKINGS_BASE = TAG_RANKINGS_BASE_FIELDS + ` 
-FROM Tags 
-INNER JOIN Links 
-ON Links.id = Tags.link_id
-WHERE link_id = ?
-ORDER BY lifespan_overlap DESC
-LIMIT ?;`
-
-func (tr *TagRankings) Public() *TagRankings {
-	tr.Text = strings.Replace(
-		tr.Text,
-		TAG_RANKINGS_BASE_FIELDS,
-		TAG_RANKINGS_BASE_FIELDS+TAG_RANKINGS_PUBLIC_FIELDS,
-		1,
-	)
-
-	tr.Args[1] = TAGS_PAGE_LIMIT
-
-	return tr
-}
-
-const TAG_RANKINGS_PUBLIC_FIELDS = `, 
-	Tags.submitted_by, 
-	last_updated`
-
-type GlobalCatCounts struct {
+type GlobalCatsForLink struct {
 	*Query
 }
 
-func NewTopGlobalCatCounts() *GlobalCatCounts {
-	return (&GlobalCatCounts{
+func NewGlobalCatsForLink(link_id string) *GlobalCatsForLink {
+	return (&GlobalCatsForLink{
 		Query: &Query{
-			Text: GLOBAL_CATS_BASE,
+			Text: `WITH TagLifespanOverlaps AS (
+    SELECT
+        (julianday('now') - julianday(t.last_updated)) / (julianday('now') - julianday(l.submit_date)) * 100 AS lifespan_overlap,
+        t.link_id,
+        t.cats as cats
+    FROM Tags t
+    INNER JOIN Links l ON l.id = t.link_id
+    WHERE t.link_id = ?
+    ORDER BY lifespan_overlap DESC
+    LIMIT ?
+),
+CatsSplit(link_id, lifespan_overlap, cat, str) AS (
+    SELECT link_id, lifespan_overlap, '', cats||','
+    FROM TagLifespanOverlaps
+    UNION ALL 
+    SELECT
+        link_id,
+	lifespan_overlap,
+        TRIM(substr(str, 0, instr(str, ','))),
+        substr(str, instr(str, ',') + 1)
+    FROM CatsSplit
+    WHERE str != ''
+),
+IndividualCats AS (
+    SELECT DISTINCT
+        link_id,
+	lifespan_overlap,
+        cat
+    FROM CatsSplit
+    WHERE cat != ''
+),
+NormalizedCats AS (
+    SELECT 
+        link_id,
+	lifespan_overlap,
+        cat,
+        CASE
+            WHEN LOWER(cat) LIKE '%sses' THEN substr(LOWER(cat), 1, length(LOWER(cat)) - 2)
+            WHEN LOWER(cat) LIKE '%s' AND NOT LOWER(cat) LIKE '%ss' THEN substr(LOWER(cat), 1, length(LOWER(cat)) - 1)
+            ELSE LOWER(cat)
+        END as normalized_cat
+    FROM IndividualCats
+),
+IdealSpellingVariants AS (
+    SELECT 
+        link_id,
+        normalized_cat,
+	SUM(lifespan_overlap) as cat_score,
+        (SELECT 
+	    cat FROM NormalizedCats nc2 
+	    WHERE nc2.link_id = nc1.link_id 
+	    AND nc2.normalized_cat = nc1.normalized_cat
+	    ORDER BY length(cat) DESC, cat DESC 
+	    LIMIT 1
+        ) as ideal_cat_spelling
+    FROM NormalizedCats nc1
+    GROUP BY normalized_cat
+    ORDER BY cat_score DESC
+    LIMIT ?
+),
+AlphabetizedCats AS (
+	SELECT 
+		ideal_cat_spelling as cat,
+		cat_score
+	FROM IdealSpellingVariants
+	ORDER BY cat ASC
+),
+MaxScore AS (
+    SELECT MAX(cat_score) as high_score
+    FROM IdealSpellingVariants
+)
+SELECT GROUP_CONCAT(cat, ',') as new_global_cats
+FROM AlphabetizedCats, MaxScore
+WHERE cat_score >= high_score / 100 * ?;`,
+			Args: []any{
+				link_id, 
+				TAGS_TO_SEARCH_FOR_TOP_GLOBAL_CATS,
+				mutil.CATS_PER_LINK_LIMIT,
+				PERCENT_OF_MAX_CAT_SCORE_NEEDED_FOR_GLOBAL_CATS_ASSIGNMENT,
+			},
+		},
+	})
+}
+
+type TopGlobalCatCounts struct {
+	*Query
+}
+
+func NewTopGlobalCatCounts() *TopGlobalCatCounts {
+	return (&TopGlobalCatCounts{
+		Query: &Query{
+			Text: TOP_GLOBAL_CATS_BASE,
 			Args: []any{GLOBAL_CATS_PAGE_LIMIT},
 		},
 	})
 }
 
 // id used for .SubcatsOfCats(): don't remove
-const GLOBAL_CATS_BASE = `WITH RECURSIVE GlobalCatsSplit(id, global_cat, str) AS (
+const TOP_GLOBAL_CATS_BASE = `WITH RECURSIVE GlobalCatsSplit(id, global_cat, str) AS (
     SELECT id, '', global_cats||','
     FROM Links
     UNION ALL SELECT
@@ -95,21 +171,23 @@ IdealSpellingVariants AS (
     SELECT 
         normalized_global_cat,
         SUM(count) as max_count,
-        (
-			SELECT global_cat FROM NormalizedGlobalCats ngc2 
-         	WHERE ngc2.normalized_global_cat = ngc1.normalized_global_cat 
-         	ORDER BY count DESC, length(global_cat) DESC, global_cat DESC 
-         	LIMIT 1
-		) as ideal_cat_spelling
+        (SELECT 
+	    global_cat FROM NormalizedGlobalCats ngc2 
+	    WHERE ngc2.normalized_global_cat = ngc1.normalized_global_cat 
+	    ORDER BY count DESC, length(global_cat) DESC, global_cat DESC 
+	    LIMIT 1
+	) as ideal_cat_spelling
     FROM NormalizedGlobalCats ngc1
     GROUP BY normalized_global_cat
 )
-SELECT ideal_cat_spelling as global_cat, max_count as count
+SELECT 
+    ideal_cat_spelling as global_cat, 
+    max_count as count
 FROM IdealSpellingVariants
 ORDER BY max_count DESC
 LIMIT ?;`
 
-func (gcc *GlobalCatCounts) FromRequestParams(params url.Values) *GlobalCatCounts {
+func (gcc *TopGlobalCatCounts) FromRequestParams(params url.Values) *TopGlobalCatCounts {
 	cats_params := params.Get("cats")
 	if cats_params != "" {
 		gcc = gcc.SubcatsOfCats(cats_params)
@@ -145,7 +223,7 @@ func (gcc *GlobalCatCounts) FromRequestParams(params url.Values) *GlobalCatCount
 	return gcc
 }
 
-func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
+func (gcc *TopGlobalCatCounts) SubcatsOfCats(cats_params string) *TopGlobalCatCounts {
 	// lowercase cats to ensure all case variations are returned
 	cats := strings.Split(strings.ToLower(cats_params), ",")
 
@@ -192,7 +270,7 @@ func (gcc *GlobalCatCounts) SubcatsOfCats(cats_params string) *GlobalCatCounts {
 	return gcc
 }
 
-func (gcc *GlobalCatCounts) WithGlobalSummaryContaining(snippet string) *GlobalCatCounts {
+func (gcc *TopGlobalCatCounts) WithGlobalSummaryContaining(snippet string) *TopGlobalCatCounts {
 	// in case either .WithURLContaining or .WithURLLacking was run first
 	if strings.Contains(
 		gcc.Text, 
@@ -254,7 +332,7 @@ func (gcc *GlobalCatCounts) WithGlobalSummaryContaining(snippet string) *GlobalC
 	return gcc
 }
 
-func (gcc *GlobalCatCounts) WithURLContaining(snippet string) *GlobalCatCounts {
+func (gcc *TopGlobalCatCounts) WithURLContaining(snippet string) *TopGlobalCatCounts {
 	// in case .WithGlobalSummaryContaining was run first
 	if strings.Contains(
 		gcc.Text, 
@@ -319,7 +397,7 @@ func (gcc *GlobalCatCounts) WithURLContaining(snippet string) *GlobalCatCounts {
 	return gcc
 }
 
-func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
+func (gcc *TopGlobalCatCounts) WithURLLacking(snippet string) *TopGlobalCatCounts {
 	// in case .WithGlobalSummaryContaining was run first
 	if strings.Contains(
 		gcc.Text, 
@@ -384,7 +462,7 @@ func (gcc *GlobalCatCounts) WithURLLacking(snippet string) *GlobalCatCounts {
 	return gcc
 }
 
-func (gcc *GlobalCatCounts) DuringPeriod(period string) *GlobalCatCounts {
+func (gcc *TopGlobalCatCounts) DuringPeriod(period string) *TopGlobalCatCounts {
 	if period == "all" {
 		return gcc
 	}
@@ -408,7 +486,7 @@ func (gcc *GlobalCatCounts) DuringPeriod(period string) *GlobalCatCounts {
 	return gcc
 }
 
-func (gcc *GlobalCatCounts) More() *GlobalCatCounts {
+func (gcc *TopGlobalCatCounts) More() *TopGlobalCatCounts {
 	gcc.Args[len(gcc.Args)-1] = MORE_GLOBAL_CATS_PAGE_LIMIT
 	return gcc
 }
