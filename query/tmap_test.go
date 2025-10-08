@@ -45,7 +45,7 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
 	// (submitted, starred, or tagged links with global_cat "NSFW"
 	// OR where user's tag contains "NSFW")
 	var expected_count int
-	sql_manual := `WITH PossibleUserCats_NSFW AS (
+	sql_manual := `WITH PossibleUserCatsNSFW AS (
     SELECT
         link_id,
         cats AS user_cats
@@ -53,7 +53,7 @@ func TestNewTmapNSFWLinksCount(t *testing.T) {
     WHERE submitted_by = ?
         AND cats MATCH 'NSFW'
 ),
-GlobalCatsFTS_NSFW AS (
+GlobalNSFWCats AS (
     SELECT
         link_id,
         global_cats
@@ -68,17 +68,17 @@ UserStars AS (
 )
 SELECT count(*) as NSFW_link_count
 FROM Links l
-LEFT JOIN PossibleUserCats_NSFW puc ON l.id = puc.link_id
-LEFT JOIN GlobalCatsFTS_NSFW gc ON l.id = gc.link_id
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
 WHERE
-    (gc.global_cats IS NOT NULL OR puc.user_cats IS NOT NULL)
+    (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
 AND (
 	l.submitted_by = ?
 	OR l.id IN (SELECT link_id FROM UserStars)
 	OR l.id IN
 		(
 		SELECT link_id
-		FROM PossibleUserCats_NSFW
+		FROM PossibleUserCatsNSFW
 		)
 	);`
 
@@ -100,7 +100,7 @@ AND (
 		t.Fatal(err)
 	}
 
-	sql_manual = `WITH PossibleUserCats_NSFW AS (
+	sql_manual = `WITH PossibleUserCatsNSFW AS (
 	SELECT
 		link_id,
 		cats AS user_cats
@@ -108,14 +108,14 @@ AND (
 	WHERE submitted_by = ?
 		AND cats MATCH 'NSFW'
 ),
-GlobalCatsFTS_NSFW AS (
+GlobalNSFWCats AS (
 	SELECT
 			link_id,
 			global_cats
 	FROM global_cats_fts
 	WHERE global_cats MATCH 'NSFW'
 ),
-PossibleUserCats_Other AS (
+PossibleUserCatsMatchingRequestParams AS (
 	SELECT
 			link_id,
 			cats AS user_cats
@@ -123,7 +123,7 @@ PossibleUserCats_Other AS (
 	WHERE submitted_by = ?
 	AND cats MATCH ?
 ),
-GlobalCatsFTS_Other AS (
+GlobalCatsMatchingRequestParams AS (
     SELECT
         link_id,
         global_cats
@@ -138,22 +138,22 @@ UserStars AS (
 )
 SELECT count(*) as NSFW_link_count
 FROM Links l
-LEFT JOIN PossibleUserCats_NSFW puc ON l.id = puc.link_id
-LEFT JOIN GlobalCatsFTS_NSFW gc ON l.id = gc.link_id
-LEFT JOIN PossibleUserCats_Other puco ON l.id = puco.link_id
-LEFT JOIN GlobalCatsFTS_Other gco ON l.id = gco.link_id
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+LEFT JOIN PossibleUserCatsMatchingRequestParams pucmrp ON l.id = pucmrp.link_id
+LEFT JOIN GlobalCatsMatchingRequestParams gcmrp ON l.id = gcmrp.link_id
 WHERE
-		(gc.global_cats IS NOT NULL
+		(gnsfwc.global_cats IS NOT NULL
 		OR
-		puc.user_cats IS NOT NULL)
-AND (gco.global_cats IS NOT NULL OR puco.user_cats IS NOT NULL)
+		pucnsfw.user_cats IS NOT NULL)
+AND (gcmrp.global_cats IS NOT NULL OR pucmrp.user_cats IS NOT NULL)
 AND (
 	l.submitted_by = ?
 	OR l.id IN (SELECT link_id FROM UserStars)
 	OR l.id IN
 			(
 			SELECT link_id
-			FROM PossibleUserCats_NSFW
+			FROM PossibleUserCatsNSFW
 			)
 	);`
 	if err := TestClient.QueryRow(
@@ -178,7 +178,7 @@ func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sql_manual := `WITH PossibleUserCats_NSFW AS (
+	sql_manual := `WITH PossibleUserCatsNSFW AS (
     SELECT
         link_id,
         cats AS user_cats
@@ -186,7 +186,7 @@ func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
     WHERE submitted_by = ?
         AND cats MATCH 'NSFW'
 ),
-GlobalCatsFTS_NSFW AS (
+GlobalNSFWCats AS (
     SELECT
         link_id,
         global_cats
@@ -195,9 +195,9 @@ GlobalCatsFTS_NSFW AS (
 )
 SELECT count(*) as NSFW_link_count
 FROM Links l
-LEFT JOIN PossibleUserCats_NSFW puc ON l.id = puc.link_id
-LEFT JOIN GlobalCatsFTS_NSFW gc ON l.id = gc.link_id
-WHERE (gc.global_cats IS NOT NULL OR puc.user_cats IS NOT NULL)
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+WHERE (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
 AND l.submitted_by = ?;`
 
 	var expected_count int
@@ -220,7 +220,7 @@ func TestTmapNSFWLinksCountStarredOnly(t *testing.T) {
 	}
 
 	var expected_count int
-	sql_manual := `WITH PossibleUserCats_NSFW AS (
+	sql_manual := `WITH PossibleUserCatsNSFW AS (
     SELECT
         link_id,
         cats AS user_cats
@@ -228,7 +228,7 @@ func TestTmapNSFWLinksCountStarredOnly(t *testing.T) {
     WHERE submitted_by = ?
         AND cats MATCH 'NSFW'
 ),
-GlobalCatsFTS_NSFW AS (
+GlobalNSFWCats AS (
     SELECT
         link_id,
         global_cats
@@ -243,10 +243,10 @@ UserStars AS (
 )
 SELECT count(*) as NSFW_link_count
 FROM Links l
-LEFT JOIN PossibleUserCats_NSFW puc ON l.id = puc.link_id
-LEFT JOIN GlobalCatsFTS_NSFW gc ON l.id = gc.link_id
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
 WHERE
-    (gc.global_cats IS NOT NULL OR puc.user_cats IS NOT NULL)
+    (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
 AND l.id IN (SELECT link_id FROM UserStars);`
 	if err := TestClient.QueryRow(
 		sql_manual, 
@@ -269,7 +269,7 @@ func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
 	}
 
 	var expected_count int
-	sql_manual := `WITH PossibleUserCats_NSFW AS (
+	sql_manual := `WITH PossibleUserCatsNSFW AS (
     SELECT
         link_id,
         cats AS user_cats
@@ -277,7 +277,7 @@ func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
     WHERE submitted_by = ?
         AND cats MATCH 'NSFW'
 ),
-GlobalCatsFTS_NSFW AS (
+GlobalNSFWCats AS (
     SELECT
         link_id,
         global_cats
@@ -292,9 +292,9 @@ UserStars AS (
 )
 SELECT count(*) as NSFW_link_count
 FROM Links l
-LEFT JOIN PossibleUserCats_NSFW puc ON l.id = puc.link_id
-LEFT JOIN GlobalCatsFTS_NSFW gc ON l.id = gc.link_id
-WHERE (gc.global_cats IS NOT NULL OR puc.user_cats IS NOT NULL)
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+WHERE (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
 AND l.submitted_by != ?
 AND l.id NOT IN
 	(SELECT link_id FROM UserStars);`
