@@ -356,10 +356,10 @@ func TestCalculateAndSetGlobalCats(t *testing.T) {
 	}{
 		{"0", "flowers"},
 		{"11", "test"},
-		// test that calculated global cats are limited to top TAG_CATS_LIMIT
-		// link 1234567890 has 1 tag with cats "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17" so should be shortened to top 15
+		// test that calculated global cats are limited to top {CATS_PER_LINK_LIMIT} (currently 20)
+		// link 1234567890 has 1 tag with cats "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22" - last 2 should be cut
 		// (all same scores so sort alphabetically)
-		{"1234567890", "1,10,11,12,13,14,15,16,17,2,3,4,5,6,7"},
+		{"1234567890", "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"},
 	}
 
 	for _, l := range test_link_ids {
