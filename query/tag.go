@@ -99,22 +99,18 @@ IdealSpellingVariants AS (
         ) as ideal_cat_spelling
     FROM NormalizedCats nc1
     GROUP BY normalized_cat
-    ORDER BY cat_score DESC
+    ORDER BY 
+	cat_score DESC, 
+	length(ideal_cat_spelling) ASC, 
+	ideal_cat_spelling ASC
     LIMIT ?
-),
-AlphabetizedCats AS (
-	SELECT 
-		ideal_cat_spelling as cat,
-		cat_score
-	FROM IdealSpellingVariants
-	ORDER BY cat ASC
 ),
 MaxScore AS (
     SELECT MAX(cat_score) as high_score
     FROM IdealSpellingVariants
 )
-SELECT GROUP_CONCAT(cat, ',') as new_global_cats
-FROM AlphabetizedCats, MaxScore
+SELECT GROUP_CONCAT(ideal_cat_spelling, ',') as new_global_cats
+FROM IdealSpellingVariants, MaxScore
 WHERE cat_score >= high_score / 100 * ?;`,
 			Args: []any{
 				link_id, 
@@ -170,11 +166,14 @@ NormalizedGlobalCats AS (
 IdealSpellingVariants AS (
     SELECT 
         normalized_global_cat,
-        SUM(count) as max_count,
+        SUM(count) as count_across_spelling_variations,
         (SELECT 
 	    global_cat FROM NormalizedGlobalCats ngc2 
 	    WHERE ngc2.normalized_global_cat = ngc1.normalized_global_cat 
-	    ORDER BY count DESC, length(global_cat) DESC, global_cat DESC 
+	    ORDER BY 
+		count DESC, 
+		length(global_cat) DESC, 
+		global_cat DESC 
 	    LIMIT 1
 	) as ideal_cat_spelling
     FROM NormalizedGlobalCats ngc1
@@ -182,9 +181,9 @@ IdealSpellingVariants AS (
 )
 SELECT 
     ideal_cat_spelling as global_cat, 
-    max_count as count
+    count_across_spelling_variations as count
 FROM IdealSpellingVariants
-ORDER BY max_count DESC
+ORDER BY count_across_spelling_variations DESC
 LIMIT ?;`
 
 func (gcc *TopGlobalCatCounts) FromRequestParams(params url.Values) *TopGlobalCatCounts {
@@ -554,7 +553,6 @@ SpellfixMatches AS (
 		1,
 	)
 
-	// edit rest of query to use "local_rank"
 	// this is not strictly necessary - could use "rank" as in the base query,
 	// but this is a bit more clear.
 	new_rest_of_query := strings.ReplaceAll(
@@ -576,7 +574,7 @@ SpellfixMatches AS (
 	return sm
 }
 
-// oddly, "WHERE word MATCH "%s OR %s*" doesn't work very well here
+// oddly, "WHERE word MATCH "%s OR %s*" doesn't work very well
 // hence the UNION
 const SPELLFIX_BASE_CTE = `SpellfixMatches AS (
 	SELECT word, rank, distance
