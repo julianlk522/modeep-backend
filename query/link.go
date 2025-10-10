@@ -403,12 +403,17 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 		SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
 	)`
 
+	// check if other methods called first
+	// there's probably a better way to do this... TODO
 	if strings.Contains(
 		tl.Text, 
 		"WHERE url",
 	) || strings.Contains(
 		tl.Text, 
 		"WHERE global_summmary",
+	) || strings.Contains(
+		tl.Text, 
+		"WHERE submit_date",
 	) {
 		nsfw_clause = strings.Replace(
 			nsfw_clause,

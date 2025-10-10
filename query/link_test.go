@@ -789,3 +789,66 @@ func TestPage(t *testing.T) {
 		}
 	}
 }
+
+func TestCountNSFWLinks(t *testing.T) {
+	// without NSFW params enabled
+	links_sql := NewTopLinks().CountNSFWLinks(false)
+	if links_sql.Error != nil {
+		t.Fatal(links_sql.Error)
+	}
+
+	var nsfw_links int
+	if err := TestClient.QueryRow(links_sql.Text, links_sql.Args...).Scan(&nsfw_links); err != nil {
+		t.Fatal(err)
+	}
+	
+	// with NSFW params
+	links_sql = NewTopLinks().
+		NSFW().
+		// NOTE: this breaks the query if passed "true" and .NSFW() is not called first
+		// (which shouldn't happen)
+		CountNSFWLinks(true)
+	if links_sql.Error != nil {
+		t.Fatal(links_sql.Error)
+	}
+
+	if err := TestClient.QueryRow(links_sql.Text, links_sql.Args...).Scan(&nsfw_links); err != nil {
+		t.Fatalf(
+			"err: %v, sql text was %s, args were %v",
+			err,
+			links_sql.Text,
+			links_sql.Args,
+		)
+	}
+
+	// combined with other methods
+	links_sql = NewTopLinks().
+		FromCats(test_cats).
+		DuringPeriod("year", "times_starred").
+		SortBy("newest").
+		AsSignedInUser(TEST_USER_ID).
+		CountNSFWLinks(false)
+	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
+		t.Fatalf(
+			"err: %v, sql text was %s, args were %v",
+			err,
+			links_sql.Text,
+			links_sql.Args,
+		)
+	}
+
+	// MORE COMBINATIONSSSSS
+	links_sql = NewTopLinks().
+		FromCats(test_cats).
+		DuringPeriod("all", "average_stars").
+		SortBy("average_stars").
+		WithURLContaining("www", "average_stars").
+		WithURLLacking(".com", "average_stars").
+		WithGlobalSummaryContaining("test", "average_stars").
+		AsSignedInUser(TEST_USER_ID).
+		NSFW().
+		CountNSFWLinks(true)
+	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
+		t.Fatal(err)
+	}
+}
