@@ -65,7 +65,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 		return nil, err
 	}
 
-	links_page.NSFWLinks = hidden_links	
+	links_page.NSFWLinksCount = hidden_links	
 
 	return links_page, nil
 }

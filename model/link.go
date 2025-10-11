@@ -52,10 +52,10 @@ type LinksPageOptions struct {
 }
 
 type LinksPage[T Link | LinkSignedIn] struct {
-	Links      *[]T
-	NSFWLinks int
-	MergedCats []string
-	Pages   int
+	Links          *[]T
+	NSFWLinksCount int
+	MergedCats     []string
+	Pages          int
 }
 
 type Contributor struct {
@@ -160,7 +160,7 @@ func (ulr *UnstarLinkRequest) Bind(r *http.Request) error {
 
 type StarLinkRequest struct {
 	*UnstarLinkRequest
-	Stars  uint8 `json:"stars"`
+	Stars uint8 `json:"stars"`
 }
 
 func (sl *StarLinkRequest) Bind(r *http.Request) error {

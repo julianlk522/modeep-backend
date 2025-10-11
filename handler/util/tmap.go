@@ -197,7 +197,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		if links == nil || len(*links) == 0 {
-			return model.TmapSectionPage[T]{
+			return model.TmapIndividualSectionPage[T]{
 				Links:          &[]T{},
 				Cats:           &[]model.CatCount{},
 				NSFWLinksCount: nsfw_links_count,
@@ -229,7 +229,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : query.LINKS_PAGE_LIMIT*page]
 		}
 
-		return model.TmapSectionPage[T]{
+		return model.TmapIndividualSectionPage[T]{
 			Links:          links,
 			Cats:           cat_counts,
 			Pages:          pages,
@@ -275,8 +275,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		links_from_all_sections := slices.Concat(*submitted, *starred, *tagged)
-		if len(links_from_all_sections) == 0 {
-			return model.FilteredTmap[T]{
+			return model.Tmap[T]{
 				TmapSections:   &model.TmapSections[T]{},
 				NSFWLinksCount: nsfw_links_count,
 			}, nil
@@ -312,16 +311,19 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		if has_cat_filter {
-			return model.FilteredTmap[T]{
+			return model.Tmap[T]{
 				TmapSections:   sections,
 				NSFWLinksCount: nsfw_links_count,
 			}, nil
 
 		} else {
-			return model.Tmap[T]{
+			return model.TmapWithProfile[T]{
 				Profile:        profile,
-				TmapSections:   sections,
-				NSFWLinksCount: nsfw_links_count,
+				Tmap:           model.Tmap[T]{
+					TmapSections:   sections,
+					NSFWLinksCount: nsfw_links_count,
+
+				},
 			}, nil
 		}
 	}
@@ -336,7 +338,7 @@ func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 			&u.PFP,
 			&u.About,
 			&u.Email,
-			&u.Created,
+			&u.CreatedAt,
 		); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, e.ErrNoUserWithLoginName

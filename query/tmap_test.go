@@ -29,7 +29,7 @@ func TestNewTmapProfile(t *testing.T) {
 		&profile.PFP,
 		&profile.About,
 		&profile.Email,
-		&profile.Created,
+		&profile.CreatedAt,
 	); err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
 	}

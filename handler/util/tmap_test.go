@@ -34,7 +34,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		LoginName        string
 		RequestingUserID string
 		CatsParams       string
-		SortBy     	     string
+		SortBy           string
 		IncludeNSFW      bool
 		SectionParams    string
 		PageParams       int
@@ -96,12 +96,12 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		// verify type and filtered
 		var is_filtered bool
 		switch tmap.(type) {
-		case model.Tmap[model.TmapLink], model.Tmap[model.TmapLinkSignedIn]:
-			is_filtered = false
-		case model.FilteredTmap[model.TmapLink], model.FilteredTmap[model.TmapLinkSignedIn]:
-			is_filtered = true
-		case model.TmapSectionPage[model.TmapLink], model.TmapSectionPage[model.TmapLinkSignedIn]:
-			continue
+			case model.TmapWithProfile[model.TmapLink], model.TmapWithProfile[model.TmapLinkSignedIn]:
+				is_filtered = false
+			case model.Tmap[model.TmapLink], model.Tmap[model.TmapLinkSignedIn]:
+				is_filtered = true
+			case model.TmapIndividualSectionPage[model.TmapLink], model.TmapIndividualSectionPage[model.TmapLinkSignedIn]:
+				continue
 		}
 
 		if is_filtered && td.CatsParams == "" {
@@ -128,10 +128,10 @@ func TestScanTmapProfile(t *testing.T) {
 		)
 	}
 
-	if profile.Created != "2024-04-10T03:48:09Z" {
+	if profile.CreatedAt != "2024-04-10T03:48:09Z" {
 		t.Fatalf(
 			"expected %s, got %s", "2024-04-10T03:48:09Z",
-			profile.Created,
+			profile.CreatedAt,
 		)
 	}
 }
@@ -214,11 +214,11 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 	var all_links any
 
 	switch tmap.(type) {
-	case model.Tmap[model.TmapLink]:
+	case model.TmapWithProfile[model.TmapLink]:
 		all_links = slices.Concat(
-			*tmap.(model.Tmap[model.TmapLink]).Submitted,
-			*tmap.(model.Tmap[model.TmapLink]).Starred,
-			*tmap.(model.Tmap[model.TmapLink]).Tagged,
+			*tmap.(model.TmapWithProfile[model.TmapLink]).Submitted,
+			*tmap.(model.TmapWithProfile[model.TmapLink]).Starred,
+			*tmap.(model.TmapWithProfile[model.TmapLink]).Tagged,
 		)
 		l, ok := all_links.([]model.TmapLink)
 		if !ok {

@@ -8,13 +8,57 @@ import (
 	util "github.com/julianlk522/modeep/model/util"
 )
 
-// Profile
+// Links
+type TmapLink struct {
+	Link
+	CatsFromUser bool
+}
+
+type TmapLinkSignedIn struct {
+	LinkSignedIn
+	CatsFromUser bool
+}
+
+// Treasure Map
+type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
+	Submitted        *[]T
+	Starred          *[]T
+	Tagged           *[]T
+	SectionsWithMore []string
+	Cats             *[]CatCount
+}
+
+// Individual section of Treasure Map links:
+// submitted, starred, tagged
+type TmapIndividualSectionPage[T TmapLink | TmapLinkSignedIn] struct {
+	Links          *[]T
+	Cats           *[]CatCount
+	NSFWLinksCount int
+	// Individual sections can be paginated for thorough searches,
+	// though main Treasure Map page just has the first few links 
+	// from each section as an overview
+	Pages          int
+}
+
+type Tmap[T TmapLink | TmapLinkSignedIn] struct {
+	*TmapSections[T]
+	NSFWLinksCount int
+}
+
+type TmapWithProfile[T TmapLink | TmapLinkSignedIn] struct {
+	Tmap[T]
+	// Profile data does not need to be viewed on every single page of
+	// someone's Treasure Map, but it available on the "blank slate" version:
+	// that is, when no cat filters are applied
+	Profile *Profile
+}
+
 type Profile struct {
 	LoginName string
 	PFP       string
 	About     string
 	Email     string
-	Created   string
+	CreatedAt string
 }
 
 type EditAboutRequest struct {
@@ -40,69 +84,34 @@ type EditProfilePicRequest struct {
 	ProfilePic string `json:"pfp,omitempty"`
 }
 
-// Links
-type TmapLink struct {
-	Link
-	CatsFromUser bool
-}
 
-type TmapLinkSignedIn struct {
-	LinkSignedIn
-	CatsFromUser bool
-}
-
-type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
-	Submitted        *[]T
-	Starred          *[]T
-	Tagged           *[]T
-	SectionsWithMore []string
-	Cats             *[]CatCount
-}
-
-type Tmap[T TmapLink | TmapLinkSignedIn] struct {
-	*TmapSections[T]
-	NSFWLinksCount int
-	Profile        *Profile
-}
-
-type FilteredTmap[T TmapLink | TmapLinkSignedIn] struct {
-	*TmapSections[T]
-	NSFWLinksCount int
-}
-
-type TmapSectionPage[T TmapLink | TmapLinkSignedIn] struct {
-	Links          *[]T
-	Cats           *[]CatCount
-	NSFWLinksCount int
-	Pages       int
-}
-
+// Options
 type TmapOptions struct {
-	OwnerLoginName        string
-	AsSignedInUser        string
+	OwnerLoginName string
+	AsSignedInUser string
 	// RawCatsParams (reserved chars unescaped, plural/singular variations not
 	// bundled) is stored in addition to CatsFilter so that
 	// GetCatCountsFromTmapLinks can know the exact values passed in
 	// the request and not count them
-	RawCatsParams         string
-	Cats                  []string
-	Period                string
-	SortBy                string
-	IncludeNSFW           bool
+	RawCatsParams   string
+	Cats            []string
+	Period          string
+	SortBy          string
+	IncludeNSFW     bool
 	SummaryContains string
-	URLContains           string
-	URLLacks              string
-	Section               string
-	Page                  int
+	URLContains     string
+	URLLacks        string
+	Section         string
+	Page            int
 }
 
 type TmapNSFWLinksCountOptions struct {
-	OnlySection string // "Submitted", "Starred", "Tagged"
-	CatsFilter []string
-	Period string
+	OnlySection     string // "Submitted", "Starred", "Tagged"
+	CatsFilter      []string
+	Period          string
 	SummaryContains string
-	URLContains string
-	URLLacks string
+	URLContains     string
+	URLLacks        string
 }
 
 type TmapCatCountsOptions struct {
