@@ -132,12 +132,23 @@ func DeleteSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Does requesting user have permission to delete the summary?
+	// If they submitted it or it is an Auto Summary for a link they submitted, then yes
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
-	owns_summary, err := util.SummarySubmittedByUser(delete_data.SummaryID, req_user_id)
+	req_user_owns_summary, err := util.SummarySubmittedByUser(delete_data.SummaryID, req_user_id)
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 		return
-	} else if !owns_summary {
+	}
+	is_auto_summary_and_req_user_owns_link, err := util.IsAutoSummaryForLinkSubmittedByUser(
+		delete_data.SummaryID,
+		req_user_id,
+	)
+	if err != nil {
+		render.Render(w, r, e.ErrInternalServerError(err))
+		return
+	}
+	if !req_user_owns_summary && !is_auto_summary_and_req_user_owns_link {
 		render.Render(w, r, e.ErrInvalidRequest(e.ErrDoesntOwnSummary))
 		return
 	}
