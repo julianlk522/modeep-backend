@@ -4,6 +4,6 @@
 
 Simple, effective social bookmarking and search.
 
-Share and discover the web's gems.
+Discover and share great treasures.
 
 [modeep.org](https://modeep.org)
