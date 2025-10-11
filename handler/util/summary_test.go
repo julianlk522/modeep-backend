@@ -3,8 +3,10 @@ package handler
 import (
 	"context"
 	"net/http"
+	"slices"
 	"testing"
 
+	"github.com/julianlk522/modeep/db"
 	m "github.com/julianlk522/modeep/middleware"
 	"github.com/julianlk522/modeep/model"
 )
@@ -185,6 +187,80 @@ func TestSummarySubmittedByUser(t *testing.T) {
 			t.Fatalf("failed with error: %s", err)
 		} else if l.SubmittedByTestUser != got {
 			t.Fatalf("expected %t, got %t for link %s", l.SubmittedByTestUser, got, l.ID)
+		}
+	}
+}
+
+func TestIsAutoSummaryForLinkSubmittedByUser(t *testing.T) {
+	all_auto_summaries_sql := `SELECT id, link_id
+	FROM Summaries
+	WHERE submitted_by = ?`
+	rows, err := db.Client.Query(all_auto_summaries_sql, db.AUTO_SUMMARY_USER_ID)
+	if err != nil {
+		t.Fatalf("failed with error: %s", err)
+	}
+	defer rows.Close()
+
+	var auto_summaries []struct {
+		ID     string
+		LinkID string
+	}
+	for rows.Next() {
+		var auto_summary struct {
+			ID     string
+			LinkID string
+		}
+		if err := rows.Scan(
+			&auto_summary.ID,
+			&auto_summary.LinkID,
+		); err != nil {
+			t.Fatalf("failed with error: %s", err)
+		}
+
+		auto_summaries = append(auto_summaries, auto_summary)
+	}
+
+	test_user_links_sql := `SELECT id
+	FROM Links
+	WHERE submitted_by IN (
+		SELECT login_name
+		FROM Users
+		WHERE id = ?
+	)`
+	rows, err = db.Client.Query(
+		test_user_links_sql,
+		TEST_USER_ID,
+	)
+	if err != nil {
+		t.Fatalf("failed with error: %s", err)
+	}
+	defer rows.Close()
+	
+	var test_user_link_ids []string
+	for rows.Next() {
+		var test_user_link_id string
+		if err := rows.Scan(&test_user_link_id); err != nil {
+			t.Fatalf("failed with error: %s", err)
+		}
+		test_user_link_ids = append(test_user_link_ids, test_user_link_id)
+	}
+
+	for _, as := range auto_summaries {
+		got, err := IsAutoSummaryForLinkSubmittedByUser(
+			as.ID,
+			TEST_USER_ID,
+		)
+		if err != nil {
+			t.Fatalf("failed with error: %s", err)
+		}
+
+		// should be in the found link IDs
+		if got {
+			found := slices.Contains(test_user_link_ids, as.LinkID)
+
+			if !found {
+				t.Fatalf("expected %t, got %t", true, got)
+			}
 		}
 	}
 }

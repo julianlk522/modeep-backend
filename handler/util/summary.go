@@ -167,6 +167,33 @@ func SummarySubmittedByUser(summary_id string, user_id string) (bool, error) {
 	return submitted_by.String == user_id, nil
 }
 
+func IsAutoSummaryForLinkSubmittedByUser(summary_id string, user_id string) (bool, error) {
+	is_auto_summary_sql := `SELECT 1
+FROM Summaries
+WHERE id = ?
+AND submitted_by = ?
+AND link_id IN (
+	SELECT id
+	FROM Links
+	WHERE submitted_by IN (
+		SELECT login_name
+		FROM Users
+		WHERE id = ?
+	)
+);`
+	var is_auto_summary_for_their_link sql.NullInt16
+	if err := db.Client.QueryRow(
+		is_auto_summary_sql,
+		summary_id,
+		db.AUTO_SUMMARY_USER_ID,
+		user_id,
+	).Scan(&is_auto_summary_for_their_link); err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	return is_auto_summary_for_their_link.Int16 == 1, nil
+}
+
 func UserHasLikedSummary(user_id string, summary_id string) (bool, error) {
 	var summary_like_id sql.NullString
 
