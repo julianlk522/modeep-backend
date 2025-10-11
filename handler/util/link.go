@@ -325,21 +325,30 @@ func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata
 	x_md := &model.LinkExtraMetadata{}
 
 	switch {
-	case html_md.OGDescription != "":
-		x_md.AutoSummary = html_md.OGDescription
-	case html_md.Description != "":
-		x_md.AutoSummary = html_md.Description
-	case html_md.OGTitle != "":
-		x_md.AutoSummary = html_md.OGTitle
-	case html_md.Title != "":
-		x_md.AutoSummary = html_md.Title
-	case html_md.OGSiteName != "":
-		x_md.AutoSummary = html_md.OGSiteName
+		case html_md.OGDesc != "":
+			x_md.AutoSummary = html_md.OGDesc
+		case html_md.Desc != "":
+			x_md.AutoSummary = html_md.Desc
+		case html_md.OGTitle != "":
+			x_md.AutoSummary = html_md.OGTitle
+		case html_md.Title != "":
+			x_md.AutoSummary = html_md.Title
+		case html_md.OGSiteName != "":
+			x_md.AutoSummary = html_md.OGSiteName
+		case html_md.TwitterDesc != "":
+			x_md.AutoSummary = html_md.TwitterDesc
+		case html_md.TwitterTitle != "":
+			x_md.AutoSummary = html_md.TwitterTitle
 	}
 
+	// Don't just set any preview image URL - test that boi to make sure the image is there and can be accessed 
 	if html_md.OGImage != "" {
 		if _, err := GetResolvedURLResponse(html_md.OGImage); err == nil {
 			x_md.PreviewImgURL = html_md.OGImage
+		}
+	} else if html_md.TwitterImage != "" {
+		if _, err := GetResolvedURLResponse(html_md.TwitterImage); err == nil {
+			x_md.PreviewImgURL = html_md.TwitterImage
 		}
 	}
 

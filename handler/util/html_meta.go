@@ -8,13 +8,16 @@ import (
 
 type HTMLMetadata struct {
 	Title         string
-	Description   string
+	Desc          string
 	OGTitle       string
-	OGDescription string
+	OGDesc        string
 	OGImage       string
 	OGAuthor      string
 	OGPublisher   string
 	OGSiteName    string
+	TwitterTitle  string
+	TwitterDesc   string
+	TwitterImage  string
 }
 
 func ExtractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
@@ -55,6 +58,9 @@ var meta_properties = []string{
 	"og:author",
 	"og:publisher",
 	"og:site_name",
+	"twitter:title",
+	"twitter:description",
+	"twitter:image",
 }
 
 func AssignTokenPropertyToHTMLMeta(token html.Token, html_md *HTMLMetadata) {
@@ -62,20 +68,26 @@ func AssignTokenPropertyToHTMLMeta(token html.Token, html_md *HTMLMetadata) {
 		prop, ok := ExtractMetaPropertyFromToken(mp, token)
 		if ok {
 			switch mp {
-			case "description":
-				html_md.Description = prop
-			case "og:title":
-				html_md.OGTitle = prop
-			case "og:description":
-				html_md.OGDescription = prop
-			case "og:image":
-				html_md.OGImage = prop
-			case "og:author":
-				html_md.OGAuthor = prop
-			case "og:publisher":
-				html_md.OGPublisher = prop
-			case "og:site_name":
-				html_md.OGSiteName = prop
+				case "description":
+					html_md.Desc = prop
+				case "og:title":
+					html_md.OGTitle = prop
+				case "og:description":
+					html_md.OGDesc = prop
+				case "og:image":
+					html_md.OGImage = prop
+				case "og:author":
+					html_md.OGAuthor = prop
+				case "og:publisher":
+					html_md.OGPublisher = prop
+				case "og:site_name":
+					html_md.OGSiteName = prop
+				case "twitter:title":
+					html_md.TwitterTitle = prop
+				case "twitter:description":
+					html_md.TwitterDesc = prop
+				case "twitter:image":
+					html_md.TwitterImage = prop
 			}
 		}
 	}
