@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-
-LOG_FILE="/var/log/modeep/update.log"
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
@@ -8,38 +6,47 @@ log() {
 echo
 log "UPDATE AND RESTART"
 
-# redirect non-explicit output to log file (append)
-exec >> "$LOG_FILE" 2>&1
-# "exec >> {arg}" replaces current shell process (modifying stdout file descriptor) with {arg} output for later script commands
-# "2>&1" redirects stderr (file descriptor 2) to stdout (1)
+LOG_DIR="/var/log/modeep"
+LOG_FILE="$LOG_DIR/update.log"
 
-# pull changes
-if [ -z "$MODEEP_BACKEND_ROOT" ]; then
-    log "error: MODEEP_BACKEND_ROOT is not set"
+# Create log file if it doesn't exist
+if [[ -z "$LOG_FILE" ]]; then
+    mkdir -p "$LOG_DIR"
+    touch "$LOG_FILE"
+fi
+
+# Pull changes
+if [[ -z "$MODEEP_BACKEND_ROOT" ]]; then
+    log "Error: MODEEP_BACKEND_ROOT is not set"
     exit 1
 fi
-cd "$MODEEP_BACKEND_ROOT" || { log "error: could not navigate to $MODEEP_BACKEND_ROOT"; exit 1; }
 git pull
 
-# update dependencies, rebuild
+# Replace backup with current
+if [[ -f "modeep.old" ]]; then
+    rm modeep.old
+    mv modeep modeep.old
+fi
+
+# Update dependencies, rebuild
 go mod tidy
 ./build.sh
-log "build complete"
+log "Built!"
 
-# gracefully stop running server process
+# Stop old process
 PID=$(pgrep -f modeep)
 kill $PID
 
-# start tmux session if one doesn't already exist
+# Start tmux session if it doesn't exist
 if ! tmux has-session -t modeep-backend 2>/dev/null; then
-    log "creating new modeep-backend tmux session"
     tmux new-session -d -s modeep-backend
+    log "Created tmux session"
 fi
 
-# run fresh binary 
+# Run fresh binary 
 tmux send-keys -t modeep-backend "cd $MODEEP_BACKEND_ROOT && ./modeep" ENTER
 
-# detach
+# Detach
 tmux detach -s modeep-backend
 
-log "update complete and server restarted"
+log "Update complete and server has been restarted"
