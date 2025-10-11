@@ -6,6 +6,7 @@ const (
 	// Link
 	MAX_DAILY_SUBMITTED_LINKS                              = 50
 	MAX_PREVIEW_IMG_WIDTH_PX                               = 200
+	MODEEP_BOT_USER_AGENT                                  = "Modeep-Bot (https://modeep.org/about/how#retrieving-metadata)"
 	YT_VID_URL_REGEX                                       = `^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+`
 
 	// Tag

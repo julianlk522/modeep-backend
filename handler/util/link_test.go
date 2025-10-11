@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -202,14 +204,13 @@ func TestGetResolvedURLResponse(t *testing.T) {
 		URL   string
 		Valid bool
 	}{
-		{"abc.com", true},
-		{"www.abc.com", true},
-		{"https://www.abc.com", true},
+		{"julianlk.com", true},
+		{"www.julianlk.com", true},
+		{"https://www.julianlk.com", true},
+		// sudomains should work too
 		{"about.google.com", true},
-		{"julianlk.com/notreal", false},
 		{"gobblety gook", false},
-		// TODO: get the user agent headers to correctly apply and
-		// add test case 
+		{"julianlk.com/notreal", false},
 	}
 
 	for _, u := range test_urls {
@@ -222,7 +223,44 @@ func TestGetResolvedURLResponse(t *testing.T) {
 	}
 }
 
-// this has to be an actual URL or GetLinkExtraMetadataFromHTML() will not set it
+func TestHeadersAreApplied(t *testing.T) {
+	var expected_headers = map[string]string{
+		"User-Agent": MODEEP_BOT_USER_AGENT,
+		"Accept":     "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+		"Accept-Language": "en-US,en;q=0.9",
+		"Accept-Encoding": "gzip, deflate, br",
+	}
+	test_server := httptest.NewServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				for k, v := range expected_headers {
+					if r.Header.Get(k) != v {
+						t.Errorf(
+							"Expected header %s to be %s, got %s",
+							k,
+							v,
+							r.Header.Get(k),
+						)
+					}
+				}
+			},
+		))
+	defer test_server.Close()
+
+	resp, err := GetResolvedURLResponse(test_server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if _, err = io.ReadAll(resp.Body); err != nil {
+		t.Fatal(err)
+	}
+
+}
+
+// this has to be valid and receive a reply back from a test response or
+// GetLinkExtraMetadataFromHTML() will not set it
 const TEST_PREVIEW_IMAGE_URL = "https://github.com/julianlk522/modeep-frontend/raw/main/public/home.webp"
 func TestGetLinkExtraMetadataFromHTML(t *testing.T) {
 	mock_metas := []HTMLMetadata{

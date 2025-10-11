@@ -287,9 +287,10 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 			continue
 		}
 
-		req.Header.Set("Accept", "*/*")
-		req.Header.Set("User-Agent", "Modeep-Bot (https://modeep.org/about/how#retrieving-metadata)")
-
+		req.Header.Set("User-Agent", MODEEP_BOT_USER_AGENT)
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
@@ -305,9 +306,17 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 				return resp, nil
 			}
 			continue
-		} else if resp.StatusCode == http.StatusNotFound {
+		}
+
+		if resp == nil {
+			continue
+		}
+
+		if resp.StatusCode == http.StatusNotFound {
+			resp.Body.Close()
 			continue
 		} else if IsRedirect(resp.StatusCode) {
+			resp.Body.Close()
 			return nil, e.ErrRedirect
 		}
 
