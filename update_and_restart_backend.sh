@@ -10,7 +10,7 @@ LOG_DIR="/var/log/modeep"
 LOG_FILE="$LOG_DIR/update.log"
 
 # Create log file if it doesn't exist
-if [[ -z "$LOG_FILE" ]]; then
+if [[ ! -f "$LOG_FILE" ]]; then
     mkdir -p "$LOG_DIR"
     touch "$LOG_FILE"
 fi
@@ -20,10 +20,14 @@ if [[ -z "$MODEEP_BACKEND_ROOT" ]]; then
     log "Error: MODEEP_BACKEND_ROOT is not set"
     exit 1
 fi
+
+cd "$MODEEP_BACKEND_ROOT"
+git stash
 git pull
+git stash pop
 
 # Replace backup with current
-if [[ -f "modeep.old" ]]; then
+if [[ -f "modeep" && -f "modeep.old" ]]; then
     rm modeep.old
     mv modeep modeep.old
 fi
@@ -40,13 +44,10 @@ kill $PID
 # Start tmux session if it doesn't exist
 if ! tmux has-session -t modeep-backend 2>/dev/null; then
     tmux new-session -d -s modeep-backend
-    log "Created tmux session"
+    log "Created modeep-backend tmux session"
 fi
 
 # Run fresh binary 
 tmux send-keys -t modeep-backend "cd $MODEEP_BACKEND_ROOT && ./modeep" ENTER
 
-# Detach
-tmux detach -s modeep-backend
-
-log "Update complete and server has been restarted"
+log "Update complete and server restarted"
