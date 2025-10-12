@@ -139,10 +139,12 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 	var nsfw_links_count int
 	nsfw_links_count_opts := &model.TmapNSFWLinksCountOptions{
-		OnlySection: opts.Section,
-		CatsFilter:  opts.Cats,
-		Period:      opts.Period,
-		URLContains: opts.URLContains,
+		OnlySection:     opts.Section,
+		CatsFilter:      opts.Cats,
+		Period:          opts.Period,
+		SummaryContains: opts.SummaryContains,
+		URLContains:     opts.URLContains,
+		URLLacks:        opts.URLLacks,
 	}
 	nsfw_links_count_sql := query.
 		NewTmapNSFWLinksCount(tmap_owner).
