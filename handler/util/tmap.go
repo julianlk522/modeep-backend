@@ -118,25 +118,8 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	}
 	tmap_owner := opts.OwnerLoginName
 
-	var profile *model.Profile
-	var cat_counts *[]model.CatCount
-	var cat_counts_opts *model.TmapCatCountsOptions
-
-	has_cat_filter := len(opts.Cats) > 0
-	if has_cat_filter {
-		cat_counts_opts = &model.TmapCatCountsOptions{
-			RawCatsParams: opts.RawCatsParams,
-		}
-	} else {
-		// add profile only if unfiltered
-		var err error
-		profile_sql := query.NewTmapProfile(tmap_owner)
-		profile, err = ScanTmapProfile(profile_sql)
-		if err != nil {
-			return nil, err
-		}
-	}
-
+	// Regardless of individual or multiple sections, cat filters or not, we
+	// always return counts for NSFW links and top cats/subcats
 	var nsfw_links_count int
 	nsfw_links_count_opts := &model.TmapNSFWLinksCountOptions{
 		OnlySection:     opts.Section,
@@ -149,7 +132,6 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	nsfw_links_count_sql := query.
 		NewTmapNSFWLinksCount(tmap_owner).
 		FromOptions(nsfw_links_count_opts)
-
 	if err := db.Client.QueryRow(
 		nsfw_links_count_sql.Text,
 		nsfw_links_count_sql.Args...,
@@ -157,7 +139,20 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		return nil, err
 	}
 
-	// Single section
+	var cat_counts *[]model.CatCount
+	var cat_counts_opts *model.TmapCatCountsOptions
+
+	var cat_filters []string
+	has_cat_filter := len(opts.Cats) > 0
+	if has_cat_filter {
+		cat_counts_opts = &model.TmapCatCountsOptions{
+			RawCatsParams: opts.RawCatsParams,
+		}
+
+		cat_filters = strings.Split(opts.RawCatsParams, ",")
+	}
+
+	// Individual section
 	if opts.Section != "" {
 		var links *[]T
 		var err error
@@ -226,18 +221,31 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		if page > pages {
 			links = &[]T{}
 		} else if page == pages {
-			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : ]
+			*links = (*links)[query.LINKS_PAGE_LIMIT*(page - 1):]
 		} else {
-			*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : query.LINKS_PAGE_LIMIT*page]
+			*links = (*links)[query.LINKS_PAGE_LIMIT*(page - 1) : query.LINKS_PAGE_LIMIT * page]
 		}
 
-		return model.TmapIndividualSectionPage[T]{
-			Links:          links,
-			Cats:           cat_counts,
-			Pages:          pages,
-			NSFWLinksCount: nsfw_links_count,
-		}, nil
-
+		// Indicate any merged cats
+		if has_cat_filter {
+			merged_cats := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(links, cat_filters)
+			return model.TmapIndividualSectionPageWithCatFilters[T]{
+				TmapIndividualSectionPage: &model.TmapIndividualSectionPage[T]{
+					Links:          links,
+					Cats:           cat_counts,
+					Pages:          pages,
+					NSFWLinksCount: nsfw_links_count,
+				},
+				MergedCats:     merged_cats,
+			}, nil
+		} else {
+			return model.TmapIndividualSectionPage[T]{
+				Links:          links,
+				Cats:           cat_counts,
+				Pages:          pages,
+				NSFWLinksCount: nsfw_links_count,
+			}, nil
+		}
 	// All sections
 	} else {
 		submitted_sql := query.
@@ -276,15 +284,18 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return nil, err
 		}
 
-		links_from_all_sections := slices.Concat(*submitted, *starred, *tagged)
+		if len(*submitted)+len(*starred)+len(*tagged) == 0 {
 			return model.Tmap[T]{
 				TmapSections:   &model.TmapSections[T]{},
 				NSFWLinksCount: nsfw_links_count,
 			}, nil
 		}
 
+		// Get cat counts BEFORE pagination so totals still include
+		// cats from any links that were excluded
+		combined_sections := slices.Concat(*submitted, *starred, *tagged)
 		cat_counts = GetCatCountsFromTmapLinks(
-			&links_from_all_sections, 
+			&combined_sections,
 			cat_counts_opts,
 		)
 
@@ -304,7 +315,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			*tagged = (*tagged)[0:query.LINKS_PAGE_LIMIT]
 		}
 
-		sections := &model.TmapSections[T]{
+		tmap_sections := &model.TmapSections[T]{
 			Submitted:        submitted,
 			Starred:          starred,
 			Tagged:           tagged,
@@ -312,44 +323,36 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			Cats:             cat_counts,
 		}
 
+		// Indicate any merged cats
 		if has_cat_filter {
-			return model.Tmap[T]{
-				TmapSections:   sections,
-				NSFWLinksCount: nsfw_links_count,
+			merged_cats := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(&combined_sections, cat_filters)
+			return model.TmapWithCatFilters[T]{
+				Tmap: &model.Tmap[T]{
+					TmapSections:   tmap_sections,
+					NSFWLinksCount: nsfw_links_count,
+				},
+				MergedCats: merged_cats,
 			}, nil
 
 		} else {
-			return model.TmapWithProfile[T]{
-				Profile:        profile,
-				Tmap:           model.Tmap[T]{
-					TmapSections:   sections,
-					NSFWLinksCount: nsfw_links_count,
+			// Profile is only returned on "blank slate" Treasure Map
+			// (no cat filters, no particular section)
+			var profile *model.Profile
+			profile_sql := query.NewTmapProfile(tmap_owner)
+			profile, err = ScanTmapProfile(profile_sql)
+			if err != nil {
+				return nil, err
+			}
 
+			return model.TmapWithProfile[T]{
+				Profile: profile,
+				Tmap: &model.Tmap[T]{
+					TmapSections:   tmap_sections,
+					NSFWLinksCount: nsfw_links_count,
 				},
 			}, nil
 		}
 	}
-}
-
-func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
-	var u model.Profile
-	if err := db.Client.
-		QueryRow(profile_sql.Text, profile_sql.Args...).
-		Scan(
-			&u.LoginName,
-			&u.PFP,
-			&u.About,
-			&u.Email,
-			&u.CreatedAt,
-		); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, e.ErrNoUserWithLoginName
-		} else {
-			return nil, err
-		}
-	}
-
-	return &u, nil
 }
 
 func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) (*[]T, error) {
@@ -523,3 +526,60 @@ func MergeCatCountsSpellingVariants(counts *[]model.CatCount) {
 		}
 	}
 }
+
+func GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, cat_filters []string) []string {
+	var merged_cats []string
+	for _, l := range *links {
+		var cats_str string
+		switch l := any(l).(type) {
+		case model.TmapLink:
+			cats_str = l.Cats
+		case model.TmapLinkSignedIn:
+			cats_str = l.Cats
+		}
+
+		link_cats := strings.SplitSeq(cats_str, ",")
+		for cat := range link_cats {
+			cat_lc := strings.ToLower(cat)
+			
+			// Merge if does not match cat filter exactly but is close
+			if !slices.Contains(cat_filters, cat) {
+				for _, cf := range cat_filters {
+					cf_lc := strings.ToLower(cf)
+
+					if (CatsAreSingularOrPluralVariationsOfEachOther(cat_lc, cf_lc) || 
+					// capitalization variants
+					cat_lc == cf_lc && cat != cf) && !slices.Contains(merged_cats, cat) {
+						merged_cats = append(merged_cats, cat)
+					}
+				}
+			}
+
+		}
+
+	}
+	return merged_cats
+}
+
+
+func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
+	var u model.Profile
+	if err := db.Client.
+		QueryRow(profile_sql.Text, profile_sql.Args...).
+		Scan(
+			&u.LoginName,
+			&u.PFP,
+			&u.About,
+			&u.Email,
+			&u.CreatedAt,
+		); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, e.ErrNoUserWithLoginName
+		} else {
+			return nil, err
+		}
+	}
+
+	return &u, nil
+}
+

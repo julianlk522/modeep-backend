@@ -347,3 +347,76 @@ func TestMergeCatCountsSpellingVariants(t *testing.T) {
 		)
 	}
 }
+
+func TestGetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(t *testing.T) {
+	var test_links = []model.TmapLink{
+		{Link: model.Link{
+			Cats: "tests,Tests",
+		}},
+		{Link: model.Link{
+			Cats: "Test",
+		}},
+		{Link: model.Link{
+			Cats: "MoDeEp",
+		}},
+		{Link: model.Link{
+			Cats: "testicles,modoop", // neither of these should be merged (that could get painful...)
+		}},
+	}
+	var test_cat_filter = []string{
+		"test",
+		"modeep",
+	}
+	var expected_merged_cats = []string{
+		"tests", // pluralization variant
+		"Test", // capitalization variant
+		"MoDeEp",
+		"Tests", // pluralization and capitalization variant
+	}
+
+	got := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(
+		&test_links,
+		test_cat_filter,
+	)
+
+	if len(got) != len(expected_merged_cats) {
+		t.Fatalf(
+			"expected %d cats, got %d",
+			len(expected_merged_cats),
+			len(got),
+		)
+	}
+
+	for _, cat := range got {
+		if !slices.Contains(expected_merged_cats, cat) {
+			t.Fatalf(
+				"got cats %s, expected %s",
+				got,
+				expected_merged_cats,
+			)
+		}
+	}
+}
+
+func TestScanTmapProfile(t *testing.T) {
+	profile_sql := query.NewTmapProfile(TEST_LOGIN_NAME)
+	profile, err := ScanTmapProfile(profile_sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if profile.LoginName != TEST_LOGIN_NAME {
+		t.Fatalf(
+			"expected %s, got %s", TEST_LOGIN_NAME,
+			profile.LoginName,
+		)
+	}
+
+	if profile.CreatedAt != "2024-04-10T03:48:09Z" {
+		t.Fatalf(
+			"expected %s, got %s", "2024-04-10T03:48:09Z",
+			profile.CreatedAt,
+		)
+	}
+}
+

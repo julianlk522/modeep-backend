@@ -19,7 +19,7 @@ type TmapLinkSignedIn struct {
 	CatsFromUser bool
 }
 
-// Treasure Map
+// Sections
 type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
 	Submitted        *[]T
 	Starred          *[]T
@@ -29,15 +29,20 @@ type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
 }
 
 // Individual section of Treasure Map links:
-// submitted, starred, tagged
+// (submitted, starred, or tagged)
 type TmapIndividualSectionPage[T TmapLink | TmapLinkSignedIn] struct {
 	Links          *[]T
 	Cats           *[]CatCount
 	NSFWLinksCount int
 	// Individual sections can be paginated for thorough searches,
-	// though main Treasure Map page just has the first few links 
+	// though main Treasure Map page just has the first few links
 	// from each section as an overview
-	Pages          int
+	Pages int
+}
+
+type TmapIndividualSectionPageWithCatFilters[T TmapLink | TmapLinkSignedIn] struct {
+	*TmapIndividualSectionPage[T]
+	MergedCats []string
 }
 
 type Tmap[T TmapLink | TmapLinkSignedIn] struct {
@@ -45,8 +50,13 @@ type Tmap[T TmapLink | TmapLinkSignedIn] struct {
 	NSFWLinksCount int
 }
 
+type TmapWithCatFilters[T TmapLink | TmapLinkSignedIn] struct {
+	*Tmap[T]
+	MergedCats []string
+}
+
 type TmapWithProfile[T TmapLink | TmapLinkSignedIn] struct {
-	Tmap[T]
+	*Tmap[T]
 	// Profile data does not need to be viewed on every single page of
 	// someone's Treasure Map, but it available on the "blank slate" version:
 	// that is, when no cat filters are applied
@@ -61,6 +71,7 @@ type Profile struct {
 	CreatedAt string
 }
 
+// Profile
 type EditAboutRequest struct {
 	About string `json:"about"`
 }
@@ -83,7 +94,6 @@ func (ear *EditAboutRequest) Bind(r *http.Request) error {
 type EditProfilePicRequest struct {
 	ProfilePic string `json:"pfp,omitempty"`
 }
-
 
 // Options
 type TmapOptions struct {
