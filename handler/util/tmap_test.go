@@ -63,7 +63,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 			OwnerLoginName: td.LoginName,
 			RawCatsParams:  td.CatsParams,
 			AsSignedInUser: td.RequestingUserID,
-			SortBy:   		td.SortBy,
+			SortBy:         td.SortBy,
 			IncludeNSFW:    td.IncludeNSFW,
 			Section:        td.SectionParams,
 			Page:           td.PageParams,
@@ -96,12 +96,20 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		// verify type and filtered
 		var is_filtered bool
 		switch tmap.(type) {
-			case model.TmapWithProfile[model.TmapLink], model.TmapWithProfile[model.TmapLinkSignedIn]:
-				is_filtered = false
-			case model.Tmap[model.TmapLink], model.Tmap[model.TmapLinkSignedIn]:
-				is_filtered = true
-			case model.TmapIndividualSectionPage[model.TmapLink], model.TmapIndividualSectionPage[model.TmapLinkSignedIn]:
-				continue
+		case model.TmapWithProfilePage[model.TmapLink], model.TmapWithProfilePage[model.TmapLinkSignedIn]:
+			is_filtered = false
+		case 
+			model.TmapWithCatFiltersPage[model.TmapLink],
+			model.TmapWithCatFiltersPage[model.TmapLinkSignedIn],
+			model.TmapIndividualSectionWithCatFiltersPage[model.TmapLink],
+			model.TmapIndividualSectionWithCatFiltersPage[model.TmapLinkSignedIn]:
+			is_filtered = true
+		case 
+			model.TmapPage[model.TmapLink],
+			model.TmapPage[model.TmapLinkSignedIn],
+			model.TmapIndividualSectionPage[model.TmapLink],
+			model.TmapIndividualSectionPage[model.TmapLinkSignedIn]:
+			continue
 		}
 
 		if is_filtered && td.CatsParams == "" {
@@ -109,30 +117,6 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		} else if !is_filtered && td.CatsParams != "" {
 			t.Fatalf("expected filtered treasure map type, got %T (request params: %+v)", tmap, td)
 		}
-	}
-}
-
-func TestScanTmapProfile(t *testing.T) {
-	profile_sql := query.NewTmapProfile(TEST_LOGIN_NAME)
-	// NewTmapProfile() tested in query/tmap_test.go
-
-	profile, err := ScanTmapProfile(profile_sql)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if profile.LoginName != TEST_LOGIN_NAME {
-		t.Fatalf(
-			"expected %s, got %s", TEST_LOGIN_NAME,
-			profile.LoginName,
-		)
-	}
-
-	if profile.CreatedAt != "2024-04-10T03:48:09Z" {
-		t.Fatalf(
-			"expected %s, got %s", "2024-04-10T03:48:09Z",
-			profile.CreatedAt,
-		)
 	}
 }
 
@@ -214,11 +198,11 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 	var all_links any
 
 	switch tmap.(type) {
-	case model.TmapWithProfile[model.TmapLink]:
+	case model.TmapWithProfilePage[model.TmapLink]:
 		all_links = slices.Concat(
-			*tmap.(model.TmapWithProfile[model.TmapLink]).Submitted,
-			*tmap.(model.TmapWithProfile[model.TmapLink]).Starred,
-			*tmap.(model.TmapWithProfile[model.TmapLink]).Tagged,
+			*tmap.(model.TmapWithProfilePage[model.TmapLink]).Submitted,
+			*tmap.(model.TmapWithProfilePage[model.TmapLink]).Starred,
+			*tmap.(model.TmapWithProfilePage[model.TmapLink]).Tagged,
 		)
 		l, ok := all_links.([]model.TmapLink)
 		if !ok {
@@ -304,22 +288,22 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 	}
 }
 
-func TestMergeCatCountsSpellingVariants(t *testing.T) {
+func TestMergeCountsOfCatSpellingVariants(t *testing.T) {
 	var counts = []model.CatCount{
 		{Category: "Music", Count: 1},
-		{Category: "music", Count: 1}, // should get added
+		{Category: "music", Count: 1},  // should get added
 		{Category: "musica", Count: 1}, // should NOT get added
 		{Category: "Musics", Count: 5}, // should get added
 		{Category: "musics", Count: 1}, // should get added
 		{Category: "MODEEP", Count: 6},
 		{Category: "modeep", Count: 5}, // should get added to above
 	}
-	MergeCatCountsSpellingVariants(&counts)
+	MergeCountsOfCatSpellingVariants(&counts)
 
 	// make sure the highest counts go first
 	if counts[0].Category != "MODEEP" &&
-	counts[1].Category != "Musics" &&
-	counts[0].Count < counts[1].Count {
+		counts[1].Category != "Musics" &&
+		counts[0].Count < counts[1].Count {
 		t.Fatalf(
 			"largest counts did not go first (counts were %+v)",
 			counts,
@@ -327,10 +311,10 @@ func TestMergeCatCountsSpellingVariants(t *testing.T) {
 	}
 
 	// make sure all the "music" variants added their counts
-	if counts[1].Count != 1 + 1 + 5 + 1 {
+	if counts[1].Count != 1+1+5+1 {
 		t.Fatalf(
-			"expected count %d, got %d (counts were %+v)", 
-			8, 
+			"expected count %d, got %d (counts were %+v)",
+			8,
 			counts[1].Count,
 			counts,
 		)
@@ -340,8 +324,8 @@ func TestMergeCatCountsSpellingVariants(t *testing.T) {
 	// should be "Music", "musica", and "MODEEP" remaining
 	if len(counts) != 3 {
 		t.Fatalf(
-			"expected count %d, got %d (counts were %+v)", 
-			3, 
+			"expected count %d, got %d (counts were %+v)",
+			3,
 			len(counts),
 			counts,
 		)
@@ -369,7 +353,7 @@ func TestGetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(t *testing.T) 
 	}
 	var expected_merged_cats = []string{
 		"tests", // pluralization variant
-		"Test", // capitalization variant
+		"Test",  // capitalization variant
 		"MoDeEp",
 		"Tests", // pluralization and capitalization variant
 	}
@@ -419,4 +403,3 @@ func TestScanTmapProfile(t *testing.T) {
 		)
 	}
 }
-

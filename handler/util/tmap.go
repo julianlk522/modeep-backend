@@ -33,14 +33,14 @@ func UserWithIDHasProfilePic(user_id string) bool {
 
 func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
 	var opts = &model.TmapOptions{}
-	var cats_params, 
-		period_params, 
+	var cats_params,
+		period_params,
 		summary_contains_params,
-		url_contains_params, 
-		url_lacks_params, 
-		nsfw_params, 
-		sort_params, 
-		section_params, 
+		url_contains_params,
+		url_lacks_params,
+		nsfw_params,
+		sort_params,
+		section_params,
 		page_params string
 
 	cats_params = params.Get("cats")
@@ -202,10 +202,10 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			}, nil
 		}
 
-		// counting cats and pagination are done in Go because merging 
-		// all the links SQL queries together is a headache and doesn't make 
-		// perf thattt much better since tmap contains <= 60 links at a time 
-		// (single section contains <= 20 links)
+		// Counting cats and pagination are currently done in Go because merging
+		// all the links SQL queries together is a headache and doesn't improve
+		// perf thattt much since tmap contains <= 60 links at a time
+		// (individual section contains <= 20 links)
 		cat_counts = GetCatCountsFromTmapLinks(links, cat_counts_opts)
 
 		// Pagination
@@ -229,7 +229,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		// Indicate any merged cats
 		if has_cat_filter {
 			merged_cats := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(links, cat_filters)
-			return model.TmapIndividualSectionPageWithCatFilters[T]{
+			return model.TmapIndividualSectionWithCatFiltersPage[T]{
 				TmapIndividualSectionPage: &model.TmapIndividualSectionPage[T]{
 					Links:          links,
 					Cats:           cat_counts,
@@ -271,7 +271,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		if err != nil {
 			return nil, err
 		}
-		
+
 		tagged_sql := query.
 			NewTmapTagged(tmap_owner).
 			FromOptions(opts)
@@ -285,7 +285,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		if len(*submitted)+len(*starred)+len(*tagged) == 0 {
-			return model.Tmap[T]{
+			return model.TmapPage[T]{
 				TmapSections:   &model.TmapSections[T]{},
 				NSFWLinksCount: nsfw_links_count,
 			}, nil
@@ -326,8 +326,8 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		// Indicate any merged cats
 		if has_cat_filter {
 			merged_cats := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(&combined_sections, cat_filters)
-			return model.TmapWithCatFilters[T]{
-				Tmap: &model.Tmap[T]{
+			return model.TmapWithCatFiltersPage[T]{
+				TmapPage: &model.TmapPage[T]{
 					TmapSections:   tmap_sections,
 					NSFWLinksCount: nsfw_links_count,
 				},
@@ -344,9 +344,9 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 				return nil, err
 			}
 
-			return model.TmapWithProfile[T]{
+			return model.TmapWithProfilePage[T]{
 				Profile: profile,
-				Tmap: &model.Tmap[T]{
+				TmapPage: &model.TmapPage[T]{
 					TmapSections:   tmap_sections,
 					NSFWLinksCount: nsfw_links_count,
 				},
@@ -431,7 +431,7 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	var omitted_cats []string
 	// Use raw_cats_params to determine omitted_cats because CatsFilter
 	// (from BuildTmapFromOpts) is modified to escape reserved chars
-	
+
 	if opts != nil && opts.RawCatsParams != "" {
 		omitted_cats = strings.Split(strings.ToLower(opts.RawCatsParams), ",")
 	}
@@ -454,23 +454,25 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 			if strings.TrimSpace(lc) == "" {
 				continue
 			}
-			
+
 			// skip if resembles a cat filter
 			skip := false
 			if has_cat_filter {
 				for _, oc := range omitted_cats {
 					if strings.EqualFold(lc, oc) ||
-					CatsAreSingularOrPluralVariationsOfEachOther(lc, oc) {
+						CatsAreSingularOrPluralVariationsOfEachOther(lc, oc) {
 						skip = true
 					}
 				}
 			}
 
 			// skip if resembles another cat from same link
+			// e.g. the same link does not need to double-count "book" if
+			// it has both "book" and "books"
 			if !skip {
-				for _, other_lc := range link_cats[i + 1:] {
+				for _, other_lc := range link_cats[i+1:] {
 					if strings.EqualFold(lc, other_lc) ||
-					CatsAreSingularOrPluralVariationsOfEachOther(lc, other_lc) {
+						CatsAreSingularOrPluralVariationsOfEachOther(lc, other_lc) {
 						skip = true
 					}
 				}
@@ -491,7 +493,7 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 						}
 					}
 				}
-	
+
 				// or create new count
 				if !found {
 					counts = append(counts, model.CatCount{Category: lc, Count: 1})
@@ -501,7 +503,7 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 		}
 	}
 
-	MergeCatCountsSpellingVariants(&counts)
+	MergeCountsOfCatSpellingVariants(&counts)
 
 	if len(counts) > TMAP_CATS_PAGE_LIMIT {
 		counts = (counts)[:TMAP_CATS_PAGE_LIMIT]
@@ -510,8 +512,8 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	return &counts
 }
 
-func MergeCatCountsSpellingVariants(counts *[]model.CatCount) {
-	// sort to ensure most-frequent spelling / casing variants are used
+func MergeCountsOfCatSpellingVariants(counts *[]model.CatCount) {
+	// Sort first so most-frequent spelling / casing variants are the ones merged into
 	slices.SortFunc(*counts, model.SortCats)
 
 	for i := 0; i < len(*counts); i++ {

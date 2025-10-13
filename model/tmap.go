@@ -40,23 +40,23 @@ type TmapIndividualSectionPage[T TmapLink | TmapLinkSignedIn] struct {
 	Pages int
 }
 
-type TmapIndividualSectionPageWithCatFilters[T TmapLink | TmapLinkSignedIn] struct {
+type TmapIndividualSectionWithCatFiltersPage[T TmapLink | TmapLinkSignedIn] struct {
 	*TmapIndividualSectionPage[T]
 	MergedCats []string
 }
 
-type Tmap[T TmapLink | TmapLinkSignedIn] struct {
+type TmapPage[T TmapLink | TmapLinkSignedIn] struct {
 	*TmapSections[T]
 	NSFWLinksCount int
 }
 
-type TmapWithCatFilters[T TmapLink | TmapLinkSignedIn] struct {
-	*Tmap[T]
+type TmapWithCatFiltersPage[T TmapLink | TmapLinkSignedIn] struct {
+	*TmapPage[T]
 	MergedCats []string
 }
 
-type TmapWithProfile[T TmapLink | TmapLinkSignedIn] struct {
-	*Tmap[T]
+type TmapWithProfilePage[T TmapLink | TmapLinkSignedIn] struct {
+	*TmapPage[T]
 	// Profile data does not need to be viewed on every single page of
 	// someone's Treasure Map, but it available on the "blank slate" version:
 	// that is, when no cat filters are applied

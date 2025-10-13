@@ -215,7 +215,7 @@ func TestCatsAreSingularOrPluralVariationsOfEachOther(t *testing.T) {
 		{"game", "games", true},
 		{"glitch", "glitches", true},
 		{"test", "abc", false},
-		// does not report true if same form but different case 
+		// does not report true if same spelling but different case
 		{"abc", "abc", false},
 		{"abc", "ABC", false},
 	}

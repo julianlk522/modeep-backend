@@ -379,7 +379,7 @@ func (ts *TmapSubmitted) FromCats(cats []string) *TmapSubmitted {
 	ts.Text = strings.Replace(
 		ts.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
-		TMAP_NO_NSFW_CATS_WHERE + "\n" + CAT_FILTER_AND, 
+		TMAP_NO_NSFW_CATS_WHERE + "\n" + CAT_FILTER_AND,
 		1,
 	)
 
@@ -638,7 +638,7 @@ func (ts *TmapStarred) FromOptions(opts *model.TmapOptions) *TmapStarred {
 	if opts.URLLacks != "" {
 		ts.WithURLLacking(opts.URLLacks)
 	}
-
+	
 	return ts
 }
 
@@ -657,18 +657,18 @@ func (ts *TmapStarred) FromCats(cats []string) *TmapStarred {
 		CAT_FILTER_JOINS,
 		1,
 	)
-	// Edit fields	
+	// Edit fields
 	ts.Text = strings.Replace(
 		ts.Text,
 		TMAP_BASE_FIELDS,
 		TMAP_FROM_CATS_FIELDS,
 		1,
 	)
-	// Add necessary cats condition
+	// Add cat filter condition
 	ts.Text = strings.Replace(
 		ts.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
-		TMAP_NO_NSFW_CATS_WHERE + "\n" + CAT_FILTER_AND, 
+		TMAP_NO_NSFW_CATS_WHERE + "\n" + CAT_FILTER_AND,
 		1,
 	)
 
@@ -678,9 +678,9 @@ func (ts *TmapStarred) FromCats(cats []string) *TmapStarred {
 		match_arg += " AND " + cats[i]
 	}
 
-	// Insert args	
+	// Insert args
 	// old: [{earliest_starrers_limit}, login_name x 6]
-	// new: [{earliest_starrers_limit}, login_name x 4, 
+	// new: [{earliest_starrers_limit}, login_name x 4,
 	// match_arg x 2, login_name x 3]
 	// so insert before last 3
 	login_name := ts.Args[1]
@@ -708,7 +708,7 @@ func (ts *TmapStarred) AsSignedInUser(req_user_id string) *TmapStarred {
 	ts.Text = fields_replacer.Replace(ts.Text)
 
 	// insert args:
-	// old: [[{earliest_starrers_limit} login_name x 3, 
+	// old: [[{earliest_starrers_limit} login_name x 3,
 	// match_arg x 2, login_name x 3]
 	// new: {earliest_starrers_limit}, req_user_id, login_name x 3,
 	// match_arg x 2, login_name x 3] 

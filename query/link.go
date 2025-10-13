@@ -86,12 +86,11 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	}
 
 	// Build CTE from match_clause
-	match_clause := `
-	WHERE global_cats MATCH ?`
 	cats_CTE := `,
 		CatsFilter AS (
 			SELECT link_id
-			FROM global_cats_fts` + match_clause + `
+			FROM global_cats_fts
+			WHERE global_cats MATCH ?
 		)`
 
 	// Prepend CTE
@@ -107,7 +106,7 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_FROM,
-		LINKS_FROM+LINKS_CATS_JOIN,
+		LINKS_FROM + LINKS_CATS_JOIN,
 		1,
 	)
 
@@ -403,7 +402,7 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 		SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
 	)`
 
-	// check if other methods called first
+	// Edit WHERE => AND if other methods called first
 	// there's probably a better way to do this... TODO
 	if strings.Contains(
 		tl.Text, 
@@ -423,9 +422,10 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 		)
 	}
 
+	// calling .NSFW() removes the NO_NSFW_CATS_WHERE
+	// so we can't depend on it for a universal replace condition here
 	if nsfw_params {
-		// insert in front of all LINKS_ORDER_BY variants
-		// (all except one should be no-op)
+		// (all LINKS_ORDER_BY variants should be no-op except one)
 		for _, order_by_clause := range links_order_by_clauses {
 			tl.Text = strings.Replace(
 				tl.Text,
@@ -434,6 +434,7 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 				1,
 			)
 		}
+	// otherwise NO_NSFW_CATS_WHERE will be there
 	} else {
 		tl.Text = strings.Replace(
 			tl.Text,
@@ -443,7 +444,8 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 		)
 	}
 
-	// remove LIMIT and OFFET clause
+	// remove LIMIT and OFFET clause since there will be no links
+	// ranked, just a count
 	tl.Text = strings.Replace(
 		tl.Text,
 		"\nLIMIT ? OFFSET ?",
