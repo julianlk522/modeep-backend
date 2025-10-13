@@ -1,6 +1,7 @@
 package error
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -14,6 +15,7 @@ type ErrResponse struct {
 }
 
 func (er *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	log.Printf("%s: %s", er.StatusText, er.ErrorText)
 	render.Status(r, er.HTTPStatusCode)
 	return nil
 }
