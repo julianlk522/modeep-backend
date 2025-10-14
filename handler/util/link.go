@@ -406,6 +406,7 @@ func LinkAlreadyAdded(url string) (bool, string) {
 }
 
 func IncrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
+	cats = GetDeduplicatedCats(cats)
 	if tx != nil {
 		for _, cat := range cats {
 
@@ -469,6 +470,7 @@ func IncrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 
 // Delete link
 func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
+	cats = GetDeduplicatedCats(cats)
 	if tx != nil {
 		for _, cat := range cats {
 
@@ -486,6 +488,7 @@ func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 					return err
 				}
 			}
+			// else decrement
 			_, err = tx.Exec(
 				"UPDATE global_cats_spellfix SET rank = rank - 1 WHERE word = ?;",
 				cat,
@@ -507,6 +510,19 @@ func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 	}
 
 	return nil
+}
+
+// "ham,Ham,cheese,cHeEsE" -> "ham,cheese"
+func GetDeduplicatedCats(cats []string) []string {
+	cats_set := make(map[string]bool)
+	for _, cat := range cats {
+		cats_set[strings.ToLower(cat)] = true
+	}
+	cats = make([]string, 0, len(cats_set))
+	for cat := range cats_set {
+		cats = append(cats, cat)
+	}
+	return cats
 }
 
 // Star link
