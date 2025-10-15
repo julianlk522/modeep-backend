@@ -28,7 +28,7 @@ WHERE t.link_id = ?
 ORDER BY lifespan_overlap DESC
 LIMIT ?;`,
 			Args: []any{
-				link_id, 
+				link_id,
 				TAGS_PAGE_LIMIT,
 			},
 		},
@@ -498,147 +498,387 @@ func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
 	return (&SpellfixMatches{
 		Query: &Query{
 			Text: "WITH " +
-				SPELLFIX_BASE_CTE +
-				REST_OF_SPELLFIX_BASE_QUERY,
+				SPELLFIX_MATCHES_CTE + ",\n" +
+				NORMALIZED_MATCHES_CTE + ",\n" +
+				COMBINED_RANKS_CTE + "\n" +
+				SPELLFIX_SELECT,
 			Args: []any{
+				// NOTE: snippets sent to spellfix work better when not
+				// expanded to include variations e.g., ("test" OR "tests").
+				// Levenshtein distance (or just "distance") used by spellfix1
+				// (https://www.sqlite.org/spellfix1.html#:~:text=statement.-,distance)
+				// is not ideal for this use case: it approximates number of character
+				// edits required to transform one string into another, meaning it
+				// interprets the above as a literal 19-character string, many edits away
+				// from "test." But, it's fine to forego normal variation matching here - 
+				// spellfix helps with that anyway.
 				snippet,
-				snippet,
-				SPELLFIX_DISTANCE_LIMIT,
+				snippet + "*",
 				SPELLFIX_MATCHES_LIMIT,
 			},
 		},
 	})
 }
 
+
+// Rank represents total occurences across all global cats
+// *including* potentially multiple times in the same link's global tag
+// To prevent double-counting a cat with multiple variations inside the same link's
+// global tag, cats are de-duped before having their spellfix ranks updated, rather
+// than adjusting queries here to remove them.
+const SPELLFIX_MATCHES_CTE = `SpellfixMatches AS (
+    SELECT word, rank, distance
+    FROM global_cats_spellfix gcs
+    WHERE gcs.word MATCH ?
+    OR gcs.word MATCH ?
+    ORDER BY distance, rank DESC
+)`
+
+// e.g., "Tests" => "test"
+const NORMALIZED_MATCHES_CTE = `NormalizedMatches AS (
+	SELECT 
+		word,
+		rank,
+		distance,
+		CASE
+			WHEN LOWER(word) LIKE '%sses' THEN substr(LOWER(word), 1, length(LOWER(word)) - 2)
+			WHEN LOWER(word) LIKE '%s' AND NOT LOWER(word) LIKE '%ss' THEN substr(LOWER(word), 1, length(LOWER(word)) - 1)
+			ELSE LOWER(word)
+		END as normalized_word
+	FROM SpellfixMatches
+)`
+
+// Combine ranks for variations of the same normalized form
+// These would be merged into search results if the cat were selected as a filter,
+// so the combined rank represents accurately how many links would appear.
+const COMBINED_RANKS_CTE = `CombinedRanks AS (
+	SELECT 
+		normalized_word,
+		SUM(rank) as combined_rank,
+		MIN(distance) as min_distance,
+		(SELECT word FROM NormalizedMatches nm2
+		WHERE nm2.normalized_word = nm1.normalized_word
+		ORDER BY rank DESC, length(word) DESC, word DESC
+		LIMIT 1) as ideal_cat_spelling
+	FROM NormalizedMatches nm1
+	GROUP BY normalized_word
+)`
+
+// Sometimes computed distance comes out extremely low for unexpected results
+// e.g., "co" => "computation" = 0, where "co" => coding = 100.
+// Distance alone can't be trusted as a goodness-of-fit metric.
+// To allow weighting tags through a combination of rank and distance,
+// without having near-0 distances totally distort rankings, this lower bound
+// is used.
+const DISTANCE_LOWER_BOUND = 50
+var SPELLFIX_SELECT = fmt.Sprintf(`SELECT 
+	ideal_cat_spelling,
+	combined_rank as rank
+FROM CombinedRanks
+ORDER BY (MAX(min_distance, %d) / combined_rank), combined_rank DESC
+LIMIT ?;`, DISTANCE_LOWER_BOUND)
+
 func (sm *SpellfixMatches) FromTmap(tmap_owner_login_name string) *SpellfixMatches {
-	sm.Text = strings.Replace(
-		sm.Text,
-		SPELLFIX_BASE_CTE,
-		`RECURSIVE CatsSplit(tag_id, link_id, submitted_by, cat, remaining) AS (
-	SELECT 
-		tag_id, 
-		link_id, 
-		submitted_by,
-		'',
-		cats || ','
-	FROM user_cats_fts
-	WHERE submitted_by = ?
-	UNION ALL 
-	SELECT 
-		tag_id,
-		link_id,
-		submitted_by,
-		SUBSTR(remaining, 0, INSTR(remaining, ',')),
-		SUBSTR(remaining, INSTR(remaining, ',') + 1)
-	FROM CatsSplit
-	WHERE remaining != ''
-),
-CatRanks AS (
-	SELECT cat, COUNT(*) as local_rank
-	FROM CatsSplit
-	WHERE cat != ''
-	GROUP BY cat
-),
-SpellfixMatches AS (
-	SELECT gcs.word, cr.local_rank, gcs.distance
-	FROM global_cats_spellfix gcs
-	INNER JOIN CatRanks cr ON LOWER(gcs.word) = LOWER(cr.cat)
-	WHERE gcs.word MATCH ?
-	UNION ALL
-	SELECT gcs.word, cr.local_rank, gcs.distance
-	FROM global_cats_spellfix gcs
-	INNER JOIN CatRanks cr ON LOWER(gcs.word) = LOWER(cr.cat)
-	WHERE gcs.word MATCH ? || '*'
-)`,
+	sm.Text = TMAP_SPELLFIX_BASE
+		
+	// Old: snippet, snippet*, LIMIT
+	// New: tmap_owner_login_name, ("snippet" OR "snippets" OR "snippet"*) x2, tmap_owner_login_name x3, %snippet%, snippet, snippet*, LIMIT
+	raw_snippet := sm.Args[0]
+	snippet_with_spelling_variants := WithOptionalPluralOrSingularForm(raw_snippet.(string))
+	snippet_with_spelling_variants_and_wildcard := strings.Replace(
+		snippet_with_spelling_variants,
+		")",
+		" OR " + GetCatSurroundedInDoubleQuotes(raw_snippet.(string)) + "*)",
 		1,
 	)
 
-	// this is not strictly necessary - could use "rank" as in the base query,
-	// but this is a bit more clear.
-	new_rest_of_query := strings.ReplaceAll(
-		REST_OF_SPELLFIX_BASE_QUERY,
-		"rank",
-		"local_rank",
-	)
-	
-	sm.Text = strings.Replace(
-		sm.Text,
-		REST_OF_SPELLFIX_BASE_QUERY,
-		new_rest_of_query,
-		1,
-	)
-
-	// prepend arg
-	sm.Args = append([]any{tmap_owner_login_name}, sm.Args...)
+	sm.Args = []any{
+		tmap_owner_login_name,
+		snippet_with_spelling_variants_and_wildcard ,
+		snippet_with_spelling_variants_and_wildcard,
+		tmap_owner_login_name,
+		tmap_owner_login_name,
+		tmap_owner_login_name,
+		"%" + raw_snippet.(string) + "%",
+		raw_snippet,
+		raw_snippet.(string) + "*",
+		SPELLFIX_MATCHES_LIMIT,
+	}
 
 	return sm
 }
 
-// oddly, "WHERE word MATCH "%s OR %s*" doesn't work very well
-// hence the UNION
-const SPELLFIX_BASE_CTE = `SpellfixMatches AS (
-	SELECT word, rank, distance
-	FROM global_cats_spellfix
-	WHERE word MATCH ?
-	UNION ALL
-	SELECT word, rank, distance
-	FROM global_cats_spellfix
-	WHERE word MATCH ? || '*'
-)`
-
-const REST_OF_SPELLFIX_BASE_QUERY = `,
-RankedMatches AS (
-	SELECT 
-		word, 
-		rank,
-		distance,
-		ROW_NUMBER() OVER (PARTITION BY word ORDER BY distance, rank DESC) AS row_num
-	FROM SpellfixMatches
+// For links in "Submitted" and "Starred" Treasure Map sections, we
+// look primarily for user's cats and fall back to global cats for links which
+// they did not tag. (If tagged then they submitted cats - use those.)
+var TMAP_SPELLFIX_BASE = `WITH UserCatsMatches AS (
+    SELECT 
+        link_id,
+        cats
+    FROM user_cats_fts ucfts
+    WHERE ucfts.submitted_by = ?
+    AND cats MATCH ?
 ),
-TopMatches AS (
+GlobalCatsMatches AS (
+    SELECT
+        link_id,
+        global_cats as cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH ?
+    AND link_id IN (
+		SELECT id FROM Links
+		WHERE submitted_by = ?
+		UNION 
+		SELECT link_id FROM Stars
+		WHERE user_id IN (
+			SELECT id
+			FROM Users
+			WHERE login_name = ?
+		)
+    )
+    AND link_id NOT IN (SELECT link_id FROM Tags WHERE submitted_by = ?)
+),
+CombinedCatsMatches AS (
+    SELECT * FROM UserCatsMatches
+    UNION ALL
+    SELECT * FROM GlobalCatsMatches
+),
+CombinedCatsSplit(link_id, cat, remaining, cats) AS (
+    SELECT 
+        link_id,
+        '',
+        cats || ',',
+        cats
+    FROM CombinedCatsMatches
+    UNION ALL 
+    SELECT 
+        link_id,
+        SUBSTR(remaining, 0, INSTR(remaining, ',')),
+        SUBSTR(remaining, INSTR(remaining, ',') + 1),
+        cats
+    FROM CombinedCatsSplit
+    WHERE remaining != ''
+),
+MatchingCats AS (
+    SELECT cat as word, link_id
+    FROM CombinedCatsSplit
+    WHERE cat != ''
+    AND cat LIKE ?
+    GROUP BY LOWER(cat), link_id
+),
+NormalizedMatches AS (
 	SELECT 
-		word, 
-		rank, 
-		distance
-	FROM RankedMatches
-	WHERE row_num = 1
-	AND distance <= ?
-	ORDER BY distance, rank DESC
-)
-SELECT word, SUM(rank) as rank
-FROM TopMatches
-GROUP BY LOWER(word)
-ORDER BY distance, rank DESC
-LIMIT ?;`
+		word,
+		link_id,
+		CASE
+			WHEN LOWER(word) LIKE '%sses' THEN substr(LOWER(word), 1, length(LOWER(word)) - 2)
+			WHEN LOWER(word) LIKE '%s' AND NOT LOWER(word) LIKE '%ss' THEN substr(LOWER(word), 1, length(LOWER(word)) - 1)
+			ELSE LOWER(word)
+		END as normalized_word
+	FROM MatchingCats
+	GROUP BY normalized_word, link_id
+),
+RankedNormalizedMatches AS (
+	SELECT word, normalized_word, count(normalized_word) as rank_in_context
+	FROM NormalizedMatches
+	GROUP BY normalized_word
+),
+IdealSpellingVariants AS (
+	SELECT word, normalized_word, count(word) as rank
+	FROM NormalizedMatches
+	GROUP BY word
+	ORDER BY rank DESC
+),
+RankedIdealSpellingVariants AS (
+	SELECT 
+		rank_in_context,
+		(SELECT word FROM IdealSpellingVariants isp
+		WHERE isp.normalized_word = rnm.normalized_word
+		ORDER BY isp.rank DESC, length(word) DESC, word DESC
+		LIMIT 1) as ideal_cat_spelling
+	FROM RankedNormalizedMatches rnm
+),
+SpellfixMatches AS (
+    SELECT word, rank, distance
+    FROM global_cats_spellfix gcs
+    WHERE gcs.word MATCH ?
+    OR gcs.word MATCH ?
+    ORDER BY distance, rank DESC
+),
+FilteredSpellfixMatches AS (
+	SELECT 
+		sfm.word,
+		(
+			SELECT risv.rank_in_context
+			FROM RankedIdealSpellingVariants risv
+			WHERE risv.ideal_cat_spelling = sfm.word
+		) as rank_in_context,
+		sfm.distance
+	FROM SpellfixMatches sfm
+	WHERE rank_in_context IS NOT NULL
+	
+)` + "\n" + TMAP_SPELLFIX_SELECT
 
-func (sm *SpellfixMatches) OmitCats(cats []string) error {
-	if len(cats) == 0 || cats[0] == "" {
-		return e.ErrNoOmittedCats
+var TMAP_SPELLFIX_SELECT = fmt.Sprintf(`SELECT 
+	word,
+	rank_in_context as rank
+FROM FilteredSpellfixMatches
+ORDER BY (MAX(distance, %d) / rank_in_context), rank_in_context DESC
+LIMIT ?;`, DISTANCE_LOWER_BOUND)
+
+func (sm *SpellfixMatches) FromCats(cat_filters []string) error {
+	if len(cat_filters) == 0 || cat_filters[0] == "" {
+		return e.ErrNoCatFilters
 	}
 
-	// Pop SPELLFIX_MATCHES_LIMIT arg
-	sm.Args = sm.Args[0 : len(sm.Args) - 1]
-
-	not_in_clause := `
-	AND LOWER(word) NOT IN (?`
-	sm.Args = append(sm.Args, cats[0])
-
-	for i := 1; i < len(cats); i++ {
-		not_in_clause += ", ?"
-		sm.Args = append(sm.Args, cats[i])
+	// Add placeholders to MatchingGlobalCats / MatchingCats CTEs (depending on if .FromTmap() called)
+	// NOT IN clause if more than 1 cat filter
+	not_in_clause := "AND cat NOT IN (?"
+	not_in_args := []any{}
+	for i, cat := range cat_filters {
+		if i > 0 {
+			not_in_clause += ", ?"
+		}
+		not_in_args = append(not_in_args, cat)
 	}
 	not_in_clause += ")"
 
-	distance_clause := `AND distance <= ?`
-	sm.Text = strings.Replace(
-		sm.Text,
-		distance_clause,
-		distance_clause + not_in_clause,
-		1,
-	)
+	// WHERE global_cats MATCH '("dog" OR "dogs") AND ("cat" OR "cats")', etc.
+	fts_match_subcats_arg := strings.Join(GetCatsOptionalPluralOrSingularForms(cat_filters), " AND ")
 
-	// Push SPELLFIX_MATCHES_LIMIT arg back to end
-	sm.Args = append(sm.Args, SPELLFIX_MATCHES_LIMIT)
+	// Determine if .FromTmap() was called first
+	// (likely a better way...)
+
+	// .FromTmap() not called
+	if len(sm.Args) == 3 {
+		// Update CTES
+		cat_filters_global_cats_ctes := CAT_FILTERS_GLOBAL_CATS_CTES
+		if len(not_in_args) > 1 {
+			cat_filters_global_cats_ctes = strings.Replace(
+				cat_filters_global_cats_ctes,
+				"AND cat NOT IN (?)",
+				not_in_clause,
+				1,
+			)
+		}
+		sm.Text = strings.Replace(
+			sm.Text,
+			SPELLFIX_MATCHES_CTE,
+			cat_filters_global_cats_ctes + ",\n" + SPELLFIX_MATCHES_CTE + ",\n" + FILTERED_SPELLFIX_MATCHES_CTE,
+			1,
+		)
+		sm.Text = strings.Replace(
+			sm.Text,
+			NORMALIZED_MATCHES_CTE,
+			FILTERED_NORMALIZED_MATCHES_CTE,
+			1,
+		)
+		
+		// Prepend args
+		// Old: snippet, snippet*, LIMIT
+		// New: fts_match_subcats_arg, not_in_args..., snippet, snippet*, LIMIT
+		new_args := make([]any, 0, 1 + len(not_in_args) + len(sm.Args))
+		new_args = append(new_args, fts_match_subcats_arg)
+		new_args = append(new_args, not_in_args...)
+		new_args = append(new_args, sm.Args...)
+		sm.Args = new_args
+
+	// .FromTmap() called first
+	} else {
+		// Update CTE
+		new_matching_cats_cte := fmt.Sprintf(`MatchingCats AS (
+			SELECT cat as word, link_id
+			FROM CombinedCatsSplit
+			WHERE cat != ''
+			AND cat LIKE ?
+			%s
+		)`, not_in_clause)
+		sm.Text = strings.Replace(
+			sm.Text,
+			`MatchingCats AS (
+    SELECT cat as word, link_id
+    FROM CombinedCatsSplit
+    WHERE cat != ''
+    AND cat LIKE ?
+    GROUP BY LOWER(cat), link_id
+)`,
+			new_matching_cats_cte,
+1,
+		)
+
+		// Insert args
+		// Old: tmap_owner_login_name, ("snippet" OR "snippets" OR "snippet"*) x2, tmap_owner_login_name x3, %snippet%, snippet, snippet*, LIMIT
+		// New: tmap_owner_login_name, ("snippet" OR "snippets" OR "snippet"* AND ("cat_filter" OR "cat_filters" ...)) x2, tmap_owner_login_name x3,
+		// %snippet%, not_in_args..., snippet, snippet*, LIMIT
+
+		// Add cat filters to UserCatsMatches / GlobalCatsMatches MATCH clauses to get subcats
+		// Snippet with spelling variations are args[1] and args[2]
+		old_match_arg := sm.Args[1]
+		// "("test" OR "tests") => "("test" OR "tests") AND ("dog" OR "dogs") AND ("cat" OR "cats")
+		new_match_arg := old_match_arg.(string) + " AND " + fts_match_subcats_arg
+		sm.Args[1] = new_match_arg
+		sm.Args[2] = new_match_arg
+
+		// not_in_args... can be inserted 3 from the end
+		up_to_last_3_args := sm.Args[:len(sm.Args) - 3]
+		last_3_args := sm.Args[len(sm.Args) - 3:]
+		
+		new_args := make([]any, 0, len(sm.Args) + len(not_in_args))
+		new_args = append(new_args, up_to_last_3_args...)
+		new_args = append(new_args, not_in_args...)
+		new_args = append(new_args, last_3_args...)
+		sm.Args = new_args
+	}
 
 	return nil
 }
+
+var CAT_FILTERS_GLOBAL_CATS_CTES = `RECURSIVE MatchingGlobalCatsSplit(link_id, cat, remaining, global_cats) AS (
+    SELECT 
+        link_id,
+        '',
+        global_cats || ',',
+        global_cats
+    FROM global_cats_fts
+	WHERE global_cats MATCH ?
+    UNION ALL 
+    SELECT 
+        link_id,
+        SUBSTR(remaining, 0, INSTR(remaining, ',')),
+        SUBSTR(remaining, INSTR(remaining, ',') + 1),
+        global_cats
+    FROM MatchingGlobalCatsSplit
+    WHERE remaining != ''
+),
+MatchingGlobalSubcats AS (
+	SELECT cat, count(cat) as rank_in_context
+	FROM MatchingGlobalCatsSplit
+	WHERE cat != ''
+	AND cat NOT IN (?)
+	GROUP BY cat
+)`
+
+const FILTERED_SPELLFIX_MATCHES_CTE = `FilteredSpellfixMatches AS (
+	SELECT 
+		sfm.word,
+		(
+			SELECT mgs.rank_in_context 
+			FROM MatchingGlobalSubcats mgs 
+			WHERE mgs.cat = sfm.word) as rank_in_context,
+		sfm.distance
+	FROM SpellfixMatches sfm
+	WHERE rank_in_context IS NOT NULL
+)`
+
+var FILTERED_NORMALIZED_MATCHES_CTE = `NormalizedMatches AS (
+	SELECT 
+		word,
+		rank_in_context as rank,
+		distance,
+		CASE
+			WHEN LOWER(word) LIKE '%sses' THEN substr(LOWER(word), 1, length(LOWER(word)) - 2)
+			WHEN LOWER(word) LIKE '%s' AND NOT LOWER(word) LIKE '%ss' THEN substr(LOWER(word), 1, length(LOWER(word)) - 1)
+			ELSE LOWER(word)
+		END as normalized_word
+	FROM FilteredSpellfixMatches
+)`

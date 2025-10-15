@@ -180,11 +180,9 @@ func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 
 	omitted_params := r.URL.Query().Get("omitted")
 	if omitted_params != "" {
-
-		// lowercase to ensure all case variations matched 
+		// lowercase to ensure all casing variations matched
 		omitted_words := strings.Split(strings.ToLower(omitted_params), ",")
-		err := spfx_sql.OmitCats(omitted_words)
-		if err != nil {
+		if err := spfx_sql.FromCats(omitted_words); err != nil {
 			render.Render(w, r, e.ErrInternalServerError(err))
 			return
 		}
