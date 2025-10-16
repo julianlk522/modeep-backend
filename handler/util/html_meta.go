@@ -1,3 +1,5 @@
+// Credit and many thanks to https://github.com/jonlaing/htmlmeta
+// this is mostly copied from that.
 package handler
 
 import (
