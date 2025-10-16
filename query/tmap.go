@@ -33,7 +33,7 @@ WHERE login_name = ?;`
 
 // NSFW LINKS COUNT
 // Communicates how many NSFW links are hidden if the user does not
-// opt into seeing them via the "?nsfw=true" URL param.
+// opt into seeing them via the "?nsfw=true" URL params.
 // This clarifies the view somewhat when cat counts given via spellfix matches
 // or Top Cats totals appear to not equal the amount of matching links
 // (because some are hidden).
@@ -54,8 +54,8 @@ func NewTmapNSFWLinksCount(login_name string) *TmapNSFWLinksCount {
 				NSFW_LINKS_COUNT_WHERE +
 				NSFW_LINKS_COUNT_FINAL_AND + ";",
 			Args: []any{
-				login_name, 
-				login_name, 
+				login_name,
+				login_name,
 				login_name,
 				login_name,
 			},
@@ -302,8 +302,7 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 				TMAP_ORDER_BY_TIMES_STARRED,
 			Args: []any{
 				mutil.EARLIEST_STARRERS_LIMIT, 
-				login_name, 
-				login_name, 
+				login_name,
 				login_name,
 				login_name,
 				login_name,
@@ -390,17 +389,18 @@ func (ts *TmapSubmitted) FromCats(cats []string) *TmapSubmitted {
 	}
 
 	// Insert args	
-	// old: [{earliest_starrers_limit}, login_name x 5]
-	// new: [{earliest_starrers_limit}, login_name x 3, 
-	// match_arg x 2, login_name x 3]
+	// old: [{earliest_starrers_limit}, login_name x 4]
+	// new: [{earliest_starrers_limit}, login_name x 3,
+	// match_arg x 2, login_name x 2]
+	// so can insert before last 2 args
 	login_name := ts.Args[1]
-	first_3_args := make([]any, 3)
-	copy(first_3_args, ts.Args[:3])
+	up_to_last_2_args := ts.Args[:len(ts.Args) - 2]
+	last_2_args := ts.Args[len(ts.Args) - 2:]
 
 	new_args := make([]any, 0, len(ts.Args) + 3)
-	new_args = append(new_args, first_3_args...)
+	new_args = append(new_args, up_to_last_2_args...)
 	new_args = append(new_args, login_name, match_arg, match_arg)
-	new_args = append(new_args, ts.Args[3:]...)
+	new_args = append(new_args, last_2_args...)
 
 	ts.Args = new_args
 	return ts
@@ -419,7 +419,7 @@ func (ts *TmapSubmitted) AsSignedInUser(req_user_id string) *TmapSubmitted {
 	ts.Text = fields_replacer.Replace(ts.Text)
 
 	// Insert args after first index
-	new_args := make([]any, 0, len(ts.Args)+1)
+	new_args := make([]any, 0, len(ts.Args) + 1)
 
 	first_arg := ts.Args[0]
 	trailing_args := ts.Args[1:]
@@ -465,11 +465,6 @@ WHERE l.submitted_by = ?`,
 			1,
 		)
 	}
-	
-	// Remove login_name arg (it should always be last if this is called 
-	// before .WithBlahBlah methods, which it should always be per the order
-	// of TmapSubmitted.FromOptions())
-	ts.Args = ts.Args[:len(ts.Args) - 1]
 
 	return ts
 }
@@ -590,10 +585,9 @@ func NewTmapStarred(login_name string) *TmapStarred {
 				TMAP_ORDER_BY_TIMES_STARRED,
 			Args: []any{
 				mutil.EARLIEST_STARRERS_LIMIT, 
-				login_name, 
 				login_name,
 				login_name,
-				login_name, 
+				login_name,
 				login_name,
 				login_name,
 			},
@@ -679,16 +673,16 @@ func (ts *TmapStarred) FromCats(cats []string) *TmapStarred {
 	}
 
 	// Insert args
-	// old: [{earliest_starrers_limit}, login_name x 6]
+	// old: [{earliest_starrers_limit}, login_name x 5]
 	// new: [{earliest_starrers_limit}, login_name x 4,
-	// match_arg x 2, login_name x 3]
-	// so insert before last 3
+	// match_arg x 2, login_name x 2]
+	// so insert before last 2
 	login_name := ts.Args[1]
-	last_3_args := ts.Args[len(ts.Args) - 3:]
+	last_2_args := ts.Args[len(ts.Args) - 2:]
 
-	new_args := append([]any{}, ts.Args[:len(ts.Args) - 3]...)
+	new_args := append([]any{}, ts.Args[:len(ts.Args) - 2]...)
 	new_args = append(new_args, login_name, match_arg, match_arg)
-	new_args = append(new_args, last_3_args...)
+	new_args = append(new_args, last_2_args...)
 	ts.Args = new_args
 
 	return ts
@@ -709,9 +703,9 @@ func (ts *TmapStarred) AsSignedInUser(req_user_id string) *TmapStarred {
 
 	// insert args:
 	// old: [[{earliest_starrers_limit} login_name x 3,
-	// match_arg x 2, login_name x 3]
+	// match_arg x 2, login_name x 2] (if cat filter applied)
 	// new: {earliest_starrers_limit}, req_user_id, login_name x 3,
-	// match_arg x 2, login_name x 3] 
+	// match_arg x 2, login_name x 2]
 	// so insert req_user_id after earliest_starrers_limit
 	first_arg := ts.Args[0]
 	trailing_args := ts.Args[1:]
@@ -760,9 +754,6 @@ WHERE l.submitted_by != ?`,
 		)
 	}
 
-	// Remove login_name arg used in TMAP_NO_NSFW_CATS_WHERE
-	ts.Args = ts.Args[:len(ts.Args) - 1]
-	
 	return ts
 }
 
@@ -875,7 +866,7 @@ func NewTmapTagged(login_name string) *TmapTagged {
 				TMAP_FROM +
 				TAGGED_JOINS +
 				NSFW_JOINS + "\n" +
-				TMAP_NO_NSFW_CATS_WHERE +
+				TAGGED_NO_NSFW_CATS_WHERE +
 				TAGGED_AND +
 				TMAP_ORDER_BY_TIMES_STARRED,
 			Args: []any{
@@ -883,7 +874,6 @@ func NewTmapTagged(login_name string) *TmapTagged {
 				login_name, 
 				login_name, 
 				login_name, 
-				login_name,
 				login_name,
 				login_name,
 			},
@@ -916,6 +906,12 @@ var TAGGED_JOINS = strings.Replace(
 	"INNER",
 	"LEFT",
 	1,
+)
+
+var TAGGED_NO_NSFW_CATS_WHERE = strings.ReplaceAll(
+	TMAP_NO_NSFW_CATS_WHERE,
+	"puca.user_cats",
+	"uct.user_cats",
 )
 
 const TAGGED_AND = `
@@ -1012,12 +1008,12 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 	// Remove NSFW clause
 	tt.Text = strings.Replace(
 		tt.Text,
-		TMAP_NO_NSFW_CATS_WHERE,
+		TAGGED_NO_NSFW_CATS_WHERE,
 		"",
 		1,
 	)
 
-	// Swap following condition keyword 
+	// Swap following condition keyword
 	if strings.Contains(
 		tt.Text,
 		CAT_FILTER_AND,
@@ -1035,19 +1031,19 @@ func (tt *TmapTagged) NSFW() *TmapTagged {
 			1,
 		)
 	} else {
+		tagged_where := strings.Replace(
+			TAGGED_AND,
+			"AND",
+			"WHERE",
+			1,
+		)
 		tt.Text = strings.Replace(
 			tt.Text,
 			TAGGED_AND,
-			`
-WHERE l.submitted_by != ?
-AND l.id NOT IN
-	(SELECT link_id FROM UserStars)`,
+			tagged_where,
 			1,
 		)
 	}
-	
-	// Remove login_name arg used in TMAP_NO_NSFW_CATS_WHERE
-	tt.Args = tt.Args[:len(tt.Args) - 1]
 
 	return tt
 }
@@ -1258,11 +1254,11 @@ LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id`
 
 // As with cat filters and summary filters on user Treasure Map pages,
 // NSFW filters are made against the Treasure Map owner's input if it exists,
-// otherwise global data. Links are considered NSFW (included in the count
+// otherwise global tags/cats. Links are considered NSFW (included in the count
 // and hidden by default) if either the Treasure Map owner tagged it "NSFW"
 // OR they have not tagged at all but the global tag contains "NSFW."
-// If the Treasure Map owner has made an evaluation and explicitly _not_ assigned
-// NSFW as a cat in their tag for a link, the link is visible by default.
+// If the Treasure Map owner has tagged a link and _not_ assigned NSFW
+// as a cat in their tag, the link is visible by default.
 const NSFW_LINKS_COUNT_WHERE = `WHERE (
 	(puca.user_cats IS NULL AND gnsfwc.global_cats IS NOT NULL)
 	OR
@@ -1280,10 +1276,13 @@ AND (
 		)
 	)`
 
-const TMAP_NO_NSFW_CATS_WHERE = `WHERE l.id NOT IN (
-	SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
-	UNION
-	SELECT link_id FROM user_cats_fts WHERE cats MATCH 'NSFW' AND submitted_by = ?
+// Links which the Treasure Map owner has tagged "NSFW" are hidden by default.
+// Additionally, if they have not tagged one but its global tag contains "NSFW,"
+// it is hidden by default.
+const TMAP_NO_NSFW_CATS_WHERE = `WHERE (
+	(puca.user_cats IS NULL AND gnsfwc.global_cats IS NULL)
+	OR
+	(puca.user_cats IS NOT NULL AND pucnsfw.user_cats IS NULL)
 )`
 
 var tmap_order_by_clauses = map[string]string{
