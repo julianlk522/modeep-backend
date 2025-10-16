@@ -159,10 +159,12 @@ func IsOnlyTag(tag_id string) (bool, error) {
 }
 
 // Shared
-func CatsAreSingularOrPluralVariationsOfEachOther(a string, b string) bool {
+func CatsResembleEachOther(a string, b string) bool {
+	// Capitalization variants
 	a, b = strings.ToLower(a), strings.ToLower(b)
 
-	if a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
+	// Or singular/plural variants
+	if a == b || a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
 		return true
 	} 
 

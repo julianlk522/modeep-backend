@@ -132,7 +132,7 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 
 		for _, count := range *counts {
 			for _, cat_param := range split_cats_params {
-				if util.CatsAreSingularOrPluralVariationsOfEachOther(count.Category, cat_param) {
+				if util.CatsResembleEachOther(count.Category, cat_param) {
 					merged_cats = append(merged_cats, count.Category)
 				}
 			}
@@ -284,7 +284,8 @@ func EditTag(w http.ResponseWriter, r *http.Request) {
 
 	_, err = db.Client.Exec(
 		`UPDATE Tags 
-		SET cats = ?, last_updated = ? 
+		SET cats = ?, 
+		last_updated = ? 
 		WHERE id = ?;`,
 		edit_tag_data.Cats,
 		edit_tag_data.LastUpdated,

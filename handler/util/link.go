@@ -223,6 +223,7 @@ func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
 	}
 }
 
+// TODO make this signature match one for tmap links
 func CountMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cats_params string) {
 	if lp.Links == nil || len(*lp.Links) == 0 {
 		return
@@ -240,9 +241,7 @@ func CountMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cat
 				for _, cf := range cat_filters {
 					cf_lc := strings.ToLower(cf)
 
-					if (CatsAreSingularOrPluralVariationsOfEachOther(cat_lc, cf_lc) || 
-						// capitalization variants
-						cat_lc == cf_lc && link_cats[i] != cf) && 
+					if CatsResembleEachOther(cat_lc, cf_lc) && 
 					!slices.Contains(lp.MergedCats, link_cats[i]) {
 						lp.MergedCats = append(lp.MergedCats, link_cats[i])
 					}

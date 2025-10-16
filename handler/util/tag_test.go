@@ -204,7 +204,7 @@ func TestScanGlobalCatCounts(t *testing.T) {
 	}
 }
 
-func TestCatsAreSingularOrPluralVariationsOfEachOther(t *testing.T) {
+func TestCatsResembleEachOther(t *testing.T) {
 	var test_cats = []struct {
 		CatA string
 		CatB string
@@ -215,13 +215,13 @@ func TestCatsAreSingularOrPluralVariationsOfEachOther(t *testing.T) {
 		{"game", "games", true},
 		{"glitch", "glitches", true},
 		{"test", "abc", false},
-		// does not report true if same spelling but different case
-		{"abc", "abc", false},
-		{"abc", "ABC", false},
+		// still valid if same spelling but different case
+		{"abc", "abc", true},
+		{"abc", "ABC", true},
 	}
 
 	for _, c := range test_cats {
-		got := CatsAreSingularOrPluralVariationsOfEachOther(c.CatA, c.CatB)
+		got := CatsResembleEachOther(c.CatA, c.CatB)
 		if c.ExpectedResult != got {
 			t.Fatalf(
 				"expected %t, got %t for cats %s and %s",

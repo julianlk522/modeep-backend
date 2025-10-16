@@ -138,7 +138,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	).Scan(&nsfw_links_count); err != nil {
 		return nil, err
 	}
-
+	
 	var cat_counts *[]model.CatCount
 	var cat_counts_opts *model.TmapCatCountsOptions
 
@@ -455,31 +455,29 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 				continue
 			}
 
-			// skip if resembles a cat filter
 			skip := false
+			// Skip if resembles a cat filter
 			if has_cat_filter {
 				for _, oc := range omitted_cats {
-					if strings.EqualFold(lc, oc) ||
-						CatsAreSingularOrPluralVariationsOfEachOther(lc, oc) {
+					if CatsResembleEachOther(lc, oc) {
 						skip = true
 					}
 				}
 			}
 
-			// skip if resembles another cat from same link
-			// e.g. the same link does not need to double-count "book" if
-			// it has both "book" and "books"
+			// Skip if resembles another cat from same link.
+			// The same link does not need to double-count "book" if
+			// it has both "book" and "books."
 			if !skip {
-				for _, other_lc := range link_cats[i+1:] {
-					if strings.EqualFold(lc, other_lc) ||
-						CatsAreSingularOrPluralVariationsOfEachOther(lc, other_lc) {
+				for _, other_lc := range link_cats[i + 1:] {
+					if CatsResembleEachOther(lc, other_lc) {
 						skip = true
 					}
 				}
 			}
 
 			if !skip {
-				// increment count if existing
+				// Increment count if existing
 				found := false
 				for _, found_cat := range all_found_cats {
 					if found_cat == lc {
@@ -494,7 +492,7 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 					}
 				}
 
-				// or create new count
+				// Or create new count
 				if !found {
 					counts = append(counts, model.CatCount{Category: lc, Count: 1})
 					all_found_cats = append(all_found_cats, lc)
@@ -518,8 +516,7 @@ func MergeCountsOfCatSpellingVariants(counts *[]model.CatCount) {
 
 	for i := 0; i < len(*counts); i++ {
 		for j := i + 1; j < len(*counts); {
-			if strings.EqualFold((*counts)[i].Category, (*counts)[j].Category) ||
-				CatsAreSingularOrPluralVariationsOfEachOther((*counts)[i].Category, (*counts)[j].Category) {
+			if CatsResembleEachOther((*counts)[i].Category, (*counts)[j].Category) {
 				(*counts)[i].Count += (*counts)[j].Count
 				*counts = append((*counts)[:j], (*counts)[j+1:]...)
 			} else {
@@ -549,7 +546,7 @@ func GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters[T model.TmapLink |
 				for _, cf := range cat_filters {
 					cf_lc := strings.ToLower(cf)
 
-					if (CatsAreSingularOrPluralVariationsOfEachOther(cat_lc, cf_lc) || 
+					if (CatsResembleEachOther(cat_lc, cf_lc) || 
 					// capitalization variants
 					cat_lc == cf_lc && cat != cf) && !slices.Contains(merged_cats, cat) {
 						merged_cats = append(merged_cats, cat)
