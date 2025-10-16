@@ -11,3 +11,4 @@ _*
 .vscode/
 .prettierignore
 .envrc
+.ignore
