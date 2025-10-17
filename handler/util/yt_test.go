@@ -44,7 +44,7 @@ func TestExtractYTVideoID(t *testing.T) {
 	}
 
 	for _, u := range test_urls {
-		id := ExtractYTVideoID(u.URL)
+		id := extractYTVideoID(u.URL)
 		if id != u.ID {
 			t.Fatalf("expected %s, got %s", u.ID, id)
 		}

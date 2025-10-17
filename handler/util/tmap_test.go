@@ -144,42 +144,42 @@ func TestBuildTmapLinksQueryAndScan(t *testing.T) {
 
 	for _, to := range test_options {
 		if to.AsSignedInUser != "" {
-			if _, err := BuildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+			if _, err := buildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
 				query.NewTmapSubmitted(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := BuildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+			if _, err := buildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
 				query.NewTmapStarred(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := BuildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+			if _, err := buildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
 				query.NewTmapTagged(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 		} else {
-			if _, err := BuildTmapLinksQueryAndScan[model.TmapLink](
+			if _, err := buildTmapLinksQueryAndScan[model.TmapLink](
 				query.NewTmapSubmitted(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := BuildTmapLinksQueryAndScan[model.TmapLink](
+			if _, err := buildTmapLinksQueryAndScan[model.TmapLink](
 				query.NewTmapStarred(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := BuildTmapLinksQueryAndScan[model.TmapLink](
+			if _, err := buildTmapLinksQueryAndScan[model.TmapLink](
 				query.NewTmapTagged(to.OwnerLoginName),
 				&to,
 			); err != nil {
@@ -212,9 +212,9 @@ func TestScanTmapLinks(t *testing.T) {
 		for _, sql := range []*query.Query{submitted_sql, starred_sql, tagged_sql} {
 			var err error
 			if to.AsSignedInUser != "" {
-				_, err = ScanTmapLinks[model.TmapLinkSignedIn](sql)
+				_, err = scanTmapLinks[model.TmapLinkSignedIn](sql)
 			} else {
-				_, err = ScanTmapLinks[model.TmapLink](sql)
+				_, err = scanTmapLinks[model.TmapLink](sql)
 			}
 			if err != nil {
 				t.Fatalf("failed with error %s", err)
@@ -257,7 +257,7 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 			{"flowers", 2},
 		}
 
-		cat_counts := GetCatCountsFromTmapLinks(&l, nil)
+		cat_counts := getCatCountsFromTmapLinks(&l, nil)
 		for _, count := range *cat_counts {
 			for _, test_count := range unfiltered_test_cat_counts {
 				if count.Category == test_count.Cat && count.Count != test_count.Count {
@@ -273,7 +273,7 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 
 		// empty omitted cats
 		// (should never happen, but should behave as if no omitted cats were passed)
-		cat_counts = GetCatCountsFromTmapLinks(
+		cat_counts = getCatCountsFromTmapLinks(
 			&l,
 			&model.TmapCatCountsOptions{
 				RawCatsParams: "",
@@ -302,7 +302,7 @@ func TestGetCatCountsFromTmapLinks(t *testing.T) {
 			{"flowers", 2},
 		}
 
-		cat_counts = GetCatCountsFromTmapLinks(
+		cat_counts = getCatCountsFromTmapLinks(
 			&l,
 			&model.TmapCatCountsOptions{
 				RawCatsParams: "test",
@@ -335,7 +335,7 @@ func TestMergeCountsOfCatSpellingVariants(t *testing.T) {
 		{Category: "MODEEP", Count: 6},
 		{Category: "modeep", Count: 5}, // should get added to above
 	}
-	MergeCountsOfCatSpellingVariants(&counts)
+	mergeCountsOfCatSpellingVariants(&counts)
 
 	// make sure the highest counts go first
 	if counts[0].Category != "MODEEP" &&
@@ -395,7 +395,7 @@ func TestGetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(t *testing.T) 
 		"Tests", // pluralization and capitalization variant
 	}
 
-	got := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(
+	got := getMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(
 		&test_links,
 		test_cat_filter,
 	)
@@ -421,7 +421,7 @@ func TestGetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(t *testing.T) 
 
 func TestScanTmapProfile(t *testing.T) {
 	profile_sql := query.NewTmapProfile(TEST_LOGIN_NAME)
-	profile, err := ScanTmapProfile(profile_sql)
+	profile, err := scanTmapProfile(profile_sql)
 	if err != nil {
 		t.Fatal(err)
 	}

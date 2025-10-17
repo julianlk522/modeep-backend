@@ -80,7 +80,7 @@ func TestHasAcceptableAspectRatio(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if HasAcceptableAspectRatio(img) != l.HasAcceptableAspectRatio {
+		if hasAcceptableAspectRatio(img) != l.HasAcceptableAspectRatio {
 			t.Fatalf("expected image %s to be %t", l.Name, l.HasAcceptableAspectRatio)
 		}
 	}

@@ -228,8 +228,7 @@ func CalculateAndSetGlobalSummary(link_id string) error {
 	}
 
 	// Otherwise global summary is set to summary with most upvotes
-	// UNLESS 1st is auto summary and is tied with 2nd place
-	// in that case use 2nd place summary
+	// unless 1st is auto summary and is tied with 2nd place, then use 2nd place
 	var top_summary_text string
 	err = db.Client.QueryRow(`WITH RankedSummaries AS (
 		SELECT 
@@ -270,13 +269,13 @@ func CalculateAndSetGlobalSummary(link_id string) error {
 	if err != nil {
 		return err
 	} else if gs == "" || gs != top_summary_text {
-		SetLinkGlobalSummary(link_id, top_summary_text)
+		setLinkGlobalSummary(link_id, top_summary_text)
 	}
 
 	return nil
 }
 
-func SetLinkGlobalSummary(link_id string, text string) {
+func setLinkGlobalSummary(link_id string, text string) {
 	_, err := db.Client.Exec(`UPDATE Links SET global_summary = ? WHERE id = ?`, text, link_id)
 	if err != nil {
 		log.Fatal(err)

@@ -76,7 +76,7 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var file_name string
-	if file_name, err = util.SaveUploadedImg(upload); err != nil {
+	if file_name, err = util.SaveUploadedImgAndGetNewFileName(upload); err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}

@@ -148,7 +148,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return nil, err
 		}
 
-		links, err := BuildTmapLinksQueryAndScan[T](section_query_builder, opts)
+		links, err := buildTmapLinksQueryAndScan[T](section_query_builder, opts)
 		if links == nil || len(*links) == 0 {
 			return model.TmapIndividualSectionPage[T]{
 				Links:          &[]T{},
@@ -159,7 +159,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		// Get cat counts
-		cat_counts := GetCatCountsFromTmapLinks(links, cat_counts_opts)
+		cat_counts := getCatCountsFromTmapLinks(links, cat_counts_opts)
 
 		// Pagination
 		links, pages, err := getPageOfIndividualTmapSectionLinks(opts.Page, links)
@@ -169,7 +169,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		// Indicate any merged cats
 		if has_cat_filter {
-			merged_cats := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(links, cat_filters)
+			merged_cats := getMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(links, cat_filters)
 			return model.TmapIndividualSectionWithCatFiltersPage[T]{
 				TmapIndividualSectionPage: &model.TmapIndividualSectionPage[T]{
 					Links:          links,
@@ -206,7 +206,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		// Get cat counts
 		combined_sections := slices.Concat(*submitted, *starred, *tagged)
-		cat_counts := GetCatCountsFromTmapLinks(
+		cat_counts := getCatCountsFromTmapLinks(
 			&combined_sections,
 			cat_counts_opts,
 		)
@@ -223,7 +223,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		if has_cat_filter {
 			// Indicate any merged cats
-			merged_cats := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(&combined_sections, cat_filters)
+			merged_cats := getMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(&combined_sections, cat_filters)
 			return model.TmapWithCatFiltersPage[T]{
 				TmapPage: &model.TmapPage[T]{
 					TmapSections:   tmap_sections,
@@ -236,7 +236,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			// (no cat filters, no particular section)
 			var profile *model.Profile
 			profile_sql := query.NewTmapProfile(tmap_owner)
-			profile, err = ScanTmapProfile(profile_sql)
+			profile, err = scanTmapProfile(profile_sql)
 			if err != nil {
 				return nil, err
 			}
@@ -290,7 +290,7 @@ func getAllTmapLinksForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedIn](
 	Tagged *[]T
 }, error) {
 
-	submitted, err := BuildTmapLinksQueryAndScan[T](
+	submitted, err := buildTmapLinksQueryAndScan[T](
 		query.NewTmapSubmitted(tmap_owner_login_name),
 		opts,
 	)
@@ -298,7 +298,7 @@ func getAllTmapLinksForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedIn](
 		return nil, err
 	}
 
-	starred, err := BuildTmapLinksQueryAndScan[T](
+	starred, err := buildTmapLinksQueryAndScan[T](
 		query.NewTmapStarred(tmap_owner_login_name),
 		opts,
 	)
@@ -306,7 +306,7 @@ func getAllTmapLinksForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedIn](
 		return nil, err
 	}
 
-	tagged, err := BuildTmapLinksQueryAndScan[T](
+	tagged, err := buildTmapLinksQueryAndScan[T](
 		query.NewTmapTagged(tmap_owner_login_name),
 		opts,
 	)
@@ -354,7 +354,7 @@ func limitTmapSectionsAndGetLimitedOnes[T model.TmapLink | model.TmapLinkSignedI
 	return sections
 }
 
-func BuildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](builder query.TmapLinksQueryBuilder, opts *model.TmapOptions) (*[]T, error) {
+func buildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](builder query.TmapLinksQueryBuilder, opts *model.TmapOptions) (*[]T, error) {
 	get_links_query := builder.
 		FromOptions(opts).
 		Build()
@@ -362,7 +362,7 @@ func BuildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](build
 		return nil, get_links_query.Error
 	}
 	
-	links, err := ScanTmapLinks[T](get_links_query)
+	links, err := scanTmapLinks[T](get_links_query)
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +370,7 @@ func BuildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](build
 	return links, nil
 }
 
-func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](q *query.Query) (*[]T, error) {
+func scanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](q *query.Query) (*[]T, error) {
 	rows, err := db.Client.Query(q.Text, q.Args...)
 	if err != nil {
 		return nil, err
@@ -446,7 +446,7 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](q *query.Query) (*
 // all the links SQL queries together is a headache and doesn't improve
 // perf thattt much since tmap contains <= 30 links at a time
 // (if LINKS_PAGE_LIMIT is 10, individual sections contain <= 10 links)
-func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOptions) *[]model.CatCount {
+func getCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOptions) *[]model.CatCount {
 	var omitted_cats []string
 	// Use raw_cats_params to determine omitted_cats because CatsFilter
 	// (from BuildTmapFromOpts) is modified to escape reserved chars
@@ -520,7 +520,7 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 		}
 	}
 
-	MergeCountsOfCatSpellingVariants(&counts)
+	mergeCountsOfCatSpellingVariants(&counts)
 
 	if len(counts) > TMAP_CATS_PAGE_LIMIT {
 		counts = (counts)[:TMAP_CATS_PAGE_LIMIT]
@@ -529,7 +529,7 @@ func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 	return &counts
 }
 
-func MergeCountsOfCatSpellingVariants(counts *[]model.CatCount) {
+func mergeCountsOfCatSpellingVariants(counts *[]model.CatCount) {
 	// Sort first so most-frequent spelling / casing variants are the ones merged into
 	slices.SortFunc(*counts, model.SortCats)
 
@@ -545,7 +545,7 @@ func MergeCountsOfCatSpellingVariants(counts *[]model.CatCount) {
 	}
 }
 
-func GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, cat_filters []string) []string {
+func getMergedCatsSpellingVariantsFromTmapLinksWithCatFilters[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, cat_filters []string) []string {
 	var merged_cats []string
 	for _, l := range *links {
 		var cats_str string
@@ -581,7 +581,7 @@ func GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters[T model.TmapLink |
 
 // USER PROFILE
 // (visible on Treasure Map page when no filters applied)
-func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
+func scanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 	var u model.Profile
 	if err := db.Client.
 		QueryRow(profile_sql.Text, profile_sql.Args...).
