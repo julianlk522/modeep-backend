@@ -30,7 +30,7 @@ func TestUserExists(t *testing.T) {
 }
 
 func TestBuildTmapFromOpts(t *testing.T) {
-	var test_data = []struct {
+	var test_opts = []struct {
 		LoginName        string
 		RequestingUserID string
 		CatsParams       string
@@ -58,7 +58,7 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		{TEST_LOGIN_NAME, "", "", "newest", true, "submitted", -1, false},
 	}
 
-	for _, td := range test_data {
+	for _, td := range test_opts {
 		var opts = &model.TmapOptions{
 			OwnerLoginName: td.LoginName,
 			RawCatsParams:  td.CatsParams,
@@ -120,70 +120,107 @@ func TestBuildTmapFromOpts(t *testing.T) {
 	}
 }
 
-func TestScanTmapLinks(t *testing.T) {
-	var test_requests = []struct {
-		LoginName        string
-		RequestingUserID string
-	}{
-		{TEST_LOGIN_NAME, TEST_USER_ID},
-		{TEST_LOGIN_NAME, TEST_REQ_USER_ID},
-		{TEST_LOGIN_NAME, ""},
+func TestBuildTmapLinksQueryAndScan(t *testing.T) {
+	var test_options = []model.TmapOptions{
+		{
+			OwnerLoginName: TEST_LOGIN_NAME,
+			AsSignedInUser: TEST_USER_ID,
+		},
+		{
+			OwnerLoginName: TEST_LOGIN_NAME,
+			AsSignedInUser: TEST_REQ_USER_ID,
+			Cats:           []string{"umvc3"},
+			Period:         "year",
+			SortBy:         "newest",
+			IncludeNSFW:    true,
+		},
+		{
+			OwnerLoginName: TEST_LOGIN_NAME,
+			SummaryContains: "web",
+			URLContains:     "com",
+			URLLacks:        "net",
+		},
 	}
 
-	for _, r := range test_requests {
-		submitted_sql := query.NewTmapSubmitted(r.LoginName)
-		starred_sql := query.NewTmapStarred(r.LoginName)
-		tagged_sql := query.NewTmapTagged(r.LoginName)
-
-		if r.RequestingUserID != "" {
-			submitted_sql = submitted_sql.AsSignedInUser(r.RequestingUserID)
-			starred_sql = starred_sql.AsSignedInUser(r.RequestingUserID)
-			tagged_sql = tagged_sql.AsSignedInUser(r.RequestingUserID)
-
-			_, err := ScanTmapLinks[model.TmapLinkSignedIn](submitted_sql.Query)
-			if err != nil {
-				t.Fatalf(
-					"failed scanning tmap submitted links (signed-in) with error: %s",
-					err,
-				)
+	for _, to := range test_options {
+		if to.AsSignedInUser != "" {
+			if _, err := BuildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+				query.NewTmapSubmitted(to.OwnerLoginName),
+				&to,
+			); err != nil {
+				t.Fatal(err)
 			}
-			_, err = ScanTmapLinks[model.TmapLinkSignedIn](starred_sql.Query)
-			if err != nil {
-				t.Fatalf(
-					"failed scanning tmap starred links (signed-in) with error: %s",
-					err,
-				)
+
+			if _, err := BuildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+				query.NewTmapStarred(to.OwnerLoginName),
+				&to,
+			); err != nil {
+				t.Fatal(err)
 			}
-			_, err = ScanTmapLinks[model.TmapLinkSignedIn](tagged_sql.Query)
-			if err != nil {
-				t.Fatalf(
-					"failed scanning tmap tagged links (signed-in) with error: %s",
-					err,
-				)
+
+			if _, err := BuildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+				query.NewTmapTagged(to.OwnerLoginName),
+				&to,
+			); err != nil {
+				t.Fatal(err)
 			}
 		} else {
-			_, err := ScanTmapLinks[model.TmapLink](submitted_sql.Query)
-			if err != nil {
-				t.Fatalf(
-					"failed scanning tmap submitted links (no auth) with error: %s",
-					err,
-				)
+			if _, err := BuildTmapLinksQueryAndScan[model.TmapLink](
+				query.NewTmapSubmitted(to.OwnerLoginName),
+				&to,
+			); err != nil {
+				t.Fatal(err)
 			}
-			_, err = ScanTmapLinks[model.TmapLink](starred_sql.Query)
-			if err != nil {
-				t.Fatalf(
-					"failed scanning tmap starred links (no auth) with error: %s",
-					err,
-				)
+
+			if _, err := BuildTmapLinksQueryAndScan[model.TmapLink](
+				query.NewTmapStarred(to.OwnerLoginName),
+				&to,
+			); err != nil {
+				t.Fatal(err)
 			}
-			_, err = ScanTmapLinks[model.TmapLink](tagged_sql.Query)
-			if err != nil {
-				t.Fatalf(
-					"failed scanning tmap tagged links (no auth) with error: %s",
-					err,
-				)
+
+			if _, err := BuildTmapLinksQueryAndScan[model.TmapLink](
+				query.NewTmapTagged(to.OwnerLoginName),
+				&to,
+			); err != nil {
+				t.Fatal(err)
 			}
 		}
+	}
+}
+
+func TestScanTmapLinks(t *testing.T) {
+	var test_options = []model.TmapOptions{
+		{
+			OwnerLoginName: TEST_LOGIN_NAME,
+			AsSignedInUser: TEST_USER_ID,
+		},
+		{
+			OwnerLoginName: TEST_LOGIN_NAME,
+			AsSignedInUser: TEST_REQ_USER_ID,
+		},
+		{
+			OwnerLoginName: TEST_LOGIN_NAME,
+		},
+	}
+
+	for _, to := range test_options {
+		submitted_sql := query.NewTmapSubmitted(to.OwnerLoginName).FromOptions(&to).Build()
+		starred_sql := query.NewTmapStarred(to.OwnerLoginName).FromOptions(&to).Build()
+		tagged_sql := query.NewTmapTagged(to.OwnerLoginName).FromOptions(&to).Build()
+
+		for _, sql := range []*query.Query{submitted_sql, starred_sql, tagged_sql} {
+			var err error
+			if to.AsSignedInUser != "" {
+				_, err = ScanTmapLinks[model.TmapLinkSignedIn](sql)
+			} else {
+				_, err = ScanTmapLinks[model.TmapLink](sql)
+			}
+			if err != nil {
+				t.Fatalf("failed with error %s", err)
+			}
+		}
+
 	}
 }
 
@@ -349,7 +386,7 @@ func TestGetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(t *testing.T) 
 	}
 	var test_cat_filter = []string{
 		"test",
-		"modeep",
+"modeep",
 	}
 	var expected_merged_cats = []string{
 		"tests", // pluralization variant

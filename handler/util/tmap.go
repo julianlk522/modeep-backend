@@ -22,15 +22,6 @@ import (
 	"github.com/julianlk522/modeep/query"
 )
 
-// DeleteProfilePic
-func UserWithIDHasProfilePic(user_id string) bool {
-	var p sql.NullString
-	if err := db.Client.QueryRow("SELECT pfp FROM Users WHERE id = ?", user_id).Scan(&p); err != nil {
-		return false
-	}
-	return p.Valid
-}
-
 func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
 	var opts = &model.TmapOptions{}
 	var cats_params,
@@ -159,36 +150,23 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		switch opts.Section {
 		case "submitted":
-			submitted_sql := query.
-				NewTmapSubmitted(tmap_owner).
-				FromOptions(opts)
-			if submitted_sql.Error != nil {
-				return nil, submitted_sql.Error
-			}
-
-			links, err = ScanTmapLinks[T](submitted_sql.Query)
+			links, err = BuildTmapLinksQueryAndScan[T](
+				query.NewTmapSubmitted(tmap_owner),
+				opts,
+			)
 		case "starred":
-			starred_sql := query.
-				NewTmapStarred(tmap_owner).
-				FromOptions(opts)
-			if starred_sql.Error != nil {
-				return nil, starred_sql.Error
-			}
-
-			links, err = ScanTmapLinks[T](starred_sql.Query)
+			links, err = BuildTmapLinksQueryAndScan[T](
+				query.NewTmapStarred(tmap_owner),
+				opts,
+			)
 		case "tagged":
-			tagged_sql := query.
-				NewTmapTagged(tmap_owner).
-				FromOptions(opts)
-			if tagged_sql.Error != nil {
-				return nil, tagged_sql.Error
-			}
-
-			links, err = ScanTmapLinks[T](tagged_sql.Query)
+			links, err = BuildTmapLinksQueryAndScan[T](
+				query.NewTmapTagged(tmap_owner),
+				opts,
+			)
 		default:
 			return nil, e.ErrInvalidSectionParams
 		}
-
 		if err != nil {
 			return nil, err
 		}
@@ -209,7 +187,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		cat_counts = GetCatCountsFromTmapLinks(links, cat_counts_opts)
 
 		// Pagination
-		// TODO: move to separate util function
+		// TODO move to separate util function
 		page := 1
 		if opts.Page < 0 {
 			return nil, e.ErrInvalidPageParams
@@ -248,38 +226,26 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 	// All sections
 	} else {
-		submitted_sql := query.
-			NewTmapSubmitted(tmap_owner).
-			FromOptions(opts)
-		if submitted_sql.Error != nil {
-			return nil, submitted_sql.Error
-		}
-
-		submitted, err := ScanTmapLinks[T](submitted_sql.Query)
+		submitted, err := BuildTmapLinksQueryAndScan[T](
+			query.NewTmapSubmitted(tmap_owner),
+			opts,
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		starred_sql := query.
-			NewTmapStarred(tmap_owner).
-			FromOptions(opts)
-		if starred_sql.Error != nil {
-			return nil, starred_sql.Error
-		}
-
-		starred, err := ScanTmapLinks[T](starred_sql.Query)
+		starred, err := BuildTmapLinksQueryAndScan[T](
+			query.NewTmapStarred(tmap_owner),
+			opts,
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		tagged_sql := query.
-			NewTmapTagged(tmap_owner).
-			FromOptions(opts)
-		if tagged_sql.Error != nil {
-			return nil, tagged_sql.Error
-		}
-
-		tagged, err := ScanTmapLinks[T](tagged_sql.Query)
+		tagged, err := BuildTmapLinksQueryAndScan[T](
+			query.NewTmapTagged(tmap_owner),
+			opts,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -355,8 +321,24 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	}
 }
 
-func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](sql *query.Query) (*[]T, error) {
-	rows, err := db.Client.Query(sql.Text, sql.Args...)
+func BuildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](builder query.TmapLinksQueryBuilder, opts *model.TmapOptions) (*[]T, error) {
+	get_links_query := builder.
+		FromOptions(opts).
+		Build()
+	if get_links_query.Error != nil {
+		return nil, get_links_query.Error
+	}
+	
+	links, err := ScanTmapLinks[T](get_links_query)
+	if err != nil {
+		return nil, err
+	}
+
+	return links, nil
+}
+
+func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](q *query.Query) (*[]T, error) {
+	rows, err := db.Client.Query(q.Text, q.Args...)
 	if err != nil {
 		return nil, err
 	}
@@ -560,7 +542,8 @@ func GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters[T model.TmapLink |
 	return merged_cats
 }
 
-
+// USER PROFILE
+// (visible on Treasure Map page when no filters applied)
 func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 	var u model.Profile
 	if err := db.Client.
@@ -582,3 +565,10 @@ func ScanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 	return &u, nil
 }
 
+func UserWithIDHasProfilePic(user_id string) bool {
+	var p sql.NullString
+	if err := db.Client.QueryRow("SELECT pfp FROM Users WHERE id = ?", user_id).Scan(&p); err != nil {
+		return false
+	}
+	return p.Valid
+}
