@@ -250,7 +250,7 @@ func TestAddLink(t *testing.T) {
 		},
 		{
 			Payload: map[string]string{
-				"url":     "https://community.hubspot.com/",
+				"url":     "modeep.org/about",
 				"cats":    "watermelon",
 				"summary": "testy",
 			},
