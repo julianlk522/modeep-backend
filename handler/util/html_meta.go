@@ -22,7 +22,7 @@ type HTMLMetadata struct {
 	TwitterImage  string
 }
 
-func ExtractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
+func extractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
 	tokenizer := html.NewTokenizer(resp)
 	
 	title_tag := false
@@ -38,7 +38,7 @@ func ExtractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
 				if t.Data == "title" && !title_found {
 					title_tag = true
 				} else if t.Data == "meta" {
-					AssignTokenPropertyToHTMLMeta(t, &html_md)
+					assignTokenPropertyToHTMLMeta(t, &html_md)
 				}
 			case html.TextToken:
 				if title_tag {
@@ -66,9 +66,9 @@ var meta_properties = []string{
 	"twitter:image",
 }
 
-func AssignTokenPropertyToHTMLMeta(token html.Token, html_md *HTMLMetadata) {
+func assignTokenPropertyToHTMLMeta(token html.Token, html_md *HTMLMetadata) {
 	for _, mp := range meta_properties {
-		prop, ok := ExtractMetaPropertyFromToken(mp, token)
+		prop, ok := extractMetaPropertyFromToken(mp, token)
 		if ok {
 			switch mp {
 				case "description":
@@ -96,7 +96,7 @@ func AssignTokenPropertyToHTMLMeta(token html.Token, html_md *HTMLMetadata) {
 	}
 }
 
-func ExtractMetaPropertyFromToken(mp string, token html.Token) (content string, ok bool) {
+func extractMetaPropertyFromToken(mp string, token html.Token) (content string, ok bool) {
 	for _, attr := range token.Attr {
 		if (attr.Key == "property" || attr.Key == "name") && attr.Val == mp {
 			ok = true

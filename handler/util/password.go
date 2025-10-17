@@ -25,7 +25,7 @@ func GetEmailFromLoginName(loginName string) (string, error) {
 	return email.String, nil
 }
 
-func GeneratePasswordResetToken(login_name, email string) (string, error) {
+func generatePasswordResetToken(login_name, email string) (string, error) {
 	payload := model.PasswordResetPayload{
 		LoginName: login_name,
 		Email:     email,
@@ -56,7 +56,7 @@ func EmailPasswordResetLink(login_name string, email string) error {
 	m.SetHeader("To", email)
 	m.SetHeader("Subject", "Modeep Password Reset Request")
 
-	token, err := GeneratePasswordResetToken(login_name, email)
+	token, err := generatePasswordResetToken(login_name, email)
 	if err != nil {
 		return err
 	}

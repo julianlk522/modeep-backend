@@ -31,8 +31,7 @@ func init() {
 	preview_pic_dir = modeep_root_path + "/db/img/preview"
 }
 
-// First return value is file name of saved image
-func SaveUploadedImg(upload *model.ImgUpload) (string, error) {
+func SaveUploadedImgAndGetNewFileName(upload *model.ImgUpload) (string, error) {
 	// Verify valid image
 	img, file_type, err := image.Decode(upload.Bytes)
 	if err != nil {
@@ -50,7 +49,7 @@ func SaveUploadedImg(upload *model.ImgUpload) (string, error) {
 		case "ProfilePic":
 			path_prefix = Profile_pic_dir
 
-			if !HasAcceptableAspectRatio(img) {
+			if !hasAcceptableAspectRatio(img) {
 				return "", e.ErrInvalidProfilePicAspectRatio
 			}
 		default:
@@ -68,10 +67,10 @@ func SaveUploadedImg(upload *model.ImgUpload) (string, error) {
 	// Scale down if needed	
 	// have not yet figured out how to encode as webp... skip for now
 	if img.Bounds().Max.X > THUMBNAIL_WIDTH_PX && file_type != "webp" {
-		img = ScaleToThumbnailSize(img)
+		img = scaleToThumbnailSize(img)
 	}
 
-	err = EncodeImg(img, file_type, out_file)
+	err = encodeImg(img, file_type, out_file)
 	if err != nil {
 		return "", err
 	}
@@ -79,7 +78,7 @@ func SaveUploadedImg(upload *model.ImgUpload) (string, error) {
 	return file_name, nil
 }
 
-func HasAcceptableAspectRatio(img image.Image) bool {
+func hasAcceptableAspectRatio(img image.Image) bool {
 	b := img.Bounds()
 	width, height := b.Max.X, b.Max.Y
 	ratio := float64(width) / float64(height)
@@ -91,7 +90,7 @@ func HasAcceptableAspectRatio(img image.Image) bool {
 	return true
 }
 
-func ScaleToThumbnailSize(img image.Image) image.Image {
+func scaleToThumbnailSize(img image.Image) image.Image {
 	return resize.Resize(
 		uint(THUMBNAIL_WIDTH_PX), 
 		0, 
@@ -100,7 +99,7 @@ func ScaleToThumbnailSize(img image.Image) image.Image {
 	)
 }
 
-func EncodeImg(img image.Image, file_type string, out_file *os.File) error {
+func encodeImg(img image.Image, file_type string, out_file *os.File) error {
 	var err error
 	switch file_type {
 		case "jpg":

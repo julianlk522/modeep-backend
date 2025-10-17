@@ -444,7 +444,7 @@ func TestSetGlobalCats(t *testing.T) {
 		old_link_gc_ranks[cat] = rank
 	}
 
-	err = SetGlobalCats(test_link_id, test_cats)
+	err = setGlobalCats(test_link_id, test_cats)
 	if err != nil {
 		t.Fatalf("failed with error: %s", err)
 	}

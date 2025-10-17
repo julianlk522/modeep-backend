@@ -19,7 +19,7 @@ func IsYTVideo(url string) bool {
 }
 
 func GetYTVideoMetadata(url string) (*model.YTVideoMetadata, error) {
-	id := ExtractYTVideoID(url)
+	id := extractYTVideoID(url)
 	if id == "" {
 		return nil, e.ErrInvalidURL
 	}
@@ -44,7 +44,7 @@ func GetYTVideoMetadata(url string) (*model.YTVideoMetadata, error) {
 		return nil, err
 	}
 
-	yt_md, err := ExtractGoogleAPIsResponseMetadata(resp.Body)
+	yt_md, err := extractGoogleAPIsResponseMetadata(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func GetYTVideoMetadata(url string) (*model.YTVideoMetadata, error) {
 	return yt_md, nil
 }
 
-func ExtractYTVideoID(url string) string {
+func extractYTVideoID(url string) string {
 	if strings.Contains(url, "youtube.com/watch?v=") {
 		return strings.Split(strings.Split(url, "&")[0], "?v=")[1]
 	} else if strings.Contains(url, "youtu.be/") {
@@ -64,7 +64,7 @@ func ExtractYTVideoID(url string) string {
 	return ""
 }
 
-func ExtractGoogleAPIsResponseMetadata(body io.Reader) (*model.YTVideoMetadata, error) {
+func extractGoogleAPIsResponseMetadata(body io.Reader) (*model.YTVideoMetadata, error) {
 	var yt_md model.YTVideoMetadata
 
 	err := json.NewDecoder(body).Decode(&yt_md)

@@ -202,15 +202,15 @@ func CalculateAndSetGlobalCats(link_id string) error {
 		return err
 	}
 
-	if err = SetGlobalCats(link_id, new_global_cats); err != nil {
+	if err = setGlobalCats(link_id, new_global_cats); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func SetGlobalCats(link_id string, new_global_cats string) error {
-	cats_diff, err := GetGlobalCatsDiff(link_id, new_global_cats)
+func setGlobalCats(link_id string, new_global_cats string) error {
+	cats_diff, err := getGlobalCatsDiff(link_id, new_global_cats)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func SetGlobalCats(link_id string, new_global_cats string) error {
 	return nil
 }
 
-func GetGlobalCatsDiff(link_id string, new_cats_str string) (*model.GlobalCatsDiff, error) {
+func getGlobalCatsDiff(link_id string, new_cats_str string) (*model.GlobalCatsDiff, error) {
 	var old_cats_str string
 	err := db.Client.QueryRow(
 		"SELECT global_cats FROM Links WHERE id = ?;",

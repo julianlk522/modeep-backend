@@ -47,20 +47,20 @@ func UserHasSubmittedMaxDailyLinks(login_name string) (bool, error) {
 }
 
 func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model.LinksPageOptions) (*model.LinksPage[T], error) {
-	links_page, err := ScanRawLinksPageData[T](links_sql)
+	links_page, err := scanRawLinksPageData[T](links_sql)
 	if err != nil {
 		return nil, err
 	}
 	
-	PaginateLinks(links_page.Links)
+	paginateLinks(links_page.Links)
 
 	cats_params := options.Cats
 	if cats_params != "" {
-		CountMergedCatSpellingVariants(links_page, cats_params)
+		countMergedCatSpellingVariants(links_page, cats_params)
 	}
 	
 	nsfw_params := options.NSFW
-	hidden_links, err := GetNSFWLinksCount[T](links_sql, nsfw_params)
+	hidden_links, err := getNSFWLinksCount[T](links_sql, nsfw_params)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 	return links_page, nil
 }
 
-func ScanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*model.LinksPage[T], error) {
+func scanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.TopLinks) (*model.LinksPage[T], error) {
 	if links_sql.Error != nil {
 		return nil, links_sql.Error
 	}
@@ -85,7 +85,7 @@ func ScanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 	defer rows.Close()
 
 	// NOTE: this both scans the links and creates the LinksPage struct
-	// because number of pages must be taken here from the query result rows
+	// because number of pages is taken here from the query result rows
 	var links any
 	var pages int
 
@@ -215,7 +215,7 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 	return link.(*T), nil
 }
 
-func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
+func paginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
 	if links == nil || len(*links) == 0 {
 		return
 	} else if len(*links) == query.LINKS_PAGE_LIMIT+1 {
@@ -224,7 +224,7 @@ func PaginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
 }
 
 // TODO make this signature match one for tmap links
-func CountMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cats_params string) {
+func countMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cats_params string) {
 	if lp.Links == nil || len(*lp.Links) == 0 {
 		return
 	}
@@ -251,7 +251,7 @@ func CountMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cat
 	}
 }
 
-func GetNSFWLinksCount[T model.HasCats](links_sql *query.TopLinks, nsfw_params bool) (int, error) {
+func getNSFWLinksCount[T model.HasCats](links_sql *query.TopLinks, nsfw_params bool) (int, error) {
 	hidden_links_count_sql := links_sql.CountNSFWLinks(nsfw_params)
 	var hidden_links sql.NullInt32
 	if err := db.Client.QueryRow(
@@ -269,8 +269,8 @@ func GetLinkExtraMetadataFromResponse(resp *http.Response) *model.LinkExtraMetad
 	if resp == nil {
 		return nil
 	} else if resp.StatusCode != http.StatusForbidden {
-		html_md := ExtractHTMLMetadata(resp.Body)
-		return GetLinkExtraMetadataFromHTML(html_md)
+		html_md := extractHTMLMetadata(resp.Body)
+		return getLinkExtraMetadataFromHTML(html_md)
 	}
 
 	return nil
@@ -307,7 +307,7 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 				no_tls_client := http.Client{Transport: tr}
 				resp, err = no_tls_client.Do(req)
 				if err != nil {
-					return nil, InvalidURLError(url)
+					return nil, invalidURLError(url)
 				}
 				return resp, nil
 			}
@@ -321,7 +321,7 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 		if resp.StatusCode == http.StatusNotFound {
 			resp.Body.Close()
 			continue
-		} else if IsRedirect(resp.StatusCode) {
+		} else if isRedirect(resp.StatusCode) {
 			resp.Body.Close()
 			return nil, e.ErrRedirect
 		}
@@ -329,14 +329,14 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 		return resp, nil
 	}
 
-	return nil, InvalidURLError(url)
+	return nil, invalidURLError(url)
 }
 
-func InvalidURLError(url string) error {
+func invalidURLError(url string) error {
 	return fmt.Errorf("invalid URL: %s", url)
 }
 
-func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata {
+func getLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata {
 	x_md := &model.LinkExtraMetadata{}
 
 	switch {
@@ -370,7 +370,7 @@ func GetLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata
 	return x_md
 }
 
-func IsRedirect(status_code int) bool {
+func isRedirect(status_code int) bool {
 	return status_code >= http.StatusMultipleChoices && 
 	status_code < http.StatusBadRequest
 }
@@ -391,7 +391,7 @@ func SavePreviewImgAndGetFileName(url string, link_id string) (string, error) {
 		Purpose: "LinkPreview",
 		UID: link_id,
 	}
-	file_name, err := SaveUploadedImg(img_upload)
+	file_name, err := SaveUploadedImgAndGetNewFileName(img_upload)
 	if err != nil {
 		return "", fmt.Errorf("could not save preview image: %s", err)
 	}
@@ -412,7 +412,7 @@ func LinkAlreadyAdded(url string) (bool, string) {
 }
 
 func IncrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
-	cats = GetDeduplicatedCats(cats)
+	cats = getDeduplicatedCats(cats)
 	if tx != nil {
 		for _, cat := range cats {
 
@@ -476,7 +476,7 @@ func IncrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 
 // Delete link
 func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
-	cats = GetDeduplicatedCats(cats)
+	cats = getDeduplicatedCats(cats)
 	if tx != nil {
 		for _, cat := range cats {
 
@@ -519,7 +519,7 @@ func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 }
 
 // "ham,Ham,cheese,cHeEsE" -> "ham,cheese"
-func GetDeduplicatedCats(cats []string) []string {
+func getDeduplicatedCats(cats []string) []string {
 	cats_set := make(map[string]bool)
 	for _, cat := range cats {
 		cats_set[strings.ToLower(cat)] = true
