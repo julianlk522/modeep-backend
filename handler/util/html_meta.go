@@ -23,18 +23,18 @@ type HTMLMetadata struct {
 }
 
 func ExtractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
-	z := html.NewTokenizer(resp)
-
+	tokenizer := html.NewTokenizer(resp)
+	
 	title_tag := false
 	title_found := false
 
 	for {
-		token_type := z.Next()
+		token_type := tokenizer.Next()
 		switch token_type {
 			case html.ErrorToken:
 				return
 			case html.SelfClosingTagToken, html.StartTagToken:
-				t := z.Token()
+				t := tokenizer.Token()
 				if t.Data == "title" && !title_found {
 					title_tag = true
 				} else if t.Data == "meta" {
@@ -42,13 +42,14 @@ func ExtractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
 				}
 			case html.TextToken:
 				if title_tag {
-					t := z.Token()
+					t := tokenizer.Token()
+
 					html_md.Title = t.Data
 
 					title_tag = false
 					title_found = true
 				}
-			}
+		}
 	}
 }
 

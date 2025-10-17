@@ -65,7 +65,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 		return nil, err
 	}
 
-	links_page.NSFWLinksCount = hidden_links	
+	links_page.NSFWLinksCount = hidden_links
 
 	return links_page, nil
 }
@@ -289,7 +289,14 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 		req.Header.Set("User-Agent", MODEEP_BOT_USER_AGENT)
 		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
 		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+		// Skip "Accept-Encoding" to keep default Go HTTP client decompression
+		// (Restoring decompression behavior is annoying...
+		// Can reconsider this if omitting Accept-Encoding becomes a problem.)
+		// req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+		req.Header.Set("Upgrade-Insecure-Requests", "1")
+		req.Header.Set("Sec-Fetch-Dest", "document")
+		req.Header.Set("Sec-Fetch-Mode", "navigate")
+		req.Header.Set("Sec-Fetch-Site", "none")
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
