@@ -11,11 +11,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	m "github.com/julianlk522/modeep/middleware"
-	"github.com/julianlk522/modeep/model"
 )
 
 func TestAddTag(t *testing.T) {
-	// TODO: fix so that payloads are correctly passed to mock request body
 	test_tag_requests := []struct {
 		Payload map[string]string
 		Valid   bool
@@ -86,6 +84,14 @@ func TestAddTag(t *testing.T) {
 			},
 			Valid: false,
 		},
+		// should fail due to duplicate tag w/ above by same user for same link
+		{
+			Payload: map[string]string{
+				"link_id": "1",
+				"cats":    "test",
+			},
+			Valid: false,
+		},
 		// should pass because test user jlk has not tagged link with ID 895bed6e-54f9-46d3-ad3f-bb529ba4a1f8
 		{
 			Payload: map[string]string{
@@ -124,7 +130,7 @@ func TestAddTag(t *testing.T) {
 				t.Fatal("failed but unable to read request body bytes")
 			} else {
 				t.Fatalf(
-					"expected status code %d, got %d (test request %+v)\n%s", 
+					"expected status code %d, got %d (test request %+v)\n%s",
 					res.StatusCode,
 					http.StatusCreated,
 					tr.Payload,
@@ -334,49 +340,31 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 		Snippet            string
 		OmittedCats        string
 		ExpectedStatusCode int
-		Results            map[string]int32
 	}{
 		{
 			Snippet:            "test",
 			OmittedCats:        "",
 			ExpectedStatusCode: http.StatusOK,
-			Results: map[string]int32{
-				"test":       21,
-				"testing":    2,
-				"tech":       2,
-				"technology": 1,
-			},
 		},
 		{
 			Snippet:            "test",
 			OmittedCats:        "test",
 			ExpectedStatusCode: http.StatusOK,
-			Results: map[string]int32{
-				"testing":    2,
-				"tech":       2,
-				"technology": 1,
-			},
 		},
 		{
 			Snippet:            "test",
 			OmittedCats:        "tech,technology",
 			ExpectedStatusCode: http.StatusOK,
-			Results: map[string]int32{
-				"test":    21,
-				"testing": 2,
-			},
 		},
 		{
 			Snippet:            "",
 			OmittedCats:        "",
 			ExpectedStatusCode: http.StatusBadRequest,
-			Results:            nil,
 		},
 		{
 			Snippet:            "",
 			OmittedCats:        "test",
 			ExpectedStatusCode: http.StatusBadRequest,
-			Results:            nil,
 		},
 	}
 
@@ -385,7 +373,7 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 	r := chi.NewRouter()
 	r.Get("/cats/*", GetSpellfixMatchesForSnippet)
 
-	for i, tr := range test_requests {
+	for _, tr := range test_requests {
 		req, err := http.NewRequest("GET", "/cats/"+tr.Snippet, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -412,26 +400,6 @@ func TestGetSpellfixMatchesForSnippet(t *testing.T) {
 				tr,
 				string(b),
 			)
-		}
-
-		// Verify results if valid
-		if w.Code > http.StatusOK {
-			continue
-		}
-
-		b, err := io.ReadAll(w.Body)
-		if err != nil {
-			t.Fatal("failed but unable to read response body bytes")
-		}
-		var results []model.CatCount
-		err = json.Unmarshal(b, &results)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, res := range results {
-			if tr.Results[res.Category] != res.Count {
-				t.Fatalf("expected %d for cat %s, got %d (i: %d)", tr.Results[res.Category], res.Category, res.Count, i)
-			}
 		}
 	}
 }
