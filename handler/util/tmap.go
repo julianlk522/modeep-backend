@@ -109,8 +109,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	}
 	tmap_owner := opts.OwnerLoginName
 
-	// Regardless of individual or multiple sections, cat filters or not, we
-	// always return counts for NSFW links and top cats/subcats
+	// Get number of NSFW links (so can indicate that they are hidden)
 	var nsfw_links_count int
 	nsfw_links_count_opts := &model.TmapNSFWLinksCountOptions{
 		OnlySection:     opts.Section,
@@ -130,9 +129,8 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		return nil, err
 	}
 	
-	var cat_counts *[]model.CatCount
+	// Cat filters
 	var cat_counts_opts *model.TmapCatCountsOptions
-
 	var cat_filters []string
 	has_cat_filter := len(opts.Cats) > 0
 	if has_cat_filter {
@@ -145,32 +143,12 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 	// Individual section
 	if opts.Section != "" {
-		var links *[]T
-		var err error
-
-		switch opts.Section {
-		case "submitted":
-			links, err = BuildTmapLinksQueryAndScan[T](
-				query.NewTmapSubmitted(tmap_owner),
-				opts,
-			)
-		case "starred":
-			links, err = BuildTmapLinksQueryAndScan[T](
-				query.NewTmapStarred(tmap_owner),
-				opts,
-			)
-		case "tagged":
-			links, err = BuildTmapLinksQueryAndScan[T](
-				query.NewTmapTagged(tmap_owner),
-				opts,
-			)
-		default:
-			return nil, e.ErrInvalidSectionParams
-		}
+		section_query_builder, err := getTmapLinksQueryBuilderForSectionForOwner(opts.Section, tmap_owner)
 		if err != nil {
 			return nil, err
 		}
 
+		links, err := BuildTmapLinksQueryAndScan[T](section_query_builder, opts)
 		if links == nil || len(*links) == 0 {
 			return model.TmapIndividualSectionPage[T]{
 				Links:          &[]T{},
@@ -180,28 +158,13 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			}, nil
 		}
 
-		// Counting cats and pagination are currently done in Go because merging
-		// all the links SQL queries together is a headache and doesn't improve
-		// perf thattt much since tmap contains <= 60 links at a time
-		// (individual section contains <= 20 links)
-		cat_counts = GetCatCountsFromTmapLinks(links, cat_counts_opts)
+		// Get cat counts
+		cat_counts := GetCatCountsFromTmapLinks(links, cat_counts_opts)
 
 		// Pagination
-		// TODO move to separate util function
-		page := 1
-		if opts.Page < 0 {
-			return nil, e.ErrInvalidPageParams
-		} else if opts.Page > 0 {
-			page = opts.Page
-		}
-
-		pages := int(math.Ceil(float64(len(*links)) / float64(query.LINKS_PAGE_LIMIT)))
-		if page > pages {
-			links = &[]T{}
-		} else if page == pages {
-			*links = (*links)[query.LINKS_PAGE_LIMIT*(page - 1):]
-		} else {
-			*links = (*links)[query.LINKS_PAGE_LIMIT*(page - 1) : query.LINKS_PAGE_LIMIT * page]
+		links, pages, err := getPageOfIndividualTmapSectionLinks(opts.Page, links)
+		if err != nil {
+			return nil, err
 		}
 
 		// Indicate any merged cats
@@ -226,29 +189,13 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 	// All sections
 	} else {
-		submitted, err := BuildTmapLinksQueryAndScan[T](
-			query.NewTmapSubmitted(tmap_owner),
-			opts,
-		)
+		all_tmap_links, err := getAllTmapLinksForOwnerFromOpts[T](tmap_owner, opts)
 		if err != nil {
 			return nil, err
 		}
-
-		starred, err := BuildTmapLinksQueryAndScan[T](
-			query.NewTmapStarred(tmap_owner),
-			opts,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		tagged, err := BuildTmapLinksQueryAndScan[T](
-			query.NewTmapTagged(tmap_owner),
-			opts,
-		)
-		if err != nil {
-			return nil, err
-		}
+		submitted := all_tmap_links.Submitted
+		starred := all_tmap_links.Starred
+		tagged := all_tmap_links.Tagged
 
 		if len(*submitted)+len(*starred)+len(*tagged) == 0 {
 			return model.TmapPage[T]{
@@ -257,40 +204,25 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			}, nil
 		}
 
-		// Get cat counts BEFORE pagination so totals still include
-		// cats from any links that were excluded
+		// Get cat counts
 		combined_sections := slices.Concat(*submitted, *starred, *tagged)
-		cat_counts = GetCatCountsFromTmapLinks(
+		cat_counts := GetCatCountsFromTmapLinks(
 			&combined_sections,
 			cat_counts_opts,
 		)
 
-		// limit to top 20 links / section
-		// sections > 20 links: indicate in response so can be paginated
-		var sections_with_more []string
-		if len(*submitted) > query.LINKS_PAGE_LIMIT {
-			sections_with_more = append(sections_with_more, "submitted")
-			*submitted = (*submitted)[0:query.LINKS_PAGE_LIMIT]
-		}
-		if len(*starred) > query.LINKS_PAGE_LIMIT {
-			sections_with_more = append(sections_with_more, "starred")
-			*starred = (*starred)[0:query.LINKS_PAGE_LIMIT]
-		}
-		if len(*tagged) > query.LINKS_PAGE_LIMIT {
-			sections_with_more = append(sections_with_more, "tagged")
-			*tagged = (*tagged)[0:query.LINKS_PAGE_LIMIT]
-		}
+		// Limit to top links per section and get SectionsWithMore
+		tmap_sections := limitTmapSectionsAndGetLimitedOnes(
+			&model.TmapSections[T]{
+				Submitted:        submitted,
+				Starred:          starred,
+				Tagged:           tagged,
+			},
+		)
+		tmap_sections.Cats = cat_counts
 
-		tmap_sections := &model.TmapSections[T]{
-			Submitted:        submitted,
-			Starred:          starred,
-			Tagged:           tagged,
-			SectionsWithMore: sections_with_more,
-			Cats:             cat_counts,
-		}
-
-		// Indicate any merged cats
 		if has_cat_filter {
+			// Indicate any merged cats
 			merged_cats := GetMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(&combined_sections, cat_filters)
 			return model.TmapWithCatFiltersPage[T]{
 				TmapPage: &model.TmapPage[T]{
@@ -299,7 +231,6 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 				},
 				MergedCats: merged_cats,
 			}, nil
-
 		} else {
 			// Profile is only returned on "blank slate" Treasure Map
 			// (no cat filters, no particular section)
@@ -319,6 +250,108 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			}, nil
 		}
 	}
+}
+
+func getTmapLinksQueryBuilderForSectionForOwner(section string, tmap_owner string) (query.TmapLinksQueryBuilder, error) {
+	switch section {
+		case "submitted":
+			return query.NewTmapSubmitted(tmap_owner), nil
+		case "starred":
+			return query.NewTmapStarred(tmap_owner), nil
+		case "tagged":
+			return query.NewTmapTagged(tmap_owner), nil
+		default:
+			return nil, e.ErrInvalidOnlySectionParams
+	}
+}
+
+func getPageOfIndividualTmapSectionLinks[T model.TmapLink | model.TmapLinkSignedIn](page int, links *[]T) (*[]T, int, error) {
+	if page < 0 {
+		return nil, 0, e.ErrInvalidPageParams
+	} else if page == 0 {
+		page = 1
+	}
+
+	pages := int(math.Ceil(float64(len(*links)) / float64(query.LINKS_PAGE_LIMIT)))
+	if page > pages {
+		links = &[]T{}
+	} else if page == pages {
+		*links = (*links)[query.LINKS_PAGE_LIMIT*(page - 1):]
+	} else {
+		*links = (*links)[query.LINKS_PAGE_LIMIT*(page - 1) : query.LINKS_PAGE_LIMIT * page]
+	}
+
+	return links, pages, nil
+}
+
+func getAllTmapLinksForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedIn](tmap_owner_login_name string, opts *model.TmapOptions) (*struct{
+	Submitted *[]T
+	Starred *[]T
+	Tagged *[]T
+}, error) {
+
+	submitted, err := BuildTmapLinksQueryAndScan[T](
+		query.NewTmapSubmitted(tmap_owner_login_name),
+		opts,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	starred, err := BuildTmapLinksQueryAndScan[T](
+		query.NewTmapStarred(tmap_owner_login_name),
+		opts,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tagged, err := BuildTmapLinksQueryAndScan[T](
+		query.NewTmapTagged(tmap_owner_login_name),
+		opts,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct{
+		Submitted *[]T
+		Starred *[]T
+		Tagged *[]T
+	}{
+		Submitted: submitted,
+		Starred: starred,
+		Tagged: tagged,
+	}, nil
+}
+
+// sections > LINKS_PAGE_LIMIT links: limit and indicate in response so frontend
+// knows to offer pagination
+func limitTmapSectionsAndGetLimitedOnes[T model.TmapLink | model.TmapLinkSignedIn](sections *model.TmapSections[T]) *model.TmapSections[T] {
+	submitted := sections.Submitted
+	starred := sections.Starred
+	tagged := sections.Tagged
+	var sections_with_more []string
+
+	if len(*submitted) > query.LINKS_PAGE_LIMIT {
+		sections_with_more = append(sections_with_more, "submitted")
+		*submitted = (*submitted)[0:query.LINKS_PAGE_LIMIT]
+	}
+	if len(*starred) > query.LINKS_PAGE_LIMIT {
+		sections_with_more = append(sections_with_more, "starred")
+		*starred = (*starred)[0:query.LINKS_PAGE_LIMIT]
+	}
+	if len(*tagged) > query.LINKS_PAGE_LIMIT {
+		sections_with_more = append(sections_with_more, "tagged")
+		*tagged = (*tagged)[0:query.LINKS_PAGE_LIMIT]
+	}
+
+	sections.Submitted = submitted
+	sections.Starred = starred
+	sections.Tagged = tagged
+	sections.SectionsWithMore = sections_with_more
+
+	return sections
 }
 
 func BuildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](builder query.TmapLinksQueryBuilder, opts *model.TmapOptions) (*[]T, error) {
@@ -409,6 +442,10 @@ func ScanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](q *query.Query) (*
 	return links.(*[]T), nil
 }
 
+// Counting cats and pagination are currently done in Go because merging
+// all the links SQL queries together is a headache and doesn't improve
+// perf thattt much since tmap contains <= 30 links at a time
+// (if LINKS_PAGE_LIMIT is 10, individual sections contain <= 10 links)
 func GetCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOptions) *[]model.CatCount {
 	var omitted_cats []string
 	// Use raw_cats_params to determine omitted_cats because CatsFilter
