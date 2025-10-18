@@ -122,13 +122,14 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	nsfw_links_count_sql := query.
 		NewTmapNSFWLinksCount(tmap_owner).
 		FromOptions(nsfw_links_count_opts)
-	if err := db.Client.QueryRow(
-		nsfw_links_count_sql.Text,
-		nsfw_links_count_sql.Args...,
-	).Scan(&nsfw_links_count); err != nil {
+	row, err := nsfw_links_count_sql.ValidateAndExecuteRow()
+	if err != nil {
 		return nil, err
 	}
-	
+	if err := row.Scan(&nsfw_links_count); err != nil {
+		return nil, err
+	}
+
 	// Cat filters
 	var cat_counts_opts *model.TmapCatCountsOptions
 	var cat_filters []string
@@ -371,7 +372,7 @@ func buildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](build
 }
 
 func scanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](q *query.Query) (*[]T, error) {
-	rows, err := db.Client.Query(q.Text, q.Args...)
+	rows, err := q.ValidateAndExecuteRows()
 	if err != nil {
 		return nil, err
 	}

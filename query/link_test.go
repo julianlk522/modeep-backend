@@ -730,6 +730,7 @@ func TestPage(t *testing.T) {
 		Page         int
 		WantLimitArg int
 	}{
+		{-1, LINKS_PAGE_LIMIT},
 		{0, LINKS_PAGE_LIMIT},
 		{1, LINKS_PAGE_LIMIT + 1},
 		{2, LINKS_PAGE_LIMIT + 1},
@@ -749,9 +750,19 @@ func TestPage(t *testing.T) {
 			offset_arg := links_sql.Args[len(links_sql.Args)-1]
 
 			if limit_arg != tc.WantLimitArg {
-				t.Fatalf("got %d, want %d", limit_arg, tc.WantLimitArg)
+				t.Fatalf(
+					"got %d, want %d with page %d",
+					limit_arg,
+					tc.WantLimitArg,
+					tc.Page,
+				)
 			} else if offset_arg != (tc.Page-1)*LINKS_PAGE_LIMIT {
-				t.Fatalf("got %d, want %d", offset_arg, tc.WantLimitArg)
+				t.Fatalf(
+					"got %d, want %d with page %d",
+					offset_arg,
+					tc.WantLimitArg,
+					tc.Page,
+				)
 			}
 
 			continue

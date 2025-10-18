@@ -39,7 +39,7 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (any, error) {
 			}
 		}
 
-		rows, err := db.Client.Query(get_summaries_sql.Text, get_summaries_sql.Args...)
+		rows, err := get_summaries_sql.ValidateAndExecuteRows()
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +80,7 @@ func BuildSummaryPageForLink(link_id string, r *http.Request) (any, error) {
 			}
 		}
 
-		rows, err := db.Client.Query(get_summaries_sql.Text, get_summaries_sql.Args...)
+		rows, err := get_summaries_sql.ValidateAndExecuteRows()
 		if err != nil {
 			return nil, err
 		}

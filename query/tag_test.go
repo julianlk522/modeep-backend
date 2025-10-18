@@ -430,8 +430,7 @@ const TEST_SNIPPET = "test"
 
 func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET)
-
-	rows, err := TestClient.Query(matches_sql.Text, matches_sql.Args...)
+	rows, err := matches_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -447,12 +446,8 @@ func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 }
 
 func TestSpellfixMatchesFromTmap(t *testing.T) {
-	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).FromTmap(TEST_LOGIN_NAME) 
-	if matches_sql.Error != nil {
-		t.Fatal(matches_sql.Error)
-	}
-	
-	rows, err := TestClient.Query(matches_sql.Text, matches_sql.Args...)
+	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromTmap(TEST_LOGIN_NAME) 
+	rows, err := matches_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -526,14 +521,9 @@ func TestSpellfixMatchesFromTmap(t *testing.T) {
 	}
 }
 
-func TestSpellfixFromCats(t *testing.T) {
-	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET)
-	err := matches_sql.FromCats([]string{TEST_SNIPPET})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rows, err := TestClient.Query(matches_sql.Text, matches_sql.Args...)
+func TestSpellfixMatchesFromCats(t *testing.T) {
+	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromCats([]string{TEST_SNIPPET})
+	rows, err := matches_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
