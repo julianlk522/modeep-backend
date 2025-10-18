@@ -28,8 +28,8 @@ LIMIT ?;`
 func (c *Contributors) FromRequestParams(params url.Values) *Contributors {
 	cats_params := params.Get("cats")
 	if cats_params != "" {
-		cats := strings.Split(cats_params, ",")
-		c = c.fromCats(cats)
+		cat_filters := strings.Split(cats_params, ",")
+		c = c.fromCatFilters(cat_filters)
 	}
 
 	summary_contains_params := params.Get("summary_contains")
@@ -55,8 +55,8 @@ func (c *Contributors) FromRequestParams(params url.Values) *Contributors {
 	return c
 }
 
-func (c *Contributors) fromCats(cats []string) *Contributors {
-	if len(cats) == 0 {
+func (c *Contributors) fromCatFilters(cat_filters []string) *Contributors {
+	if len(cat_filters) == 0 {
 		return c
 	}
 
@@ -79,10 +79,10 @@ func (c *Contributors) fromCats(cats []string) *Contributors {
 		1,
 	)
 
-	cats = GetCatsOptionalPluralOrSingularForms(cats)
-	match_arg := cats[0]
-	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + cats[i]
+	cat_filters = GetCatsOptionalPluralOrSingularForms(cat_filters)
+	match_arg := cat_filters[0]
+	for i := 1; i < len(cat_filters); i++ {
+		match_arg += " AND " + cat_filters[i]
 	}
 	c.Args = append(c.Args, match_arg)
 

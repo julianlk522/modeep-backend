@@ -57,9 +57,9 @@ func TestNewTopLinks(t *testing.T) {
 	}
 }
 
-func TestFromCats(t *testing.T) {
+func TestFromCatFilters(t *testing.T) {
 	var test_cats = []struct {
-		Cats  []string
+		CatFilters  []string
 		Valid bool
 	}{
 		{[]string{}, false},
@@ -71,11 +71,11 @@ func TestFromCats(t *testing.T) {
 
 	for _, tc := range test_cats {
 		// Cats only
-		links_sql := NewTopLinks().fromCats(tc.Cats)
+		links_sql := NewTopLinks().fromCatFilters(tc.CatFilters)
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tc.Valid && links_sql.Error == nil {
-			t.Fatalf("expected error for cats %s", tc.Cats)
+			t.Fatalf("expected error for cats %s", tc.CatFilters)
 		}
 
 		rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -89,18 +89,18 @@ func TestFromCats(t *testing.T) {
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tc.Valid && links_sql.Error == nil {
-			t.Fatalf("expected error for cats %s", tc.Cats)
+			t.Fatalf("expected error for cats %s", tc.CatFilters)
 		}
 
 		// If any cats provided, args should be cat_match and limit
 		// in that order
-		if len(tc.Cats) == 0 || len(tc.Cats) == 1 && tc.Cats[0] == "" {
+		if len(tc.CatFilters) == 0 || len(tc.CatFilters) == 1 && tc.CatFilters[0] == "" {
 			continue
 		}
 
-		if 
-		links_sql.Args[len(links_sql.Args)-2] != strings.Join(tc.Cats, " ") && links_sql.Args[len(links_sql.Args)-1] != LINKS_PAGE_LIMIT {
-			t.Fatalf("got %v, want %v (should be cat_match and limit in that order)", links_sql.Args, tc.Cats)
+		if links_sql.Args[len(links_sql.Args) - 2] != strings.Join(tc.CatFilters, " ") &&
+		links_sql.Args[len(links_sql.Args) - 1] != LINKS_PAGE_LIMIT {
+			t.Fatalf("got %v, want %v (should be cat_match and limit in that order)", links_sql.Args, tc.CatFilters)
 		}
 
 		rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -160,7 +160,7 @@ func TestLinksWithGlobalSummaryContaining(t *testing.T) {
 
 	// no conflct w/ other methods
 	links_sql = NewTopLinks().
-		fromCats([]string{"test"}).
+		fromCatFilters([]string{"test"}).
 		withGlobalSummaryContaining("GoOgLe", "").
 		withURLContaining("www", "").
 		withURLLacking("something", "").
@@ -260,7 +260,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 
 	// combined with other methods
 	links_sql = NewTopLinks().
-		fromCats([]string{"flowers"}).
+		fromCatFilters([]string{"flowers"}).
 		withURLContaining("google", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
 		sortBy("newest")
@@ -357,7 +357,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 
 	// combined with other methods
 	links_sql = NewTopLinks().
-		fromCats([]string{"umvc3"}).
+		fromCatFilters([]string{"umvc3"}).
 		withURLLacking("gOOgle", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
 		sortBy("newest")
@@ -434,7 +434,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 		rows.Close()
 
 		// With cats
-		links_sql = links_sql.fromCats([]string{"umvc3"})
+		links_sql = links_sql.fromCatFilters([]string{"umvc3"})
 		if tp.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tp.Valid && links_sql.Error == nil {
@@ -615,8 +615,10 @@ func TestAsSignedInUser(t *testing.T) {
 		}
 	}
 
-	// Verify no conflict with .FromCats()
-	links_sql = NewTopLinks().fromCats(test_cats).AsSignedInUser(TEST_USER_ID)
+	// Verify no conflict with .FromCatFilters()
+	links_sql = NewTopLinks().
+		fromCatFilters(test_cats).
+		AsSignedInUser(TEST_USER_ID)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
 		t.Fatal(err)
 	}
@@ -647,7 +649,7 @@ func TestNSFW(t *testing.T) {
 
 	// Verify no conflict with other filter methods
 	links_sql = NewTopLinks().
-		fromCats([]string{"search", "engine", "NSFW"}).
+		fromCatFilters([]string{"search", "engine", "NSFW"}).
 		duringPeriod("year", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
 		sortBy("newest").
@@ -689,7 +691,7 @@ func TestNSFW(t *testing.T) {
 
 	// Verify link not present using same query without .NSFW()
 	links_sql = NewTopLinks().
-		fromCats([]string{"search", "engine", "NSFW"}).
+		fromCatFilters([]string{"search", "engine", "NSFW"}).
 		duringPeriod("year", "newest").
 		AsSignedInUser(TEST_USER_ID).
 		sortBy("oldest").
@@ -769,13 +771,18 @@ func TestPage(t *testing.T) {
 		}
 
 		if links_sql.Args[len(links_sql.Args)-1] != tc.WantLimitArg {
-			t.Fatalf("got %d, want %d", links_sql.Args[len(links_sql.Args)-1], tc.WantLimitArg)
+			t.Fatalf(
+				"got %d, want %d with page %d",
+				links_sql.Args[len(links_sql.Args) - 1],
+				tc.WantLimitArg,
+				tc.Page,
+			)
 		}
 	}
 
 	// Verify no conflict with other methods
 	links_sql = NewTopLinks().
-		fromCats(test_cats).
+		fromCatFilters(test_cats).
 		duringPeriod("year", "times_starred").
 		sortBy("newest").
 		AsSignedInUser(TEST_USER_ID).
@@ -834,7 +841,7 @@ func TestCountNSFWLinks(t *testing.T) {
 
 	// combined with other methods
 	links_sql = NewTopLinks().
-		fromCats(test_cats).
+		fromCatFilters(test_cats).
 		duringPeriod("year", "times_starred").
 		sortBy("newest").
 		AsSignedInUser(TEST_USER_ID).
@@ -850,7 +857,7 @@ func TestCountNSFWLinks(t *testing.T) {
 
 	// MORE COMBINATIONSSSSS
 	links_sql = NewTopLinks().
-		fromCats(test_cats).
+		fromCatFilters(test_cats).
 		duringPeriod("all", "average_stars").
 		sortBy("average_stars").
 		withURLContaining("www", "average_stars").

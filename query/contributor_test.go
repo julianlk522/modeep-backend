@@ -45,8 +45,8 @@ func TestNewTopContributors(t *testing.T) {
 	}
 }
 
-func TestTopContributorsFromCats(t *testing.T) {
-	contributors_sql := NewTopContributors().fromCats(
+func TestTopContributorsFromCatFilters(t *testing.T) {
+	contributors_sql := NewTopContributors().fromCatFilters(
 		[]string{
 			"umvc3",
 			"c. viper",
@@ -248,7 +248,7 @@ func TestTopContributorsDuringPeriod(t *testing.T) {
 
 	// Period and Cats
 	for _, period := range test_periods {
-		contributors_sql := NewTopContributors().duringPeriod(period.Period).fromCats([]string{"umvc3"})
+		contributors_sql := NewTopContributors().duringPeriod(period.Period).fromCatFilters([]string{"umvc3"})
 		if period.Valid && contributors_sql.Error != nil {
 			t.Fatal(contributors_sql.Error)
 		} else if !period.Valid && contributors_sql.Error == nil {

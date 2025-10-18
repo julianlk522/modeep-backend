@@ -26,12 +26,12 @@ func TestPrepareLinksPage(t *testing.T) {
 		{
 			LinksSQL: query.NewTopLinks().FromRequestParams(
 				url.Values{
-					"cats": []string{"umvc3,flowers"},
+					"cats": test_multiple_cats,
 					"page": []string{"1"},
 				},
 			),
 			Options: &model.LinksPageOptions{
-				Cats: "umvc3,flowers",
+				CatFilters: test_multiple_cats, 
 			},
 			Valid:      true,
 		},
@@ -43,7 +43,7 @@ func TestPrepareLinksPage(t *testing.T) {
 				},
 			),
 			Options: &model.LinksPageOptions{
-				NSFW: true,
+				IncludeNSFW: true,
 			},
 			Valid:      false,
 		},

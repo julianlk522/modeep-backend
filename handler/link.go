@@ -21,38 +21,47 @@ import (
 )
 
 func GetLinks(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	links_sql := query.
-		NewTopLinks().
-		FromRequestParams(
-			r.URL.Query(),
-		)
+	url_params := r.URL.Query()
+	links_sql := query.NewTopLinks().FromRequestParams(url_params)
 
+	// Context for values that need to be screened by middleware first
+	// as opposed to just passed through URL straight into the SQL query
+	// like those above.
+	ctx := r.Context()
+	// User ID is verified first by JWT middleware
 	req_user_id := ctx.Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	if req_user_id != "" {
 		links_sql = links_sql.AsSignedInUser(req_user_id)
 	}
-
+	// Page is checked first by **drumroll** ... Pagination middleware
 	page := ctx.Value(m.PageKey).(int)
 	links_sql = links_sql.Page(page)
-	if links_sql.Error != nil {
-		render.Render(w, r, e.ErrInvalidRequest(links_sql.Error))
-		return
+
+	// Cat filters and the include-NSFW flag also must travel separately from
+	// just the query itself since PrepareLinksPage() needs to know which
+	// cats to determine if there were any merged results from close-spellings
+	// of them, and the include-NSFW params are passed separately to perform
+	// a janky conditional string replace in TopLinks.CountNSFWLinks()...
+	// TODO fix that
+	cat_filters_params := url_params.Get("cats")
+	cat_filters := strings.Split(cat_filters_params, ",")
+
+	include_nsfw_params := url_params.Get("nsfw")
+	include_nsfw := include_nsfw_params == "true"
+	page_opts := &model.LinksPageOptions{
+		CatFilters: cat_filters,
+		IncludeNSFW: include_nsfw,
 	}
 
 	var resp any
 	var err error
-
-	page_opts := &model.LinksPageOptions{
-		Cats: r.URL.Query().Get("cats"),
-		NSFW: r.URL.Query().Get("nsfw") == "true",
-	}
 
 	if req_user_id != "" {
 		resp, err = util.PrepareLinksPage[model.LinkSignedIn](links_sql, page_opts)
 	} else {
 		resp, err = util.PrepareLinksPage[model.Link](links_sql, page_opts)
 	}
+
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 	}

@@ -54,16 +54,15 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 	
 	paginateLinks(links_page.Links)
 
-	cats_params := options.Cats
-	if cats_params != "" {
-		cat_filters := strings.Split(cats_params, ",")
+	cat_filters := options.CatFilters
+	if len(cat_filters) > 0 {
 		links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
 			links_page.Links,
 			cat_filters,
 		)
 	}
 	
-	nsfw_params := options.NSFW
+	nsfw_params := options.IncludeNSFW
 	hidden_links, err := getNSFWLinksCount[T](links_sql, nsfw_params)
 	if err != nil {
 		return nil, err

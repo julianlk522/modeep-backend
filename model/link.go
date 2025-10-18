@@ -47,8 +47,8 @@ func (lsi LinkSignedIn) GetCats() string {
 }
 
 type LinksPageOptions struct {
-	Cats string
-	NSFW bool
+	CatFilters  []string
+	IncludeNSFW bool
 }
 
 type LinksPage[T Link | LinkSignedIn] struct {

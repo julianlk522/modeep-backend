@@ -586,13 +586,13 @@ func (sm *SpellfixMatches) FromRequestParams(params url.Values) *SpellfixMatches
 	}
 	cat_filter_params := params.Get("omitted")
 	if cat_filter_params != "" {
-		cats_split := strings.Split(cat_filter_params, ",")
-		sm = sm.fromCats(cats_split)
+		cat_filters := strings.Split(cat_filter_params, ",")
+		sm = sm.fromCatFilters(cat_filters)
 	}
-	new_link_cat_filter_params := params.Get("new_link_omitted")
-	if new_link_cat_filter_params != "" {
-		cats_split := strings.Split(new_link_cat_filter_params, ",")
-		sm = sm.fromCatsWhileSubmittingLink(cats_split)
+	new_link_page_cat_filter_params := params.Get("new_link_omitted")
+	if new_link_page_cat_filter_params != "" {
+		cat_filters := strings.Split(new_link_page_cat_filter_params, ",")
+		sm = sm.fromCatFiltersWhileSubmittingLink(cat_filters)
 	}
 	return sm
 }
@@ -745,7 +745,7 @@ FROM FilteredSpellfixMatches
 ORDER BY (MAX(distance, %d) / rank_in_context), rank_in_context DESC
 LIMIT ?;`, DISTANCE_LOWER_BOUND)
 
-func (sm *SpellfixMatches) fromCats(cat_filters []string) *SpellfixMatches {
+func (sm *SpellfixMatches) fromCatFilters(cat_filters []string) *SpellfixMatches {
 	if len(cat_filters) == 0 || cat_filters[0] == "" {
 		sm.Error = e.ErrNoCatFilters
 		return sm
@@ -911,17 +911,17 @@ var FILTERED_NORMALIZED_MATCHES_CTE = `NormalizedMatches AS (
 // whether or not there are existing links with similar classifications. So for those
 // spellfix recommendations, we just show the number of links that have them in their
 // global cats regardless of already-applied filters.
-func (sm *SpellfixMatches) fromCatsWhileSubmittingLink(cats []string) *SpellfixMatches {
+func (sm *SpellfixMatches) fromCatFiltersWhileSubmittingLink(cat_filters []string) *SpellfixMatches {
 	new_spellfix_matches_cte := SPELLFIX_MATCHES_FROM_CATS_WHILE_SUBMITTING_LINK_CTE
-	if len(cats) == 0 {
+	if len(cat_filters) == 0 {
 		return sm
 	}
-	var not_in_args = []any{cats[0]}
-	if len(cats) > 1 {
+	var not_in_args = []any{cat_filters[0]}
+	if len(cat_filters) > 1 {
 		not_in_clause := "AND gcs.word NOT IN (?"
-		for c:= 1; c < len(cats); c++ {
+		for c:= 1; c < len(cat_filters); c++ {
 			not_in_clause += ", ?"
-			not_in_args = append(not_in_args, cats[c])
+			not_in_args = append(not_in_args, cat_filters[c])
 		}
 		not_in_clause += ")"
 		new_spellfix_matches_cte = strings.Replace(
