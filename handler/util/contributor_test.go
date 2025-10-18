@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/julianlk522/modeep/query"
@@ -19,7 +21,7 @@ func TestScanContributors(t *testing.T) {
 	}
 
 	// single cat
-	contributors_sql = query.NewTopContributors().FromCats(test_single_cat)
+	contributors_sql = query.NewTopContributors().FromRequestParams(url.Values{"cats": []string{test_single_cat[0]}})
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
@@ -52,7 +54,8 @@ func TestScanContributors(t *testing.T) {
 	}
 
 	// multiple cats
-	contributors_sql = query.NewTopContributors().FromCats(test_multiple_cats)
+	multiple_cats_params := url.Values{"cats": []string{strings.Join(test_multiple_cats, ",")}}
+	contributors_sql = query.NewTopContributors().FromRequestParams(multiple_cats_params)
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}

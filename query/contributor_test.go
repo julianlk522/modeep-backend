@@ -46,7 +46,7 @@ func TestNewTopContributors(t *testing.T) {
 }
 
 func TestTopContributorsFromCats(t *testing.T) {
-	contributors_sql := NewTopContributors().FromCats(
+	contributors_sql := NewTopContributors().fromCats(
 		[]string{
 			"umvc3",
 			"c. viper",
@@ -81,7 +81,7 @@ FROM Links l`,
 
 func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 	// case-insensitive
-	contributors_sql := NewTopContributors().WithGlobalSummaryContaining("gooGLE")
+	contributors_sql := NewTopContributors().withGlobalSummaryContaining("gooGLE")
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
@@ -123,10 +123,10 @@ func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 
 	// no conflict w/ other methods
 	contributors_sql = NewTopContributors().
-		WithGlobalSummaryContaining("TEST").
-		WithURLContaining("www").
-		WithURLLacking("test").
-		DuringPeriod("all")
+		withGlobalSummaryContaining("TEST").
+		withURLContaining("www").
+		withURLLacking("test").
+		duringPeriod("all")
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
@@ -175,7 +175,7 @@ func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 
 func TestTopContributorsWithURLContaining(t *testing.T) {
 	// case-insensitive
-	contributors_sql := NewTopContributors().WithURLContaining("gooGLE")
+	contributors_sql := NewTopContributors().withURLContaining("gooGLE")
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
 	}
@@ -232,7 +232,7 @@ func TestTopContributorsDuringPeriod(t *testing.T) {
 
 	// Period only
 	for _, period := range test_periods {
-		contributors_sql := NewTopContributors().DuringPeriod(period.Period)
+		contributors_sql := NewTopContributors().duringPeriod(period.Period)
 		if period.Valid && contributors_sql.Error != nil {
 			t.Fatal(contributors_sql.Error)
 		} else if !period.Valid && contributors_sql.Error == nil {
@@ -248,7 +248,7 @@ func TestTopContributorsDuringPeriod(t *testing.T) {
 
 	// Period and Cats
 	for _, period := range test_periods {
-		contributors_sql := NewTopContributors().DuringPeriod(period.Period).FromCats([]string{"umvc3"})
+		contributors_sql := NewTopContributors().duringPeriod(period.Period).fromCats([]string{"umvc3"})
 		if period.Valid && contributors_sql.Error != nil {
 			t.Fatal(contributors_sql.Error)
 		} else if !period.Valid && contributors_sql.Error == nil {

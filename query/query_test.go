@@ -46,7 +46,7 @@ func TestWithOptionalPluralOrSingularForm(t *testing.T) {
 	}
 
 	for i, cat := range test_cats.Cats {
-		cat = WithOptionalPluralOrSingularForm(cat)
+		cat = withOptionalPluralOrSingularForm(cat)
 		if cat != test_cats.ExpectedResults[i] {
 			t.Fatalf("got %s, want %s", cat, test_cats.ExpectedResults[i])
 		}

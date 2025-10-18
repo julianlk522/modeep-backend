@@ -67,11 +67,11 @@ func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOption
 	if opts.OnlySection != "" {
 		switch opts.OnlySection {
 		case "submitted":
-			tnlc.SubmittedOnly()
+			tnlc.submittedOnly()
 		case "starred":
-			tnlc.StarredOnly()
+			tnlc.starredOnly()
 		case "tagged":
-			tnlc.TaggedOnly()
+			tnlc.taggedOnly()
 		default:
 			tnlc.Error = e.ErrInvalidOnlySectionParams
 			return tnlc
@@ -79,29 +79,29 @@ func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOption
 	}
 
 	if len(opts.CatsFilter) > 0 {
-		tnlc.FromCats(opts.CatsFilter)
+		tnlc.fromCats(opts.CatsFilter)
 	}
 
 	if opts.Period != "" {
-		tnlc.DuringPeriod(opts.Period)
+		tnlc.duringPeriod(opts.Period)
 	}
 
 	if opts.SummaryContains != "" {
-		tnlc.WithSummaryContaining(opts.SummaryContains)
+		tnlc.withSummaryContaining(opts.SummaryContains)
 	}
 
 	if opts.URLContains != "" {
-		tnlc.WithURLContaining(opts.URLContains)
+		tnlc.withURLContaining(opts.URLContains)
 	}
 
 	if opts.URLLacks != "" {
-		tnlc.WithURLLacking(opts.URLLacks)
+		tnlc.withURLLacking(opts.URLLacks)
 	}
 
 	return tnlc
 }
 
-func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) submittedOnly() *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		NSFW_LINKS_COUNT_FINAL_AND,
@@ -112,7 +112,7 @@ func (tnlc *TmapNSFWLinksCount) SubmittedOnly() *TmapNSFWLinksCount {
 	return tnlc
 }
 
-func (tnlc *TmapNSFWLinksCount) StarredOnly() *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) starredOnly() *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		NSFW_LINKS_COUNT_FINAL_AND,
@@ -125,7 +125,7 @@ func (tnlc *TmapNSFWLinksCount) StarredOnly() *TmapNSFWLinksCount {
 	return tnlc
 }
 
-func (tnlc *TmapNSFWLinksCount) TaggedOnly() *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) taggedOnly() *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		NSFW_LINKS_COUNT_FINAL_AND,
@@ -138,7 +138,7 @@ func (tnlc *TmapNSFWLinksCount) TaggedOnly() *TmapNSFWLinksCount {
 
 // Any cat filters must be present in either the user's cats for a link, if they
 // have tagged it, or otherwise in the global tag
-func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) fromCats(cats []string) *TmapNSFWLinksCount {
 	if len(cats) == 0 || cats[0] == "" {
 		return tnlc
 	}
@@ -199,12 +199,12 @@ func (tnlc *TmapNSFWLinksCount) FromCats(cats []string) *TmapNSFWLinksCount {
 	return tnlc
 }
 
-func (tnlc *TmapNSFWLinksCount) DuringPeriod(period string) *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) duringPeriod(period string) *TmapNSFWLinksCount {
 	if period == "all" {
 		return tnlc
 	}
 
-	period_clause, err := GetPeriodClause(period)
+	period_clause, err := getPeriodClause(period)
 	if err != nil {
 		tnlc.Error = err
 		return tnlc
@@ -229,7 +229,7 @@ func (tnlc *TmapNSFWLinksCount) DuringPeriod(period string) *TmapNSFWLinksCount 
 
 // As with cat filters, the specified snippet must either be present on the user's
 // summary for a link, if they submitted one, or otherwise on the global summary
-func (tnlc *TmapNSFWLinksCount) WithSummaryContaining(snippet string) *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) withSummaryContaining(snippet string) *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER,
@@ -259,7 +259,7 @@ func (tnlc *TmapNSFWLinksCount) WithSummaryContaining(snippet string) *TmapNSFWL
 	return tnlc
 }
 
-func (tnlc *TmapNSFWLinksCount) WithURLContaining(snippet string) *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) withURLContaining(snippet string) *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		";",
@@ -270,7 +270,7 @@ func (tnlc *TmapNSFWLinksCount) WithURLContaining(snippet string) *TmapNSFWLinks
 	return tnlc
 }
 
-func (tnlc *TmapNSFWLinksCount) WithURLLacking(snippet string) *TmapNSFWLinksCount {
+func (tnlc *TmapNSFWLinksCount) withURLLacking(snippet string) *TmapNSFWLinksCount {
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		";",
@@ -286,26 +286,34 @@ type TmapLinksQueryBuilder interface {
 	FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilder
 	Build() *Query
 
-	FromCats(cats []string) TmapLinksQueryBuilder
-	AsSignedInUser(user_id string) TmapLinksQueryBuilder
-	SortBy(metric string) TmapLinksQueryBuilder
-	NSFW() TmapLinksQueryBuilder
-	DuringPeriod(period string) TmapLinksQueryBuilder
-	WithSummaryContaining(snippet string) TmapLinksQueryBuilder
-	WithURLContaining(snippet string) TmapLinksQueryBuilder
-	WithURLLacking(snippet string) TmapLinksQueryBuilder
+	fromCats(cats []string) TmapLinksQueryBuilder
+	asSignedInUser(user_id string) TmapLinksQueryBuilder
+	sortBy(metric string) TmapLinksQueryBuilder
+	nsfw() TmapLinksQueryBuilder
+	duringPeriod(period string) TmapLinksQueryBuilder
+	withSummaryContaining(snippet string) TmapLinksQueryBuilder
+	withURLContaining(snippet string) TmapLinksQueryBuilder
+	withURLLacking(snippet string) TmapLinksQueryBuilder
 }
 
 type TmapSubmitted struct {
 	*Query
 }
-
 type TmapStarred struct {
 	*Query
 }
-
 type TmapTagged struct {
 	*Query
+}
+
+func (ts *TmapSubmitted) Build() *Query {
+	return ts.Query
+}
+func (ts *TmapStarred) Build() *Query {
+	return ts.Query
+}
+func (ts *TmapTagged) Build() *Query {
+	return ts.Query
 }
 
 // SUBMITTED
@@ -339,44 +347,40 @@ AND l.submitted_by = ?`
 
 func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilder {
 	if len(opts.Cats) > 0 {
-		ts.FromCats(opts.Cats)
+		ts.fromCats(opts.Cats)
 	}
 	if opts.AsSignedInUser != "" {
-		ts.AsSignedInUser(opts.AsSignedInUser)
+		ts.asSignedInUser(opts.AsSignedInUser)
 	}
 
 	if opts.SortBy != "" {
-		ts.SortBy(opts.SortBy)
+		ts.sortBy(opts.SortBy)
 	}
 
 	if opts.IncludeNSFW {
-		ts.NSFW()
+		ts.nsfw()
 	}
 
 	if opts.Period != "" {
-		ts.DuringPeriod(opts.Period)
+		ts.duringPeriod(opts.Period)
 	}
 
 	if opts.SummaryContains != "" {
-		ts.WithSummaryContaining(opts.SummaryContains)
+		ts.withSummaryContaining(opts.SummaryContains)
 	}
 
 	if opts.URLContains != "" {
-		ts.WithURLContaining(opts.URLContains)
+		ts.withURLContaining(opts.URLContains)
 	}
 
 	if opts.URLLacks != "" {
-		ts.WithURLLacking(opts.URLLacks)
+		ts.withURLLacking(opts.URLLacks)
 	}
 
 	return ts
 }
 
-func (ts *TmapSubmitted) Build() *Query {
-	return ts.Query
-}
-
-func (ts *TmapSubmitted) FromCats(cats []string) TmapLinksQueryBuilder {
+func (ts *TmapSubmitted) fromCats(cats []string) TmapLinksQueryBuilder {
 	// The specified cats are required on either the user's tag if
 	// they submitted one or on the global tag.
 
@@ -433,14 +437,14 @@ func (ts *TmapSubmitted) FromCats(cats []string) TmapLinksQueryBuilder {
 	return ts
 }
 
-func (ts *TmapSubmitted) AsSignedInUser(user_id string) TmapLinksQueryBuilder {
+func (ts *TmapSubmitted) asSignedInUser(user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
 		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
 		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
-		// in vase TMAP_BASE_FIELDS are modified by .FromCats
+		// in vase TMAP_BASE_FIELDS are modified by .fromCats
 		TMAP_FROM_CATS_FIELDS, TMAP_FROM_CATS_FIELDS + TMAP_AUTH_FIELD,
 		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
-		// in case TMAP_BASE_JOINS are modified by .FromCats
+		// in case TMAP_BASE_JOINS are modified by .fromCats
 		CAT_FILTER_JOINS, CAT_FILTER_JOINS + TMAP_AUTH_JOIN,
 	)
 	ts.Text = fields_replacer.Replace(ts.Text)
@@ -458,7 +462,7 @@ func (ts *TmapSubmitted) AsSignedInUser(user_id string) TmapLinksQueryBuilder {
 	return ts
 }
 
-func (ts *TmapSubmitted) NSFW() TmapLinksQueryBuilder {
+func (ts *TmapSubmitted) nsfw() TmapLinksQueryBuilder {
 	// Remove NSFW clause
 	ts.Text = strings.Replace(
 		ts.Text,
@@ -496,7 +500,7 @@ WHERE l.submitted_by = ?`,
 	return ts
 }
 
-func (ts *TmapSubmitted) SortBy(metric string) TmapLinksQueryBuilder {
+func (ts *TmapSubmitted) sortBy(metric string) TmapLinksQueryBuilder {
 	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
@@ -514,12 +518,12 @@ func (ts *TmapSubmitted) SortBy(metric string) TmapLinksQueryBuilder {
 	return ts
 }
 
-func (ts *TmapSubmitted) DuringPeriod(period string) TmapLinksQueryBuilder {
+func (ts *TmapSubmitted) duringPeriod(period string) TmapLinksQueryBuilder {
 	if period == "all" {
 		return ts
 	}
 	
-	period_clause, err := GetPeriodClause(period)
+	period_clause, err := getPeriodClause(period)
 	if err != nil {
 		ts.Error = err
 		return ts
@@ -546,7 +550,7 @@ func (ts *TmapSubmitted) DuringPeriod(period string) TmapLinksQueryBuilder {
 	return ts
 }
 
-func (ts *TmapSubmitted) WithSummaryContaining(snippet string) TmapLinksQueryBuilder {
+func (ts *TmapSubmitted) withSummaryContaining(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -560,7 +564,7 @@ func (ts *TmapSubmitted) WithSummaryContaining(snippet string) TmapLinksQueryBui
 	return ts
 }
 
-func (ts *TmapSubmitted) WithURLContaining(snippet string) TmapLinksQueryBuilder {
+func (ts *TmapSubmitted) withURLContaining(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -575,7 +579,7 @@ func (ts *TmapSubmitted) WithURLContaining(snippet string) TmapLinksQueryBuilder
 	return ts
 }
 
-func (ts *TmapSubmitted) WithURLLacking(snippet string) TmapLinksQueryBuilder {
+func (ts *TmapSubmitted) withURLLacking(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -626,46 +630,41 @@ AND l.submitted_by != ?`
 
 func (ts *TmapStarred) FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilder {
 	if len(opts.Cats) > 0 {
-		ts.FromCats(opts.Cats)
+		ts.fromCats(opts.Cats)
 	}
 
 	if opts.AsSignedInUser != "" {
-		ts.AsSignedInUser(opts.AsSignedInUser)
+		ts.asSignedInUser(opts.AsSignedInUser)
 	}
 
 	if opts.SortBy != "" {
-		ts.SortBy(opts.SortBy)
+		ts.sortBy(opts.SortBy)
 	}
 
 	if opts.IncludeNSFW {
-		ts.NSFW()
+		ts.nsfw()
 	}
 
 	if opts.Period != "" {
-		ts.DuringPeriod(opts.Period)
+		ts.duringPeriod(opts.Period)
 	}
 
 	if opts.SummaryContains != "" {
-		ts.WithSummaryContaining(opts.SummaryContains)
+		ts.withSummaryContaining(opts.SummaryContains)
 	}
 
 	if opts.URLContains != "" {
-		ts.WithURLContaining(opts.URLContains)
+		ts.withURLContaining(opts.URLContains)
 	}
 
 	if opts.URLLacks != "" {
-		ts.WithURLLacking(opts.URLLacks)
+		ts.withURLLacking(opts.URLLacks)
 	}
 	
 	return ts
 }
 
-func (ts *TmapStarred) Build() *Query {
-	return ts.Query
-}
-
-
-func (ts *TmapStarred) FromCats(cats []string) TmapLinksQueryBuilder {
+func (ts *TmapStarred) fromCats(cats []string) TmapLinksQueryBuilder {
 	// Add CTEs
 	ts.Text = strings.Replace(
 		ts.Text,
@@ -717,14 +716,14 @@ func (ts *TmapStarred) FromCats(cats []string) TmapLinksQueryBuilder {
 	return ts
 }
 
-func (ts *TmapStarred) AsSignedInUser(req_user_id string) TmapLinksQueryBuilder {
+func (ts *TmapStarred) asSignedInUser(req_user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
 		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
 		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
-		// in vase TMAP_BASE_FIELDS are modified by .FromCats
+		// in vase TMAP_BASE_FIELDS are modified by .fromCats
 		TMAP_FROM_CATS_FIELDS, TMAP_FROM_CATS_FIELDS + TMAP_AUTH_FIELD,
 		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
-		// in case TMAP_BASE_JOINS are modified by .FromCats
+		// in case TMAP_BASE_JOINS are modified by .fromCats
 		CAT_FILTER_JOINS, CAT_FILTER_JOINS + TMAP_AUTH_JOIN,
 	)
 
@@ -747,7 +746,7 @@ func (ts *TmapStarred) AsSignedInUser(req_user_id string) TmapLinksQueryBuilder 
 	return ts
 }
 
-func (ts *TmapStarred) NSFW() TmapLinksQueryBuilder {
+func (ts *TmapStarred) nsfw() TmapLinksQueryBuilder {
 	// Remove NSFW clause
 	ts.Text = strings.Replace(
 		ts.Text,
@@ -786,7 +785,7 @@ WHERE l.submitted_by != ?`,
 	return ts
 }
 
-func (ts *TmapStarred) SortBy(metric string) TmapLinksQueryBuilder {
+func (ts *TmapStarred) sortBy(metric string) TmapLinksQueryBuilder {
 	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
@@ -804,12 +803,12 @@ func (ts *TmapStarred) SortBy(metric string) TmapLinksQueryBuilder {
 	return ts
 }
 
-func (ts *TmapStarred) DuringPeriod(period string) TmapLinksQueryBuilder {
+func (ts *TmapStarred) duringPeriod(period string) TmapLinksQueryBuilder {
 	if period == "all" {
 		return ts
 	}
 	
-	period_clause, err := GetPeriodClause(period)
+	period_clause, err := getPeriodClause(period)
 	if err != nil {
 		ts.Error = err
 		return ts
@@ -834,7 +833,7 @@ func (ts *TmapStarred) DuringPeriod(period string) TmapLinksQueryBuilder {
 	return ts
 }
 
-func (ts *TmapStarred) WithSummaryContaining(snippet string) TmapLinksQueryBuilder {
+func (ts *TmapStarred) withSummaryContaining(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -848,7 +847,7 @@ func (ts *TmapStarred) WithSummaryContaining(snippet string) TmapLinksQueryBuild
 	return ts
 }
 
-func (ts *TmapStarred) WithURLContaining(snippet string) TmapLinksQueryBuilder {
+func (ts *TmapStarred) withURLContaining(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -863,7 +862,7 @@ func (ts *TmapStarred) WithURLContaining(snippet string) TmapLinksQueryBuilder {
 	return ts
 }
 
-func (ts *TmapStarred) WithURLLacking(snippet string) TmapLinksQueryBuilder {
+func (ts *TmapStarred) withURLLacking(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		ts.Text = strings.Replace(
 			ts.Text,
@@ -947,45 +946,41 @@ AND l.id NOT IN
 
 func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilder {
 	if len(opts.Cats) > 0 {
-		tt.FromCats(opts.Cats)
+		tt.fromCats(opts.Cats)
 	}
 	
 	if opts.AsSignedInUser != "" {
-		tt.AsSignedInUser(opts.AsSignedInUser)
+		tt.asSignedInUser(opts.AsSignedInUser)
 	}
 	
 	if opts.SortBy != "" {
-		tt.SortBy(opts.SortBy)
+		tt.sortBy(opts.SortBy)
 	}
 	
 	if opts.IncludeNSFW {
-		tt.NSFW()
+		tt.nsfw()
 	}
 	
 	if opts.Period != "" {
-		tt.DuringPeriod(opts.Period)
+		tt.duringPeriod(opts.Period)
 	}
 
 	if opts.SummaryContains != "" {
-		tt.WithSummaryContaining(opts.SummaryContains)
+		tt.withSummaryContaining(opts.SummaryContains)
 	}
 	
 	if opts.URLContains != "" {
-		tt.WithURLContaining(opts.URLContains)
+		tt.withURLContaining(opts.URLContains)
 	}
 
 	if opts.URLLacks != "" {
-		tt.WithURLLacking(opts.URLLacks)
+		tt.withURLLacking(opts.URLLacks)
 	}
 
 	return tt
 }
 
-func (tt *TmapTagged) Build() *Query {
-	return tt.Query
-}
-
-func (tt *TmapTagged) FromCats(cats []string) TmapLinksQueryBuilder {
+func (tt *TmapTagged) fromCats(cats []string) TmapLinksQueryBuilder {
 	if len(cats) == 0 || cats[0] == "" {
 		return tt
 	}
@@ -994,7 +989,7 @@ func (tt *TmapTagged) FromCats(cats []string) TmapLinksQueryBuilder {
 	match_clause := `
 	AND uct.user_cats MATCH ?`
 
-	// .SortBy hasn't been called yet - can safely assume
+	// .sortBy hasn't been called yet - can safely assume
 	// it will have this one
 	tt.Text = strings.Replace(
 		tt.Text,
@@ -1013,7 +1008,7 @@ func (tt *TmapTagged) FromCats(cats []string) TmapLinksQueryBuilder {
 	return tt
 }
 
-func (tt *TmapTagged) AsSignedInUser(req_user_id string) TmapLinksQueryBuilder {
+func (tt *TmapTagged) asSignedInUser(req_user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
 		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
 		TAGGED_FIELDS, TAGGED_FIELDS + TMAP_AUTH_FIELD,
@@ -1034,7 +1029,7 @@ func (tt *TmapTagged) AsSignedInUser(req_user_id string) TmapLinksQueryBuilder {
 	return tt
 }
 
-func (tt *TmapTagged) NSFW() TmapLinksQueryBuilder {
+func (tt *TmapTagged) nsfw() TmapLinksQueryBuilder {
 	// Remove NSFW clause
 	tt.Text = strings.Replace(
 		tt.Text,
@@ -1078,7 +1073,7 @@ func (tt *TmapTagged) NSFW() TmapLinksQueryBuilder {
 	return tt
 }
 
-func (tt *TmapTagged) SortBy(metric string) TmapLinksQueryBuilder {
+func (tt *TmapTagged) sortBy(metric string) TmapLinksQueryBuilder {
 	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := tmap_order_by_clauses[metric]
 		if !ok {
@@ -1096,12 +1091,12 @@ func (tt *TmapTagged) SortBy(metric string) TmapLinksQueryBuilder {
 	return tt
 }
 
-func (tt *TmapTagged) DuringPeriod(period string) TmapLinksQueryBuilder {
+func (tt *TmapTagged) duringPeriod(period string) TmapLinksQueryBuilder {
 	if period == "all" {
 		return tt
 	}
 	
-	period_clause, err := GetPeriodClause(period)
+	period_clause, err := getPeriodClause(period)
 	if err != nil {
 		tt.Error = err
 		return tt
@@ -1127,7 +1122,7 @@ for _, order_by_clause := range tmap_order_by_clauses {
 }
 
 
-func (tt *TmapTagged) WithSummaryContaining(snippet string) TmapLinksQueryBuilder {
+func (tt *TmapTagged) withSummaryContaining(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		tt.Text = strings.Replace(
 			tt.Text,
@@ -1142,7 +1137,7 @@ func (tt *TmapTagged) WithSummaryContaining(snippet string) TmapLinksQueryBuilde
 	return tt
 }
 
-func (tt *TmapTagged) WithURLContaining(snippet string) TmapLinksQueryBuilder {
+func (tt *TmapTagged) withURLContaining(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		tt.Text = strings.Replace(
 			tt.Text,
@@ -1157,7 +1152,7 @@ func (tt *TmapTagged) WithURLContaining(snippet string) TmapLinksQueryBuilder {
 	return tt
 }
 
-func (tt *TmapTagged) WithURLLacking(snippet string) TmapLinksQueryBuilder {
+func (tt *TmapTagged) withURLLacking(snippet string) TmapLinksQueryBuilder {
 	for _, order_by_clause := range tmap_order_by_clauses {
 		tt.Text = strings.Replace(
 			tt.Text,

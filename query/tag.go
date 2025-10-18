@@ -12,7 +12,17 @@ import (
 type TagRankingsForLink struct {
 	*Query
 }
+type GlobalCatsForLink struct {
+	*Query
+}
+type TopGlobalCatCounts struct {
+	*Query
+}
+type SpellfixMatches struct {
+	*Query
+}
 
+// TAG RANKINGS FOR LINK
 func NewTagRankingsForLink(link_id string) *TagRankingsForLink {
 	return (&TagRankingsForLink{
 		Query: &Query{
@@ -35,10 +45,7 @@ LIMIT ?;`,
 	})
 }
 
-type GlobalCatsForLink struct {
-	*Query
-}
-
+// GLOBAL CATS FOR LINK
 func NewGlobalCatsForLink(link_id string) *GlobalCatsForLink {
 	return (&GlobalCatsForLink{
 		Query: &Query{
@@ -122,10 +129,7 @@ WHERE cat_score >= high_score / 100 * ?;`,
 	})
 }
 
-type TopGlobalCatCounts struct {
-	*Query
-}
-
+// TOP GLOBAL CATS ACROSS ALL LINKS
 func NewTopGlobalCatCounts() *TopGlobalCatCounts {
 	return (&TopGlobalCatCounts{
 		Query: &Query{
@@ -189,32 +193,32 @@ LIMIT ?;`
 func (gcc *TopGlobalCatCounts) FromRequestParams(params url.Values) *TopGlobalCatCounts {
 	cats_params := params.Get("cats")
 	if cats_params != "" {
-		gcc = gcc.SubcatsOfCats(cats_params)
+		gcc = gcc.subcatsOfCats(cats_params)
 	}
 
 	summary_contains_params := params.Get("summary_contains")
 	if summary_contains_params != "" {
-		gcc = gcc.WithGlobalSummaryContaining(summary_contains_params)
+		gcc = gcc.withGlobalSummaryContaining(summary_contains_params)
 	}
 
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
-		gcc = gcc.WithURLContaining(url_contains_params)
+		gcc = gcc.withURLContaining(url_contains_params)
 	}
 
 	url_lacks_params := params.Get("url_lacks")
 	if url_lacks_params != "" {
-		gcc = gcc.WithURLLacking(url_lacks_params)
+		gcc = gcc.withURLLacking(url_lacks_params)
 	}
 
 	period_params := params.Get("period")
 	if period_params != "" {
-		gcc = gcc.DuringPeriod(period_params)
+		gcc = gcc.duringPeriod(period_params)
 	}
 
 	more_params := params.Get("more")
 	if more_params == "true" {
-		gcc = gcc.More()
+		gcc = gcc.more()
 	} else if more_params != "" {
 		gcc.Error = e.ErrInvalidMoreFlag
 	}
@@ -222,7 +226,7 @@ func (gcc *TopGlobalCatCounts) FromRequestParams(params url.Values) *TopGlobalCa
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) SubcatsOfCats(cats_params string) *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) subcatsOfCats(cats_params string) *TopGlobalCatCounts {
 	// lowercase cats to ensure all case variations are returned
 	cats := strings.Split(strings.ToLower(cats_params), ",")
 
@@ -243,9 +247,9 @@ func (gcc *TopGlobalCatCounts) SubcatsOfCats(cats_params string) *TopGlobalCatCo
 
 	// Add optional singular/plural variants
 	// (skipped for NOT IN clause otherwise subcats include filters)
-	match_arg := WithOptionalPluralOrSingularForm(cats[0])
+	match_arg := withOptionalPluralOrSingularForm(cats[0])
 	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + WithOptionalPluralOrSingularForm(cats[i])
+		match_arg += " AND " + withOptionalPluralOrSingularForm(cats[i])
 	}
 	gcc.Args = append(gcc.Args, match_arg)
 
@@ -269,7 +273,7 @@ func (gcc *TopGlobalCatCounts) SubcatsOfCats(cats_params string) *TopGlobalCatCo
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) WithGlobalSummaryContaining(snippet string) *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) withGlobalSummaryContaining(snippet string) *TopGlobalCatCounts {
 	// in case either .WithURLContaining or .WithURLLacking was run first
 	if strings.Contains(
 		gcc.Text, 
@@ -331,7 +335,7 @@ func (gcc *TopGlobalCatCounts) WithGlobalSummaryContaining(snippet string) *TopG
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) WithURLContaining(snippet string) *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) withURLContaining(snippet string) *TopGlobalCatCounts {
 	// in case .WithGlobalSummaryContaining was run first
 	if strings.Contains(
 		gcc.Text, 
@@ -396,7 +400,7 @@ func (gcc *TopGlobalCatCounts) WithURLContaining(snippet string) *TopGlobalCatCo
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) WithURLLacking(snippet string) *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) withURLLacking(snippet string) *TopGlobalCatCounts {
 	// in case .WithGlobalSummaryContaining was run first
 	if strings.Contains(
 		gcc.Text, 
@@ -461,12 +465,12 @@ func (gcc *TopGlobalCatCounts) WithURLLacking(snippet string) *TopGlobalCatCount
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) DuringPeriod(period string) *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) duringPeriod(period string) *TopGlobalCatCounts {
 	if period == "all" {
 		return gcc
 	}
 	
-	clause, err := GetPeriodClause(period)
+	clause, err := getPeriodClause(period)
 	if err != nil {
 		gcc.Error = err
 		return gcc
@@ -485,15 +489,12 @@ func (gcc *TopGlobalCatCounts) DuringPeriod(period string) *TopGlobalCatCounts {
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) More() *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) more() *TopGlobalCatCounts {
 	gcc.Args[len(gcc.Args)-1] = MORE_GLOBAL_CATS_PAGE_LIMIT
 	return gcc
 }
 
-type SpellfixMatches struct {
-	*Query
-}
-
+// SPELLFIX
 func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
 	return (&SpellfixMatches{
 		Query: &Query{
@@ -584,11 +585,11 @@ func (sm *SpellfixMatches) FromTmap(tmap_owner_login_name string) *SpellfixMatch
 	// Old: snippet, snippet*, LIMIT
 	// New: tmap_owner_login_name, ("snippet" OR "snippets" OR "snippet"*) x2, tmap_owner_login_name x3, %snippet%, snippet, snippet*, LIMIT
 	raw_snippet := sm.Args[0]
-	snippet_with_spelling_variants := WithOptionalPluralOrSingularForm(raw_snippet.(string))
+	snippet_with_spelling_variants := withOptionalPluralOrSingularForm(raw_snippet.(string))
 	snippet_with_spelling_variants_and_wildcard := strings.Replace(
 		snippet_with_spelling_variants,
 		")",
-		" OR " + GetCatSurroundedInDoubleQuotes(raw_snippet.(string)) + "*)",
+		" OR " + getCatSurroundedInDoubleQuotes(raw_snippet.(string)) + "*)",
 		1,
 	)
 

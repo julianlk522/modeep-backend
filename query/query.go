@@ -13,7 +13,7 @@ type Query struct {
 	Error error
 }
 
-func GetPeriodClause(period string) (clause string, err error) {
+func getPeriodClause(period string) (clause string, err error) {
 	var days int
 	switch period {
 	case "day":
@@ -34,47 +34,38 @@ func GetPeriodClause(period string) (clause string, err error) {
 func GetCatsOptionalPluralOrSingularForms(cats []string) []string {
 	modified_cats := make([]string, len(cats))
 	for i := range cats {
-		modified_cats[i] = WithOptionalPluralOrSingularForm(cats[i])
+		modified_cats[i] = withOptionalPluralOrSingularForm(cats[i])
 	}
 
 	return modified_cats
 }
 
-func WithOptionalPluralOrSingularForm(cat string) string {
+func withOptionalPluralOrSingularForm(cat string) string {
 	lc_cat := strings.ToLower(cat)
 	if strings.HasSuffix(lc_cat, "ss") {
 		return fmt.Sprintf("(%s OR %s)", 
-			GetCatSurroundedInDoubleQuotes(lc_cat), 
-			GetCatSurroundedInDoubleQuotes(lc_cat+"es"),
+			getCatSurroundedInDoubleQuotes(lc_cat), 
+			getCatSurroundedInDoubleQuotes(lc_cat+"es"),
 		)
 	} else if strings.HasSuffix(lc_cat, "sses") {
 		return fmt.Sprintf("(%s OR %s)", 
-			GetCatSurroundedInDoubleQuotes(lc_cat), 
-			GetCatSurroundedInDoubleQuotes(strings.TrimSuffix(lc_cat, "es")),
+			getCatSurroundedInDoubleQuotes(lc_cat), 
+			getCatSurroundedInDoubleQuotes(strings.TrimSuffix(lc_cat, "es")),
 		)
 	} else if strings.HasSuffix(lc_cat, "s") {
 		return fmt.Sprintf("(%s OR %s OR %s)", 
-			GetCatSurroundedInDoubleQuotes(lc_cat), 
-			GetCatSurroundedInDoubleQuotes(lc_cat+"es"), 
-			GetCatSurroundedInDoubleQuotes(strings.TrimSuffix(lc_cat, "s")),
+			getCatSurroundedInDoubleQuotes(lc_cat), 
+			getCatSurroundedInDoubleQuotes(lc_cat+"es"), 
+			getCatSurroundedInDoubleQuotes(strings.TrimSuffix(lc_cat, "s")),
 		)
 	} else {
 		return fmt.Sprintf("(%s OR %s)", 
-			GetCatSurroundedInDoubleQuotes(lc_cat), 
-			GetCatSurroundedInDoubleQuotes(lc_cat+"s"),
+			getCatSurroundedInDoubleQuotes(lc_cat), 
+			getCatSurroundedInDoubleQuotes(lc_cat+"s"),
 		)
 	}
 }
 
-func GetCatsSurroundedInDoubleQuotes(cats []string) []string {
-	modified_cats := make([]string, len(cats))
-	for i := range cats {
-		modified_cats[i] = GetCatSurroundedInDoubleQuotes(cats[i])
-	}
-
-	return modified_cats
-}
-
-func GetCatSurroundedInDoubleQuotes(cat string) string {
+func getCatSurroundedInDoubleQuotes(cat string) string {
 	return fmt.Sprintf(`"%s"`, cat)
 }
