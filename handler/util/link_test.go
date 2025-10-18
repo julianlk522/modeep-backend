@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/julianlk522/modeep/db"
@@ -69,9 +68,8 @@ func TestPrepareLinksPage(t *testing.T) {
 	}
 }
 
-func TestScanLinks(t *testing.T) {
+func TestScanRawLinksPageData(t *testing.T) {
 	links_sql := query.NewTopLinks()
-	// NewTopLinks().Error tested in query/link_test.go
 
 	// signed out
 	links_page, err := scanRawLinksPageData[model.Link](links_sql)
@@ -105,6 +103,7 @@ func TestScanSingleLink(t *testing.T) {
 	}
 }
 
+func TestPaginateLinks(t *testing.T) {
 	// single page
 	links_sql := query.NewTopLinks().FromRequestParams(url.Values{"cats": []string{"umvc3,flowers"}}).Page(1)
 	links_page, err := scanRawLinksPageData[model.Link](links_sql)
@@ -134,10 +133,10 @@ func TestScanSingleLink(t *testing.T) {
 
 func TestCountMergedCatSpellingVariants(t *testing.T) {
 	// no links; no merged cats
-	test_cat := "nonexistentcat"
+	test_cat_filters := []string{"nonexistentcat"}
 	links_sql := query.NewTopLinks().FromRequestParams(
 		url.Values{
-			"cats": []string{test_cat},
+			"cats": test_cat_filters,
 			"period": []string{"day"},
 			"page": []string{"1"},
 		},
@@ -148,21 +147,29 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 	}
 
 	paginateLinks(links_page.Links)
-	countMergedCatSpellingVariants(links_page, test_cat)
+	links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+		links_page.Links,
+		test_cat_filters,
+	)
 	if len(links_page.MergedCats) != 0 {
 		t.Fatal("expected no merged cats")
 	}
 
 	// should merge results for "flowers"
-	test_cat = "flower"
-	links_sql = query.NewTopLinks().FromRequestParams(url.Values{"cats": []string{test_cat}})
+	test_cat_filters = []string{"flower"}
+	links_sql = query.NewTopLinks().FromRequestParams(url.Values{
+		"cats": test_cat_filters,
+	})
 	links_page, err = scanRawLinksPageData[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	paginateLinks(links_page.Links)
-	countMergedCatSpellingVariants(links_page, test_cat)
+	links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+		links_page.Links,
+		test_cat_filters,
+	)
 	if len(links_page.MergedCats) != 1 {
 		t.Fatalf("expected 1 merged cat, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
 	}
@@ -176,21 +183,29 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 	}
 
 	paginateLinks(links_page.Links)
-	countMergedCatSpellingVariants(links_page, strings.Join(test_cats, ","))
+	links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+		links_page.Links,
+		test_cats,
+	)
 	if len(links_page.MergedCats) != 2 {
 		t.Fatalf("expected 2 merged cats, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
 	}
 
 	// inconsistent capitalization: should still merge
-	test_cat = "FlOwEr" // should merge "flowers"
-	links_sql = query.NewTopLinks().FromRequestParams(url.Values{"cats": []string{test_cat}})
+	test_cat_filters = []string{"FlOwEr"} // should merge "flowers"
+	links_sql = query.NewTopLinks().FromRequestParams(url.Values{
+		"cats": test_cat_filters,
+	})
 	links_page, err = scanRawLinksPageData[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	paginateLinks(links_page.Links)
-	countMergedCatSpellingVariants(links_page, test_cat)
+	links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+		links_page.Links,
+		test_cat_filters,
+	)
 	if len(links_page.MergedCats) != 1 {
 		t.Fatalf("expected 1 merged cat, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
 	}
