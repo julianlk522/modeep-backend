@@ -351,28 +351,25 @@ func (tl *TopLinks) nsfw() *TopLinks {
 }
 
 func (tl *TopLinks) Page(page int) *TopLinks {
-	if page == 0 {
+	if page < 1 {
 		return tl
 	}
 
-	if page >= 1 {
-		// Pop limit arg and replace with limit + 1
-		tl.Args = append(tl.Args[:len(tl.Args)-1], LINKS_PAGE_LIMIT+1)
+	// Pop limit arg and replace with limit + 1
+	tl.Args = tl.Args[:len(tl.Args) - 1]
+	tl.Args = append(tl.Args, LINKS_PAGE_LIMIT + 1)
+
+	if page > 1 {
+		// Add offset
+		tl.Text = strings.Replace(
+			tl.Text,
+			"LIMIT ?",
+			"LIMIT ? OFFSET ?",
+			1)
+
+			tl.Args = append(tl.Args, (page-1)*LINKS_PAGE_LIMIT)
+
 	}
-
-	if page == 1 {
-		return tl
-	}
-
-	tl.Text = strings.Replace(
-		tl.Text,
-		"LIMIT ?",
-		"LIMIT ? OFFSET ?",
-		1)
-
-	// Append offset arg
-	tl.Args = append(tl.Args, (page-1)*LINKS_PAGE_LIMIT)
-
 	return tl
 }
 
