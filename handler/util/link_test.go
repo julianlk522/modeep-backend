@@ -91,7 +91,19 @@ func TestScanLinks(t *testing.T) {
 	}
 }
 
-func TestPaginateLinks(t *testing.T) {
+func TestScanSingleLink(t *testing.T) {
+	// signed out
+	single_link_sql := query.NewSingleLink("1")
+	if _, err := single_link_sql.ValidateAndExecuteRow(); err != nil {
+		t.Fatal(err)
+	}
+
+	// signed in
+	single_link_sql = single_link_sql.AsSignedInUser(TEST_REQ_USER_ID)
+	if _, err := single_link_sql.ValidateAndExecuteRow(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 	// single page
 	links_sql := query.NewTopLinks().FromRequestParams(url.Values{"cats": []string{"umvc3,flowers"}}).Page(1)
