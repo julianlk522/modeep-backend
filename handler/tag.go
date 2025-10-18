@@ -162,32 +162,9 @@ func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	spfx_sql := query.NewSpellfixMatchesForSnippet(snippet)
-	
-	from_tmap_params := r.URL.Query().Get("from_tmap")
-	if from_tmap_params != "" {
-		user_exists, err := util.UserExists(from_tmap_params)
-		if err != nil {
-			render.Render(w, r, e.ErrInternalServerError(err))
-			return
-		} else if !user_exists {
-			render.Render(w, r, e.ErrInvalidRequest(e.ErrNoUserWithLoginName))
-			return
-		}
-
-		spfx_sql.FromTmap(from_tmap_params)
-	}
-
-	omitted_params := r.URL.Query().Get("omitted")
-	if omitted_params != "" {
-		// lowercase to ensure all casing variations matched
-		omitted_words := strings.Split(strings.ToLower(omitted_params), ",")
-		if err := spfx_sql.FromCats(omitted_words); err != nil {
-			render.Render(w, r, e.ErrInternalServerError(err))
-			return
-		}
-	}
-	
+	spfx_sql := query.NewSpellfixMatchesForSnippet(snippet).FromRequestParams(
+		r.URL.Query(),
+	)
 	rows, err := spfx_sql.ValidateAndExecuteRows()
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
@@ -282,7 +259,7 @@ func EditTag(w http.ResponseWriter, r *http.Request) {
 
 	edit_tag_data.Cats = util.TidyCats(edit_tag_data.Cats)
 
-	_, err = db.Client.Exec(
+	if _, err = db.Client.Exec(
 		`UPDATE Tags 
 		SET cats = ?, 
 		last_updated = ? 
@@ -290,8 +267,7 @@ func EditTag(w http.ResponseWriter, r *http.Request) {
 		edit_tag_data.Cats,
 		edit_tag_data.LastUpdated,
 		edit_tag_data.ID,
-	)
-	if err != nil {
+	); err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
