@@ -99,29 +99,29 @@ type EditProfilePicRequest struct {
 type TmapOptions struct {
 	OwnerLoginName string
 	AsSignedInUser string
-	// RawCatsParams (reserved chars unescaped, plural/singular variations not
+	// RawCatFiltersParams (reserved chars unescaped, plural/singular variations not
 	// bundled) is stored in addition to CatsFilter so that
-	// GetCatCountsFromTmapLinks can know the exact values passed in
+	// GetCatCountsFromTmapLinks() can know the exact values passed in
 	// the request and not count them
-	RawCatsParams   string
-	Cats            []string
-	Period          string
-	SortBy          string
-	IncludeNSFW     bool
-	SummaryContains string
-	URLContains     string
-	URLLacks        string
-	Section         string
-	Page            int
+	RawCatFiltersParams            string
+	CatFiltersWithSpellingVariants []string
+	Period                         string
+	SortBy                         string
+	IncludeNSFW                    bool
+	SummaryContains                string
+	URLContains                    string
+	URLLacks                       string
+	Section                        string
+	Page                           int
 }
 
 type TmapNSFWLinksCountOptions struct {
-	OnlySection     string // "Submitted", "Starred", "Tagged"
-	CatsFilter      []string
-	Period          string
-	SummaryContains string
-	URLContains     string
-	URLLacks        string
+	OnlySection                    string // "Submitted", "Starred", "Tagged"
+	CatFiltersWithSpellingVariants []string
+	Period                         string
+	SummaryContains                string
+	URLContains                    string
+	URLLacks                       string
 }
 
 type TmapCatCountsOptions struct {

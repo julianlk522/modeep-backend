@@ -39,8 +39,8 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 
 	cats_params := params.Get("cats")
 	if cats_params != "" {
-		cats := strings.Split(cats_params, ",")
-		tl = tl.fromCats(cats)
+		cat_filters := strings.Split(cats_params, ",")
+		tl = tl.fromCatFilters(cat_filters)
 	}
 
 	summary_contains_params := params.Get("summary_contains")
@@ -79,8 +79,8 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) fromCats(cats []string) *TopLinks {
-	if len(cats) == 0 || cats[0] == "" {
+func (tl *TopLinks) fromCatFilters(cat_filters []string) *TopLinks {
+	if len(cat_filters) == 0 || cat_filters[0] == "" {
 		tl.Error = e.ErrNoCats
 		return tl
 	}
@@ -111,13 +111,13 @@ func (tl *TopLinks) fromCats(cats []string) *TopLinks {
 	)
 
 	// Pop limit arg
-	tl.Args = tl.Args[:len(tl.Args)-1]
+	tl.Args = tl.Args[:len(tl.Args) - 1]
 
 	// Build and add match arg
-	cats = GetCatsOptionalPluralOrSingularForms(cats)
-	var match_arg = cats[0]
-	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + cats[i]
+	cat_filters = GetCatsOptionalPluralOrSingularForms(cat_filters)
+	var match_arg = cat_filters[0]
+	for i := 1; i < len(cat_filters); i++ {
+		match_arg += " AND " + cat_filters[i]
 	}
 	tl.Args = append(tl.Args, match_arg)
 

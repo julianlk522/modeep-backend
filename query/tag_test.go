@@ -521,8 +521,8 @@ func TestSpellfixMatchesFromTmap(t *testing.T) {
 	}
 }
 
-func TestSpellfixMatchesFromCats(t *testing.T) {
-	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromCats([]string{TEST_SNIPPET})
+func TestSpellfixMatchesFromCatFilters(t *testing.T) {
+	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromCatFilters([]string{TEST_SNIPPET})
 	rows, err := matches_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
@@ -540,7 +540,7 @@ func TestSpellfixMatchesFromCats(t *testing.T) {
 }
 
 func TestSpellfixMatchesWhileSubmittingLink(t *testing.T) {
-	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromCatsWhileSubmittingLink([]string{"flower"})
+	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromCatFiltersWhileSubmittingLink([]string{"flower"})
 	matches_sql.ValidateAndExecuteRows()
 	if matches_sql.Error != nil {
 		t.Fatal(matches_sql.Error)

@@ -60,20 +60,20 @@ func TestBuildTmapFromOpts(t *testing.T) {
 
 	for _, td := range test_opts {
 		var opts = &model.TmapOptions{
-			OwnerLoginName: td.LoginName,
-			RawCatsParams:  td.CatsParams,
-			AsSignedInUser: td.RequestingUserID,
-			SortBy:         td.SortBy,
-			IncludeNSFW:    td.IncludeNSFW,
-			Section:        td.SectionParams,
-			Page:           td.PageParams,
+			OwnerLoginName:      td.LoginName,
+			RawCatFiltersParams: td.CatsParams,
+			AsSignedInUser:      td.RequestingUserID,
+			SortBy:              td.SortBy,
+			IncludeNSFW:         td.IncludeNSFW,
+			Section:             td.SectionParams,
+			Page:                td.PageParams,
 		}
 
 		if td.CatsParams != "" {
-			cats := query.GetCatsOptionalPluralOrSingularForms(
+			cat_filters_with_spelling_variants := query.GetCatsOptionalPluralOrSingularForms(
 				strings.Split(td.CatsParams, ","),
 			)
-			opts.Cats = cats
+			opts.CatFiltersWithSpellingVariants = cat_filters_with_spelling_variants
 		}
 
 		var tmap any
@@ -96,20 +96,22 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		// verify type and filtered
 		var is_filtered bool
 		switch tmap.(type) {
-		case model.TmapWithProfilePage[model.TmapLink], model.TmapWithProfilePage[model.TmapLinkSignedIn]:
-			is_filtered = false
 		case 
+			model.TmapWithProfilePage[model.TmapLink], 
+			model.TmapWithProfilePage[model.TmapLinkSignedIn]:
+				is_filtered = false
+		case
 			model.TmapWithCatFiltersPage[model.TmapLink],
 			model.TmapWithCatFiltersPage[model.TmapLinkSignedIn],
 			model.TmapIndividualSectionWithCatFiltersPage[model.TmapLink],
 			model.TmapIndividualSectionWithCatFiltersPage[model.TmapLinkSignedIn]:
-			is_filtered = true
-		case 
+				is_filtered = true
+		case
 			model.TmapPage[model.TmapLink],
 			model.TmapPage[model.TmapLinkSignedIn],
 			model.TmapIndividualSectionPage[model.TmapLink],
 			model.TmapIndividualSectionPage[model.TmapLinkSignedIn]:
-			continue
+				continue
 		}
 
 		if is_filtered && td.CatsParams == "" {
@@ -127,15 +129,15 @@ func TestBuildTmapLinksQueryAndScan(t *testing.T) {
 			AsSignedInUser: TEST_USER_ID,
 		},
 		{
-			OwnerLoginName: TEST_LOGIN_NAME,
-			AsSignedInUser: TEST_REQ_USER_ID,
-			Cats:           []string{"umvc3"},
-			Period:         "year",
-			SortBy:         "newest",
-			IncludeNSFW:    true,
+			OwnerLoginName:                 TEST_LOGIN_NAME,
+			AsSignedInUser:                 TEST_REQ_USER_ID,
+			CatFiltersWithSpellingVariants: []string{"umvc3"},
+			Period:                         "year",
+			SortBy:                         "newest",
+			IncludeNSFW:                    true,
 		},
 		{
-			OwnerLoginName: TEST_LOGIN_NAME,
+			OwnerLoginName:  TEST_LOGIN_NAME,
 			SummaryContains: "web",
 			URLContains:     "com",
 			URLLacks:        "net",
@@ -386,7 +388,7 @@ func TestCountTmapMergedCatsSpellingVariantsInLinksWithCatFilters(t *testing.T) 
 	}
 	var test_cat_filter = []string{
 		"test",
-"modeep",
+		"modeep",
 	}
 	var expected_merged_cats = []string{
 		"tests", // pluralization variant

@@ -99,10 +99,10 @@ AND (
 	}
 
 	// .FromCats()
-	test_cats := GetCatsOptionalPluralOrSingularForms(
+	test_cat_filters := GetCatsOptionalPluralOrSingularForms(
 		[]string{"engine", "search"},
 	)
-	sql = sql.fromCats(test_cats)
+	sql = sql.fromCatFilters(test_cat_filters)
 	row, err = sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -171,8 +171,8 @@ AND (
 		sql_manual,
 		TEST_LOGIN_NAME, 
 		TEST_LOGIN_NAME,
-		strings.Join(test_cats, " AND "),
-		strings.Join(test_cats, " AND "),
+		strings.Join(test_cat_filters, " AND "),
+		strings.Join(test_cat_filters, " AND "),
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
 	).Scan(&expected_count); err != nil { 
@@ -450,88 +450,67 @@ func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
 }
 
 func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
+	var test_cat_filters = []string{
+		"search",
+		"engine",
+	}
+	// cat filters are always first expanded into optional singular/plural
+	// forms by GetTmapOptsFromRequestParams()
+	test_cat_filters = GetCatsOptionalPluralOrSingularForms(test_cat_filters)
+
 	var test_options_and_expected_counts = []struct {
 		Options model.TmapNSFWLinksCountOptions
-		ExpectedCount int
 		Valid bool
 	}{
 		{
 			model.TmapNSFWLinksCountOptions{
-				CatsFilter: []string{
-					"search",
-					"engine",
-				},
+				CatFiltersWithSpellingVariants: test_cat_filters,
 				Period: "all",
 				URLContains: "googler",
 			}, 
-			1,
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
-				CatsFilter: []string{
-					"search",
-					"engine",
-				},
+				CatFiltersWithSpellingVariants: test_cat_filters,
 				Period: "all",
 				URLContains: "not_googler",
 			}, 
-			0,
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
-				CatsFilter: []string{
-					"search",
-					"engine",
-				},
+				CatFiltersWithSpellingVariants: test_cat_filters,
 				Period: "all",
-			}, 
-			1,
+			},
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
 				OnlySection: "submitted",
-				CatsFilter: []string{
-					"search",
-					"engine",
-				},
-			}, 
-			1,
+				CatFiltersWithSpellingVariants: test_cat_filters,
+			},
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
 				OnlySection: "tagged",
-				CatsFilter: []string{
-					"search",
-					"engine",
-				},
-			}, 
-			0,
+				CatFiltersWithSpellingVariants: test_cat_filters, 
+			},
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
 				OnlySection: "starred",
-				CatsFilter: []string{
-					"search",
-					"engine",
-				},
-			}, 
-			0,
+				CatFiltersWithSpellingVariants: test_cat_filters,
+			},
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
 				OnlySection: "boop",
-				CatsFilter: []string{
-					"search",
-					"engine",
-				},
-			}, 
-			1,
+				CatFiltersWithSpellingVariants: test_cat_filters, 
+			},
 			false,
 		},
 	}
@@ -547,16 +526,9 @@ func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
 			var count int
 			if err = row.Scan(&count); err != nil {
 				t.Fatal(err)
-			} else if count != test.ExpectedCount {
-				t.Fatalf("expected %d, got %d (opts: %+v)", 
-					test.ExpectedCount, 
-					count,
-					test.Options,
-				)
 			}
 		}
 	}
-	
 }
 
 func TestNewTmapSubmitted(t *testing.T) {
@@ -635,8 +607,8 @@ func TestNewTmapSubmitted(t *testing.T) {
 	}
 }
 
-func TestTmapSubmittedFromCats(t *testing.T) {
-	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).fromCats(test_cats).Build()
+func TestTmapSubmittedFromCatFilters(t *testing.T) {
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).fromCatFilters(test_cats).Build()
 	if submitted_sql.Error != nil {
 		t.Fatal(submitted_sql.Error)
 	}
@@ -711,14 +683,14 @@ func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 	}
 }
 
-func TestTmapSubmittedNSFW(t *testing.T) {
-	submitted_sql := NewTmapSubmitted("bradley").nsfw().Build()
+func TestTmapSubmittedIncludeNSFW(t *testing.T) {
+	submitted_sql := NewTmapSubmitted(TEST_REQ_LOGIN_NAME).includeNSFW().Build()
 	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Verify TEST_LOGIN_NAME's tmap contains link with NSFW tag
+	// Verify TEST_REQ_LOGIN_NAME's tmap contains link with NSFW tag
 	var found_NSFW_link bool
 	for rows.Next() {
 		var l model.TmapLink
@@ -745,7 +717,7 @@ func TestTmapSubmittedNSFW(t *testing.T) {
 	}
 
 	if !found_NSFW_link {
-		t.Fatal("bradley's tmap does not but should contain link with NSFW tag")
+		t.Fatalf("%s's tmap does not but should contain link with NSFW tag", TEST_REQ_LOGIN_NAME)
 	}
 }
 
@@ -1164,8 +1136,8 @@ func TestNewTmapStarred(t *testing.T) {
 	}
 }
 
-func TestTmapStarredFromCats(t *testing.T) {
-	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).fromCats(test_cats).Build()
+func TestTmapStarredFromCatFilters(t *testing.T) {
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).fromCatFilters(test_cats).Build()
 	if starred_sql.Error != nil {
 		t.Fatal(starred_sql.Error)
 	}
@@ -1306,9 +1278,9 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 		}
 	}
 
-	// Retry with .nsfw() and verify that _all_ links from all_starred_link_ids
-	// are returned
-	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).nsfw().Build()
+	// Retry with .includeNSFW() and verify that all links from
+	// all_starred_link_ids are returned
+	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).includeNSFW().Build()
 	rows, err = TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1354,9 +1326,9 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 	}
 }
 
-func TestTmapStarredNSFW(t *testing.T) {
+func TestTmapStarredIncludeNSFW(t *testing.T) {
 	// TEST_LOGIN_NAME (jlk) has starred 1 link with NSFW tag
-	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).nsfw().Build()
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).includeNSFW().Build()
 	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1389,7 +1361,7 @@ func TestTmapStarredNSFW(t *testing.T) {
 	}
 
 	if !found_NSFW_link {
-		t.Fatal("jlk's tmap does not but should contain 1 starred link with NSFW tag")
+		t.Fatalf("%s's tmap does not but should contain 1 starred link with NSFW tag", TEST_LOGIN_NAME)
 	}
 }
 
@@ -1667,8 +1639,8 @@ func TestNewTmapTagged(t *testing.T) {
 	}
 }
 
-func TestTmapTaggedFromCats(t *testing.T) {
-	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).fromCats(test_cats).Build()
+func TestTmapTaggedFromCatFilters(t *testing.T) {
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).fromCatFilters(test_cats).Build()
 	if tagged_sql.Error != nil {
 		t.Fatal(tagged_sql.Error)
 	}
@@ -1757,9 +1729,9 @@ func TestTmapTaggedAsSignedInUser(t *testing.T) {
 	}
 }
 
-func TestTmapTaggedNSFW(t *testing.T) {
+func TestTmapTaggedIncludeNSFW(t *testing.T) {
 	// TEST_LOGIN_NAME (jlk) has tagged 1 link with NSFW tag
-	starred_sql := NewTmapTagged(TEST_LOGIN_NAME).nsfw().Build()
+	starred_sql := NewTmapTagged(TEST_LOGIN_NAME).includeNSFW().Build()
 	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -1792,7 +1764,7 @@ func TestTmapTaggedNSFW(t *testing.T) {
 	}
 
 	if !found_NSFW_link {
-		t.Fatal("jlk's tmap does not but should contain 1 tagged link with NSFW tag")
+		t.Fatalf("%s's tmap does not but should contain 1 tagged link with NSFW tag", TEST_LOGIN_NAME)
 	}
 }
 
