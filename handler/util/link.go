@@ -56,7 +56,11 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 
 	cats_params := options.Cats
 	if cats_params != "" {
-		countMergedCatSpellingVariants(links_page, cats_params)
+		cat_filters := strings.Split(cats_params, ",")
+		links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+			links_page.Links,
+			cat_filters,
+		)
 	}
 	
 	nsfw_params := options.NSFW
@@ -221,32 +225,32 @@ func paginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
 	}
 }
 
-// TODO make this signature match one for tmap links
-func countMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cats_params string) {
-	if lp.Links == nil || len(*lp.Links) == 0 {
-		return
+func countMergedCatSpellingVariantsInLinksFromCatFilters[T model.HasCats](links *[]T, cat_filters []string) []string {
+	if links == nil || len(*links) == 0 {
+		return nil
 	}
 
-	cat_filters := strings.Split(cats_params, ",")
+	var merged_cats []string
+	for _, link := range *links {
+		link_cats := strings.SplitSeq(link.GetCats(), ",")
+		for cat := range link_cats {
+			cat_lc := strings.ToLower(cat)
 
-	for _, link := range *lp.Links {
-		link_cats := strings.Split(link.GetCats(), ",")
-
-		for i, link_cat := range link_cats {
-			cat_lc := strings.ToLower(link_cat)
-
-			if !slices.Contains(cat_filters, link_cats[i]) {
+			// Merge if does not match cat filter exactly but is close
+			if !slices.Contains(cat_filters, cat) {
 				for _, cf := range cat_filters {
 					cf_lc := strings.ToLower(cf)
 
 					if CatsResembleEachOther(cat_lc, cf_lc) && 
-					!slices.Contains(lp.MergedCats, link_cats[i]) {
-						lp.MergedCats = append(lp.MergedCats, link_cats[i])
+					!slices.Contains(merged_cats, cat) {
+						merged_cats = append(merged_cats, cat)
 					}
 				}
 			}
 		}
 	}
+
+	return merged_cats
 }
 
 func getNSFWLinksCount[T model.HasCats](links_sql *query.TopLinks, nsfw_params bool) (int, error) {

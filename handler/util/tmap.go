@@ -154,7 +154,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return model.TmapIndividualSectionPage[T]{
 				Links:          &[]T{},
 				Cats:           &[]model.CatCount{},
-				NSFWLinksCount: nsfw_links_count,
+				NSFWLinksCount: 0,
 				Pages:          -1,
 			}, nil
 		}
@@ -168,9 +168,9 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 			return nil, err
 		}
 
-		// Indicate any merged cats
 		if has_cat_filter {
-			merged_cats := getMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(links, cat_filters)
+			// Indicate any merged cats
+			merged_cats := countTmapMergedCatsSpellingVariantsInLinksFromCatFilters(links, cat_filters)
 			return model.TmapIndividualSectionWithCatFiltersPage[T]{
 				TmapIndividualSectionPage: &model.TmapIndividualSectionPage[T]{
 					Links:          links,
@@ -224,7 +224,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		if has_cat_filter {
 			// Indicate any merged cats
-			merged_cats := getMergedCatsSpellingVariantsFromTmapLinksWithCatFilters(&combined_sections, cat_filters)
+			merged_cats := countTmapMergedCatsSpellingVariantsInLinksFromCatFilters(&combined_sections, cat_filters)
 			return model.TmapWithCatFiltersPage[T]{
 				TmapPage: &model.TmapPage[T]{
 					TmapSections:   tmap_sections,
@@ -546,7 +546,11 @@ func mergeCountsOfCatSpellingVariants(counts *[]model.CatCount) {
 	}
 }
 
-func getMergedCatsSpellingVariantsFromTmapLinksWithCatFilters[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, cat_filters []string) []string {
+func countTmapMergedCatsSpellingVariantsInLinksFromCatFilters[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, cat_filters []string) []string {
+	if links == nil || len(*links) == 0 {
+		return nil
+	}
+
 	var merged_cats []string
 	for _, l := range *links {
 		var cats_str string
@@ -566,9 +570,8 @@ func getMergedCatsSpellingVariantsFromTmapLinksWithCatFilters[T model.TmapLink |
 				for _, cf := range cat_filters {
 					cf_lc := strings.ToLower(cf)
 
-					if (CatsResembleEachOther(cat_lc, cf_lc) || 
-					// capitalization variants
-					cat_lc == cf_lc && cat != cf) && !slices.Contains(merged_cats, cat) {
+					if CatsResembleEachOther(cat_lc, cf_lc) &&
+					!slices.Contains(merged_cats, cat) {
 						merged_cats = append(merged_cats, cat)
 					}
 				}
