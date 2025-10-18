@@ -34,33 +34,33 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 	// not the prettiest solution but it works...
 	sort_params := params.Get("sort_by")
 	if sort_params != "" {
-		tl = tl.SortBy(sort_params)
+		tl = tl.sortBy(sort_params)
 	}
 
 	cats_params := params.Get("cats")
 	if cats_params != "" {
 		cats := strings.Split(cats_params, ",")
-		tl = tl.FromCats(cats)
+		tl = tl.fromCats(cats)
 	}
 
 	summary_contains_params := params.Get("summary_contains")
 	if summary_contains_params != "" {
-		tl = tl.WithGlobalSummaryContaining(summary_contains_params, sort_params)
+		tl = tl.withGlobalSummaryContaining(summary_contains_params, sort_params)
 	}
 
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
-		tl = tl.WithURLContaining(url_contains_params, sort_params)
+		tl = tl.withURLContaining(url_contains_params, sort_params)
 	}
 
 	url_lacks_params := params.Get("url_lacks")
 	if url_lacks_params != "" {
-		tl = tl.WithURLLacking(url_lacks_params, sort_params)
+		tl = tl.withURLLacking(url_lacks_params, sort_params)
 	}
 
 	period_params := params.Get("period")
 	if period_params != "" {
-		tl = tl.DuringPeriod(period_params, sort_params)
+		tl = tl.duringPeriod(period_params, sort_params)
 	}
 
 	var nsfw_params string
@@ -71,7 +71,7 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 	}
 
 	if nsfw_params == "true" {
-		tl = tl.NSFW()
+		tl = tl.nsfw()
 	} else if nsfw_params != "false" && nsfw_params != "" {
 		tl.Error = e.ErrInvalidNSFWParams
 	}
@@ -79,7 +79,7 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) FromCats(cats []string) *TopLinks {
+func (tl *TopLinks) fromCats(cats []string) *TopLinks {
 	if len(cats) == 0 || cats[0] == "" {
 		tl.Error = e.ErrNoCats
 		return tl
@@ -127,7 +127,7 @@ func (tl *TopLinks) FromCats(cats []string) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) WithGlobalSummaryContaining(snippet string, sort_by string) *TopLinks {
+func (tl *TopLinks) withGlobalSummaryContaining(snippet string, sort_by string) *TopLinks {
 	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
@@ -162,7 +162,7 @@ func (tl *TopLinks) WithGlobalSummaryContaining(snippet string, sort_by string) 
 	return tl
 }
 
-func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks {
+func (tl *TopLinks) withURLContaining(snippet string, sort_by string) *TopLinks {
 	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
@@ -197,7 +197,7 @@ func (tl *TopLinks) WithURLContaining(snippet string, sort_by string) *TopLinks 
 	return tl
 }
 
-func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
+func (tl *TopLinks) withURLLacking(snippet string, sort_by string) *TopLinks {
 	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
 	if sort_by != "" {
 		clause, ok := links_order_by_clauses[sort_by]
@@ -232,12 +232,12 @@ func (tl *TopLinks) WithURLLacking(snippet string, sort_by string) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
+func (tl *TopLinks) duringPeriod(period string, sort_by string) *TopLinks {
 	if (period == "all") {
 		return tl
 	}
 	
-	period_clause, err := GetPeriodClause(period)
+	period_clause, err := getPeriodClause(period)
 	if err != nil {
 		tl.Error = err
 		return tl
@@ -273,7 +273,7 @@ func (tl *TopLinks) DuringPeriod(period string, sort_by string) *TopLinks {
 
 var num_wheres_in_links_base_query = strings.Count(links_base_query, "WHERE")
 
-func (tl *TopLinks) SortBy(metric string) *TopLinks {
+func (tl *TopLinks) sortBy(metric string) *TopLinks {
 	if metric != "" && metric != "times_starred" {
 		order_by_clause, ok := links_order_by_clauses[metric]
 		if !ok {
@@ -326,7 +326,7 @@ const LINKS_AUTH_FIELD = `,
 const LINKS_AUTH_JOIN = `
 	LEFT JOIN StarsAssigned sa ON l.id = sa.link_id`
 
-func (tl *TopLinks) NSFW() *TopLinks {
+func (tl *TopLinks) nsfw() *TopLinks {
 	has_subsequent_clause := strings.Contains(
 		tl.Text, 
 		LINKS_NO_NSFW_CATS_WHERE + "\nAND",

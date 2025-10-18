@@ -146,7 +146,7 @@ func TestNewTopGlobalCatCounts(t *testing.T) {
 }
 
 func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
-	counts_sql := NewTopGlobalCatCounts().SubcatsOfCats(strings.Join(test_cats, ","))
+	counts_sql := NewTopGlobalCatCounts().subcatsOfCats(strings.Join(test_cats, ","))
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
@@ -190,7 +190,7 @@ func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
 }
 
 func TestNewTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
-	counts_sql := NewTopGlobalCatCounts().WithGlobalSummaryContaining("test")
+	counts_sql := NewTopGlobalCatCounts().withGlobalSummaryContaining("test")
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
@@ -237,11 +237,11 @@ func TestNewTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
 
 	// verify does not conflict w/ other methods
 	counts_sql = NewTopGlobalCatCounts().
-		SubcatsOfCats("flowers").
-		WithGlobalSummaryContaining("test").
-		WithURLContaining("www").
-		WithURLLacking("donut").
-		More()
+		subcatsOfCats("flowers").
+		withGlobalSummaryContaining("test").
+		withURLContaining("www").
+		withURLLacking("donut").
+		more()
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
@@ -293,9 +293,9 @@ func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
 	counts := []model.CatCount{}
 
 	counts_sql := NewTopGlobalCatCounts().
-		SubcatsOfCats(strings.Join(test_cats, ",")).
-		WithURLContaining("GooGlE").
-		More()
+		subcatsOfCats(strings.Join(test_cats, ",")).
+		withURLContaining("GooGlE").
+		more()
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
@@ -336,8 +336,8 @@ func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
 
 func TestNewTopGlobalCatCountsWithURLLacking(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts().
-		SubcatsOfCats(strings.Join(test_cats, ",")).
-		WithURLLacking("GooGlE")
+		subcatsOfCats(strings.Join(test_cats, ",")).
+		withURLLacking("GooGlE")
 	
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
@@ -400,7 +400,7 @@ func TestNewTopGlobalCatCountsDuringPeriod(t *testing.T) {
 	}
 
 	for _, tp := range test_periods {
-		tags_sql := NewTopGlobalCatCounts().DuringPeriod(tp.Period)
+		tags_sql := NewTopGlobalCatCounts().duringPeriod(tp.Period)
 		if tp.Valid && tags_sql.Error != nil {
 			t.Fatalf("unexpected error for period %s", tp.Period)
 		} else if !tp.Valid && tags_sql.Error == nil {
@@ -416,8 +416,8 @@ func TestNewTopGlobalCatCountsDuringPeriod(t *testing.T) {
 	// Verify no conflict with .SubcatsOfCats()
 	for _, tp := range test_periods {
 		tags_sql := NewTopGlobalCatCounts().
-			SubcatsOfCats(strings.Join(test_cats, ",")).
-			DuringPeriod(tp.Period)
+			subcatsOfCats(strings.Join(test_cats, ",")).
+			duringPeriod(tp.Period)
 		if tp.Valid && tags_sql.Error != nil {
 			t.Fatalf("unexpected error for period %s", tp.Period)
 		} else if !tp.Valid && tags_sql.Error == nil {

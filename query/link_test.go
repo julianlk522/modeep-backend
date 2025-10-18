@@ -71,7 +71,7 @@ func TestFromCats(t *testing.T) {
 
 	for _, tc := range test_cats {
 		// Cats only
-		links_sql := NewTopLinks().FromCats(tc.Cats)
+		links_sql := NewTopLinks().fromCats(tc.Cats)
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tc.Valid && links_sql.Error == nil {
@@ -85,7 +85,7 @@ func TestFromCats(t *testing.T) {
 		defer rows.Close()
 
 		// With period
-		links_sql = links_sql.DuringPeriod("month", "times_starred")
+		links_sql = links_sql.duringPeriod("month", "times_starred")
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tc.Valid && links_sql.Error == nil {
@@ -113,7 +113,7 @@ func TestFromCats(t *testing.T) {
 
 func TestLinksWithGlobalSummaryContaining(t *testing.T) {
 	// case-insensitive
-	links_sql := NewTopLinks().WithGlobalSummaryContaining("GoOgLe", "")
+	links_sql := NewTopLinks().withGlobalSummaryContaining("GoOgLe", "")
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
@@ -160,15 +160,15 @@ func TestLinksWithGlobalSummaryContaining(t *testing.T) {
 
 	// no conflct w/ other methods
 	links_sql = NewTopLinks().
-		FromCats([]string{"test"}).
-		WithGlobalSummaryContaining("GoOgLe", "").
-		WithURLContaining("www", "").
-		WithURLLacking("something", "").
+		fromCats([]string{"test"}).
+		withGlobalSummaryContaining("GoOgLe", "").
+		withURLContaining("www", "").
+		withURLLacking("something", "").
 		AsSignedInUser(TEST_USER_ID).
-		NSFW().
-		SortBy("newest").
+		nsfw().
+		sortBy("newest").
 		Page(1).
-		DuringPeriod("all", "newest")
+		duringPeriod("all", "newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil {
 		t.Fatal(err)
@@ -213,7 +213,7 @@ func TestLinksWithGlobalSummaryContaining(t *testing.T) {
 }
 
 func TestLinksWithURLContaining(t *testing.T) {
-	links_sql := NewTopLinks().WithURLContaining("GoOgLe", "")
+	links_sql := NewTopLinks().withURLContaining("GoOgLe", "")
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
@@ -260,10 +260,10 @@ func TestLinksWithURLContaining(t *testing.T) {
 
 	// combined with other methods
 	links_sql = NewTopLinks().
-		FromCats([]string{"flowers"}).
-		WithURLContaining("google", "times_starred").
+		fromCats([]string{"flowers"}).
+		withURLContaining("google", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
-		SortBy("newest")
+		sortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
@@ -310,7 +310,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 
 func TestLinksWithURLLacking(t *testing.T) {
 	// case-insensitive
-	links_sql := NewTopLinks().WithURLLacking("gOoGlE", "")
+	links_sql := NewTopLinks().withURLLacking("gOoGlE", "")
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
@@ -357,10 +357,10 @@ func TestLinksWithURLLacking(t *testing.T) {
 
 	// combined with other methods
 	links_sql = NewTopLinks().
-		FromCats([]string{"umvc3"}).
-		WithURLLacking("gOOgle", "times_starred").
+		fromCats([]string{"umvc3"}).
+		withURLLacking("gOOgle", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
-		SortBy("newest")
+		sortBy("newest")
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
@@ -420,7 +420,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 
 	for _, tp := range test_periods {
 		// Period only
-		links_sql := NewTopLinks().DuringPeriod(tp.Period, "")
+		links_sql := NewTopLinks().duringPeriod(tp.Period, "")
 		if tp.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tp.Valid && links_sql.Error == nil {
@@ -434,7 +434,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 		rows.Close()
 
 		// With cats
-		links_sql = links_sql.FromCats([]string{"umvc3"})
+		links_sql = links_sql.fromCats([]string{"umvc3"})
 		if tp.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !tp.Valid && links_sql.Error == nil {
@@ -466,7 +466,7 @@ func TestLinksSortBy(t *testing.T) {
 	var pages int
 
 	for _, ts := range test_sorts {
-		links_sql := NewTopLinks().SortBy(ts.Sort)
+		links_sql := NewTopLinks().sortBy(ts.Sort)
 		if ts.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
 		} else if !ts.Valid && links_sql.Error == nil {
@@ -616,7 +616,7 @@ func TestAsSignedInUser(t *testing.T) {
 	}
 
 	// Verify no conflict with .FromCats()
-	links_sql = NewTopLinks().FromCats(test_cats).AsSignedInUser(TEST_USER_ID)
+	links_sql = NewTopLinks().fromCats(test_cats).AsSignedInUser(TEST_USER_ID)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
 		t.Fatal(err)
 	}
@@ -636,7 +636,7 @@ func TestAsSignedInUser(t *testing.T) {
 }
 
 func TestNSFW(t *testing.T) {
-	links_sql := NewTopLinks().NSFW()
+	links_sql := NewTopLinks().nsfw()
 	// No opportunity for links_sql.Error to have been set
 
 	rows, err := TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -647,12 +647,12 @@ func TestNSFW(t *testing.T) {
 
 	// Verify no conflict with other filter methods
 	links_sql = NewTopLinks().
-		FromCats([]string{"search", "engine", "NSFW"}).
-		DuringPeriod("year", "times_starred").
+		fromCats([]string{"search", "engine", "NSFW"}).
+		duringPeriod("year", "times_starred").
 		AsSignedInUser(TEST_USER_ID).
-		SortBy("newest").
+		sortBy("newest").
 		Page(1).
-		NSFW()
+		nsfw()
 
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
 	if err != nil {
@@ -689,10 +689,10 @@ func TestNSFW(t *testing.T) {
 
 	// Verify link not present using same query without .NSFW()
 	links_sql = NewTopLinks().
-		FromCats([]string{"search", "engine", "NSFW"}).
-		DuringPeriod("year", "newest").
+		fromCats([]string{"search", "engine", "NSFW"}).
+		duringPeriod("year", "newest").
 		AsSignedInUser(TEST_USER_ID).
-		SortBy("oldest").
+		sortBy("oldest").
 		Page(1)
 
 	rows, err = TestClient.Query(links_sql.Text, links_sql.Args...)
@@ -764,11 +764,11 @@ func TestPage(t *testing.T) {
 
 	// Verify no conflict with other methods
 	links_sql = NewTopLinks().
-		FromCats(test_cats).
-		DuringPeriod("year", "times_starred").
-		SortBy("newest").
+		fromCats(test_cats).
+		duringPeriod("year", "times_starred").
+		sortBy("newest").
 		AsSignedInUser(TEST_USER_ID).
-		NSFW().
+		nsfw().
 		Page(2)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
 		t.Fatal(err)
@@ -804,7 +804,7 @@ func TestCountNSFWLinks(t *testing.T) {
 	
 	// with NSFW params
 	links_sql = NewTopLinks().
-		NSFW().
+		nsfw().
 		// NOTE: this breaks the query if passed "true" and .NSFW() is not called first
 		// (which shouldn't happen)
 		CountNSFWLinks(true)
@@ -823,9 +823,9 @@ func TestCountNSFWLinks(t *testing.T) {
 
 	// combined with other methods
 	links_sql = NewTopLinks().
-		FromCats(test_cats).
-		DuringPeriod("year", "times_starred").
-		SortBy("newest").
+		fromCats(test_cats).
+		duringPeriod("year", "times_starred").
+		sortBy("newest").
 		AsSignedInUser(TEST_USER_ID).
 		CountNSFWLinks(false)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
@@ -839,14 +839,14 @@ func TestCountNSFWLinks(t *testing.T) {
 
 	// MORE COMBINATIONSSSSS
 	links_sql = NewTopLinks().
-		FromCats(test_cats).
-		DuringPeriod("all", "average_stars").
-		SortBy("average_stars").
-		WithURLContaining("www", "average_stars").
-		WithURLLacking(".com", "average_stars").
-		WithGlobalSummaryContaining("test", "average_stars").
+		fromCats(test_cats).
+		duringPeriod("all", "average_stars").
+		sortBy("average_stars").
+		withURLContaining("www", "average_stars").
+		withURLLacking(".com", "average_stars").
+		withGlobalSummaryContaining("test", "average_stars").
 		AsSignedInUser(TEST_USER_ID).
-		NSFW().
+		nsfw().
 		CountNSFWLinks(true)
 	if _, err := TestClient.Query(links_sql.Text, links_sql.Args...); err != nil {
 		t.Fatal(err)

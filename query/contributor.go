@@ -29,33 +29,33 @@ func (c *Contributors) FromRequestParams(params url.Values) *Contributors {
 	cats_params := params.Get("cats")
 	if cats_params != "" {
 		cats := strings.Split(cats_params, ",")
-		c = c.FromCats(cats)
+		c = c.fromCats(cats)
 	}
 
 	summary_contains_params := params.Get("summary_contains")
 	if summary_contains_params != "" {
-		c = c.WithGlobalSummaryContaining(summary_contains_params)
+		c = c.withGlobalSummaryContaining(summary_contains_params)
 	}
 
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
-		c = c.WithURLContaining(url_contains_params)
+		c = c.withURLContaining(url_contains_params)
 	}
 
 	url_lacks_params := params.Get("url_lacks")
 	if url_lacks_params != "" {
-		c = c.WithURLLacking(url_lacks_params)
+		c = c.withURLLacking(url_lacks_params)
 	}
 
 	period_params := params.Get("period")
 	if period_params != "" {
-		c = c.DuringPeriod(period_params)
+		c = c.duringPeriod(period_params)
 	}
 
 	return c
 }
 
-func (c *Contributors) FromCats(cats []string) *Contributors {
+func (c *Contributors) fromCats(cats []string) *Contributors {
 	if len(cats) == 0 {
 		return c
 	}
@@ -95,7 +95,7 @@ func (c *Contributors) FromCats(cats []string) *Contributors {
 const CONTRIBUTORS_CATS_FROM = `
 INNER JOIN CatsFilter f ON l.id = f.link_id`
 
-func (c *Contributors) WithGlobalSummaryContaining(snippet string) *Contributors {
+func (c *Contributors) withGlobalSummaryContaining(snippet string) *Contributors {
 	clause_keyword := "WHERE"
 	if strings.Contains(c.Text, "WHERE url") {
 		clause_keyword = "AND"
@@ -116,7 +116,7 @@ func (c *Contributors) WithGlobalSummaryContaining(snippet string) *Contributors
 	return c
 }
 
-func (c *Contributors) WithURLContaining(snippet string) *Contributors {
+func (c *Contributors) withURLContaining(snippet string) *Contributors {
 	clause_keyword := "WHERE"
 	if strings.Contains(c.Text, "WHERE url") || strings.Contains(c.Text, "WHERE global_summary") {
 		clause_keyword = "AND"
@@ -137,7 +137,7 @@ func (c *Contributors) WithURLContaining(snippet string) *Contributors {
 	return c
 }
 
-func (c *Contributors) WithURLLacking(snippet string) *Contributors {
+func (c *Contributors) withURLLacking(snippet string) *Contributors {
 	clause_keyword := "WHERE"
 	if strings.Contains(c.Text, "WHERE url") || strings.Contains(c.Text, "WHERE global_summary") {
 		clause_keyword = "AND"
@@ -158,7 +158,7 @@ func (c *Contributors) WithURLLacking(snippet string) *Contributors {
 	return c
 }
 
-func (c *Contributors) DuringPeriod(period string) *Contributors {
+func (c *Contributors) duringPeriod(period string) *Contributors {
 	if (period == "all") {
 		return c
 	}
@@ -170,7 +170,7 @@ func (c *Contributors) DuringPeriod(period string) *Contributors {
 		clause_keyword = "WHERE"
 	}
 
-	period_clause, err := GetPeriodClause(period)
+	period_clause, err := getPeriodClause(period)
 	if err != nil {
 		c.Error = err
 		return c

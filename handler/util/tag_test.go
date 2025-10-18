@@ -2,6 +2,8 @@ package handler
 
 import (
 	"database/sql"
+	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -102,7 +104,6 @@ func TestScanGlobalCatCounts(t *testing.T) {
 	}
 
 	var result_count int32
-
 	for _, c := range *counts {
 		if c.Count == 0 {
 			t.Fatalf("cat %s returned count 0", c.Category)
@@ -139,11 +140,13 @@ func TestScanGlobalCatCounts(t *testing.T) {
 	}
 
 	for _, tp := range test_periods {
-		global_cats_sql = query.NewTopGlobalCatCounts().DuringPeriod(tp.Period)
-		// GlobalCatCounts.DuringPeriod().Error already tested
-		// in query/tag_test.go with same test cases
-
+		global_cats_sql = query.NewTopGlobalCatCounts().FromRequestParams(
+			url.Values{
+				"period": []string{tp.Period},
+			},
+		)
 		counts, err := ScanGlobalCatCounts(global_cats_sql)
+
 		if tp.Valid && err != nil && err != sql.ErrNoRows {
 			t.Fatalf(
 				"unexpected error for period %s: %s",
@@ -176,16 +179,28 @@ func TestScanGlobalCatCounts(t *testing.T) {
 			}
 
 			counts_sql := `SELECT count(global_cats)
-				FROM Links
-				WHERE ',' || global_cats || ',' LIKE '%,' || ? || ',%'`
+			FROM Links
+			WHERE ',' || global_cats || ',' LIKE '%,' || ? || ',%'`
 
 			if tp.Period != "all" {
-				period_clause, err := query.GetPeriodClause(tp.Period)
-				if err != nil {
-					t.Fatalf("unable to get period clause: %s", err)
+				var days int
+				switch tp.Period {
+				case "day":
+					days = 1
+				case "week":
+					days = 7
+				case "month":
+					days = 30
+				case "year":
+					days = 365
+				default:
+					t.Fatalf("invalid period: %s", tp.Period)
 				}
 
-				counts_sql += "AND "+period_clause+";"
+				period_clause := fmt.Sprintf("AND submit_date >= date('now', '-%d days')", days)
+
+
+				counts_sql += "\n" + period_clause + ";"
 			}
 
 			err = TestClient.QueryRow(counts_sql, c.Category).Scan(&result_count)
