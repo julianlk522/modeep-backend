@@ -35,7 +35,6 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 
 	page := ctx.Value(m.PageKey).(int)
 	links_sql = links_sql.Page(page)
-
 	if links_sql.Error != nil {
 		render.Render(w, r, e.ErrInvalidRequest(links_sql.Error))
 		return
@@ -57,7 +56,7 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 	}
-
+	
 	render.JSON(w, r, resp)
 }
 

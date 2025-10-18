@@ -22,9 +22,12 @@ var test_cats = []string{"go", "coding"}
 
 func TestNewTmapProfile(t *testing.T) {
 	profile_sql := NewTmapProfile(TEST_LOGIN_NAME)
-
+	row, err := profile_sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var profile model.Profile
-	if err := TestClient.QueryRow(profile_sql.Text, profile_sql.Args...).Scan(
+	if err := row.Scan(
 		&profile.LoginName,
 		&profile.PFP,
 		&profile.About,
@@ -37,8 +40,12 @@ func TestNewTmapProfile(t *testing.T) {
 
 func TestNewTmapNSFWLinksCount(t *testing.T) {
 	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME)
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var count int
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+	if err = row.Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
@@ -96,7 +103,11 @@ AND (
 		[]string{"engine", "search"},
 	)
 	sql = sql.fromCats(test_cats)
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := row.Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
@@ -173,8 +184,12 @@ AND (
 
 func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
 	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).submittedOnly() 
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var count int
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+	if err = row.Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
@@ -214,8 +229,12 @@ AND l.submitted_by = ?;`
 
 func TestTmapNSFWLinksCountStarredOnly(t *testing.T) {
 	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).starredOnly()
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var count int
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+	if err := row.Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
@@ -263,8 +282,12 @@ AND l.id IN (SELECT link_id FROM UserStars);`
 
 func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
 	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).taggedOnly()
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var count int
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+	if err := row.Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
@@ -312,28 +335,39 @@ AND l.id NOT IN
 }
 
 func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
-	// get NSFW links count overall first:
 	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
-	var total_countut int
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&total_countut); err != nil {
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var total_count int
+	if err := row.Scan(&total_count); err != nil {
 		t.Fatal(err)
 	}
 
 	// should equal "all" period
-	var count_during_all_period int
 	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).duringPeriod("all")
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_during_all_period); err != nil {
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count_during_all_period int
+	if err := row.Scan(&count_during_all_period); err != nil {
 		t.Fatal(err)
 	}
 
-	if total_countut != count_during_all_period {
-		t.Fatalf("expected %d, got %d", total_countut, count_during_all_period)
+	if total_count != count_during_all_period {
+		t.Fatalf("expected %d, got %d", total_count, count_during_all_period)
 	}
 
 	// last week (none)
-	var count_during_last_week int
 	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).duringPeriod("week")
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_during_last_week); err != nil {
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count_during_last_week int
+	if err := row.Scan(&count_during_last_week); err != nil {
 		t.Fatal(err)
 	}
 
@@ -344,8 +378,12 @@ func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
 
 func TestTmapNSFWLinksCountWithSummaryContaining(t *testing.T) {
 	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withSummaryContaining("web")
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var count int
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
+	if err := row.Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
@@ -372,18 +410,23 @@ WHERE L.global_cats LIKE '%' || 'NSFW' || '%'
 }
 
 func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
-	// user bradley has 1 NSFW tmap link: "https://www.googler.com/"
-	// count should be 1 overall and 0 with URL contains: {anything not in that}
-
-	var overall_count int
 	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&overall_count); err != nil {
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var overall_count int
+	if err := row.Scan(&overall_count); err != nil {
 		t.Fatal(err)
 	}
 
-	var count_with_url_containing int
 	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withURLContaining("googler")
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_with_url_containing); err != nil {
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count_with_url_containing int
+	if err := row.Scan(&count_with_url_containing); err != nil {
 		t.Fatal(err)
 	}
 
@@ -391,9 +434,13 @@ func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
 		t.Fatalf("expected %d, got %d", overall_count, count_with_url_containing)
 	}
 
-	var count_with_url_not_containing int
 	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withURLContaining("not_googler")
-	if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count_with_url_not_containing); err != nil {
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count_with_url_not_containing int
+	if err := row.Scan(&count_with_url_not_containing); err != nil {
 		t.Fatal(err)
 	}
 
@@ -490,24 +537,23 @@ func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
 	}
 
 	for _, test := range test_options_and_expected_counts {
-		sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).FromOptions(&test.Options)
-		var count int
-		if err := TestClient.QueryRow(sql.Text, sql.Args...).Scan(&count); err != nil {
-			t.Fatal(err)
+		sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).FromOptions(&test.Options)
+		row, err := sql.ValidateAndExecuteRow()
+		if (test.Valid && err != nil) || (!test.Valid && err == nil) {
+			t.Fatalf("expected %t, got %t", test.Valid, err == nil)
 		}
 
-		if (test.Valid && sql.Error != nil) || (!test.Valid && sql.Error == nil) {
-			if sql.Error == nil {
-				t.Fatalf("expected error, got nil")
+		if test.Valid {
+			var count int
+			if err = row.Scan(&count); err != nil {
+				t.Fatal(err)
+			} else if count != test.ExpectedCount {
+				t.Fatalf("expected %d, got %d (opts: %+v)", 
+					test.ExpectedCount, 
+					count,
+					test.Options,
+				)
 			}
-		}
-
-		if count != test.ExpectedCount {
-			t.Fatalf("expected %d, got %d (opts: %+v)", 
-				test.ExpectedCount, 
-				count,
-				test.Options,
-			)
 		}
 	}
 	

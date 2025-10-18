@@ -75,7 +75,7 @@ func scanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 		return nil, links_sql.Error
 	}
 
-	rows, err := db.Client.Query(links_sql.Text, links_sql.Args...)
+	rows, err := links_sql.ValidateAndExecuteRows()
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -92,7 +92,6 @@ func scanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 	switch any(new(T)).(type) {
 	case *model.Link:
 		var signed_out_links = []model.Link{}
-
 		for rows.Next() {
 			l := model.Link{}
 			err := rows.Scan(
@@ -121,7 +120,6 @@ func scanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 
 	case *model.LinkSignedIn:
 		var signed_in_links = []model.LinkSignedIn{}
-
 		for rows.Next() {
 			l := model.LinkSignedIn{}
 			if err := rows.Scan(
@@ -160,53 +158,53 @@ func scanRawLinksPageData[T model.Link | model.LinkSignedIn](links_sql *query.To
 }
 
 func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.SingleLink) (*T, error) {
-	var link any
+	row, err := single_link_sql.ValidateAndExecuteRow()
+	if err != nil {
+		return nil, err
+	}
 
+	var link any
 	switch any(new(T)).(type) {
 	case *model.LinkSignedIn:
 		var l = &model.LinkSignedIn{}
-		if err := db.Client.
-			QueryRow(single_link_sql.Text, single_link_sql.Args...).
-			Scan(
-				&l.ID,
-				&l.URL,
-				&l.SubmittedBy,
-				&l.SubmitDate,
-				&l.Cats,
-				&l.Summary,
-				&l.SummaryCount,
-				&l.TimesStarred,
-				&l.AvgStars,
-				&l.EarliestStarrers,
-				&l.ClickCount,
-				&l.TagCount,
-				&l.PreviewImgFilename,
-				&l.StarsAssigned,
-			); err != nil {
-			return nil, err
+		if err := row.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+			&l.StarsAssigned,
+		); err != nil {
+		return nil, err
 		}
 
 		link = l
 	case *model.Link:
 		var l = &model.Link{}
-		if err := db.Client.
-			QueryRow(single_link_sql.Text, single_link_sql.Args...).
-			Scan(
-				&l.ID,
-				&l.URL,
-				&l.SubmittedBy,
-				&l.SubmitDate,
-				&l.Cats,
-				&l.Summary,
-				&l.SummaryCount,
-				&l.TimesStarred,
-				&l.AvgStars,
-				&l.EarliestStarrers,
-				&l.ClickCount,
-				&l.TagCount,
-				&l.PreviewImgFilename,
-			); err != nil {
-			return nil, err
+		if err := row.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+		return nil, err
 		}
 
 		link = l
@@ -253,11 +251,13 @@ func countMergedCatSpellingVariants[T model.HasCats](lp *model.LinksPage[T], cat
 
 func getNSFWLinksCount[T model.HasCats](links_sql *query.TopLinks, nsfw_params bool) (int, error) {
 	hidden_links_count_sql := links_sql.CountNSFWLinks(nsfw_params)
+	row, err := hidden_links_count_sql.ValidateAndExecuteRow()
+	if err != nil {
+		return 0, err
+	}
+
 	var hidden_links sql.NullInt32
-	if err := db.Client.QueryRow(
-		hidden_links_count_sql.Text, 
-		hidden_links_count_sql.Args...,
-	).Scan(&hidden_links); err != nil {
+	if err := row.Scan(&hidden_links); err != nil {
 		return 0, err
 	}
 	

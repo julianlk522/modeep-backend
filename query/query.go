@@ -1,9 +1,12 @@
 package query
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
+	"github.com/julianlk522/modeep/db"
 	e "github.com/julianlk522/modeep/error"
 )
 
@@ -11,6 +14,37 @@ type Query struct {
 	Text  string
 	Args  []any
 	Error error
+}
+
+func (q *Query) ValidateAndExecuteRows() (*sql.Rows, error) {
+	q.validateArgCount()
+
+	if q.Error != nil {
+		return nil, q.Error
+	}
+	rows, err := db.Client.Query(q.Text, q.Args...)
+	return rows, err
+}
+
+func (q *Query) ValidateAndExecuteRow() (*sql.Row, error) {
+	q.validateArgCount()
+
+	if q.Error != nil {
+		return nil, q.Error
+	}
+	row := db.Client.QueryRow(q.Text, q.Args...)
+	return row, nil
+}
+
+func (q *Query) validateArgCount() {
+	placeholders_in_text := strings.Count(q.Text, "?")
+	arg_count := len(q.Args)
+	if arg_count != placeholders_in_text {
+		q.Error = e.ErrArgCountDoesNotMatchTextPlaceholders(arg_count, placeholders_in_text)
+		log.Printf("Placeholders in SQL text: %d, Args bundled: %d", placeholders_in_text, arg_count)
+		log.Printf("SQL text: %s", q.Text)
+		log.Printf("Args: %v", q.Args)
+	}
 }
 
 func getPeriodClause(period string) (clause string, err error) {

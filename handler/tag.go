@@ -188,7 +188,7 @@ func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	
-	rows, err := db.Client.Query(spfx_sql.Text, spfx_sql.Args...)
+	rows, err := spfx_sql.ValidateAndExecuteRows()
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 		return

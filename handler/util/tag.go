@@ -33,7 +33,7 @@ func GetUserTagForLink(login_name string, link_id string) (*model.Tag, error) {
 }
 
 func ScanTagRankings(tag_rankings_sql *query.TagRankingsForLink) (*[]model.TagRanking, error) {
-	rows, err := db.Client.Query(tag_rankings_sql.Text, tag_rankings_sql.Args...)
+	rows, err := tag_rankings_sql.ValidateAndExecuteRows()
 	if err != nil {
 		return nil, err
 	}
@@ -60,18 +60,13 @@ func ScanTagRankings(tag_rankings_sql *query.TagRankingsForLink) (*[]model.TagRa
 
 // GetTopGlobalCats
 func ScanGlobalCatCounts(global_cats_sql *query.TopGlobalCatCounts) (*[]model.CatCount, error) {
-	if global_cats_sql.Error != nil {
-		return nil, global_cats_sql.Error
-	}
-
-	rows, err := db.Client.Query(global_cats_sql.Text, global_cats_sql.Args...)
+	rows, err := global_cats_sql.ValidateAndExecuteRows()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	var counts []model.CatCount
-
 	for rows.Next() {
 		var c model.CatCount
 		err = rows.Scan(&c.Category, &c.Count)
@@ -195,13 +190,13 @@ func CalculateAndSetGlobalCats(link_id string) error {
 	}
 	
 	var new_global_cats string
-	err := db.Client.QueryRow(
-		global_cats_sql.Text, 
-		global_cats_sql.Args...).Scan(&new_global_cats)
+	row, err := global_cats_sql.ValidateAndExecuteRow()
 	if err != nil {
 		return err
 	}
-
+	if err = row.Scan(&new_global_cats); err != nil {
+		return err
+	}
 	if err = setGlobalCats(link_id, new_global_cats); err != nil {
 		return err
 	}
