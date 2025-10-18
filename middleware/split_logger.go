@@ -11,12 +11,12 @@ import (
 )
 
 var (
-	FileLogFormatter *SplitLogFormatter
+	FileLogFormatter *splitLogFormatter
 )
 
 func init() {
 	var err error
-	FileLogFormatter, err = NewSplitLogFormatter(
+	FileLogFormatter, err = newSplitLogFormatter(
 		log.New(
 			os.Stdout,
 			"",
@@ -28,20 +28,39 @@ func init() {
 	}
 }
 
-type SplitLogFormatter struct {
+func SplitRequestLogger(f *splitLogFormatter) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			entry := f.newLogEntry(r)
+			t1 := time.Now()
+
+			crw := &responseWriterWithStatusText{ResponseWriter: w}
+			ww := middleware.NewWrapResponseWriter(crw, r.ProtoMajor)
+
+			defer func() {
+				entry.Write(ww.Status(), ww.BytesWritten(), ww.Header(), time.Since(t1), crw)
+			}()
+
+			next.ServeHTTP(ww, middleware.WithLogEntry(r, entry))
+		}
+		return http.HandlerFunc(fn)
+	}
+}
+
+type splitLogFormatter struct {
 	middleware.DefaultLogFormatter
 	FileLogger *log.Logger
 }
 
-func (slf *SplitLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
-	return &SplitLogEntry{
+func (slf *splitLogFormatter) newLogEntry(r *http.Request) middleware.LogEntry {
+	return &splitLogEntry{
 		LogEntry:  slf.DefaultLogFormatter.NewLogEntry(r),
 		Formatter: slf,
 		Request:   r,
 	}
 }
 
-func NewSplitLogFormatter(logger middleware.LoggerInterface) (*SplitLogFormatter, error) {
+func newSplitLogFormatter(logger middleware.LoggerInterface) (*splitLogFormatter, error) {
 	err_log_file_path := os.Getenv("MODEEP_ERR_LOG_FILE")
 	if err_log_file_path == "" {
 		return nil, fmt.Errorf("MODEEP_ERR_LOG_FILE not set")
@@ -53,7 +72,7 @@ func NewSplitLogFormatter(logger middleware.LoggerInterface) (*SplitLogFormatter
 	}
 	log.Printf("Logging errs to %s", err_log_file_path)
 
-	return &SplitLogFormatter{
+	return &splitLogFormatter{
 		DefaultLogFormatter: middleware.DefaultLogFormatter{
 			Logger:  logger,
 			NoColor: false,
@@ -62,19 +81,19 @@ func NewSplitLogFormatter(logger middleware.LoggerInterface) (*SplitLogFormatter
 	}, nil
 }
 
-type SplitLogEntry struct {
+type splitLogEntry struct {
 	middleware.LogEntry
-	Formatter *SplitLogFormatter
+	Formatter *splitLogFormatter
 	Request   *http.Request
 }
 
-func (sle *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra any) {
+func (sle *splitLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra any) {
 	sle.LogEntry.Write(status, bytes, header, elapsed, extra)
 
 	// save GitHub webhook responses
 	if sle.Request.URL.Path == "/ghwh" {
 		status_text := "Unknown"
-		if crw, ok := extra.(*ResponseWriterWithStatusText); ok {
+		if crw, ok := extra.(*responseWriterWithStatusText); ok {
 			status_text = crw.StatusText
 		}
 
@@ -93,7 +112,7 @@ func (sle *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed t
 		// save errors
 	} else if status > 299 {
 		status_text := "Unknown Error"
-		if crw, ok := extra.(*ResponseWriterWithStatusText); ok {
+		if crw, ok := extra.(*responseWriterWithStatusText); ok {
 			status_text = crw.StatusText
 		}
 		sle.Formatter.FileLogger.Printf(
@@ -109,34 +128,14 @@ func (sle *SplitLogEntry) Write(status, bytes int, header http.Header, elapsed t
 	}
 }
 
-type ResponseWriterWithStatusText struct {
+type responseWriterWithStatusText struct {
 	http.ResponseWriter
 	StatusText string
 }
 
-func (crw *ResponseWriterWithStatusText) Write(b []byte) (int, error) {
+func (crw *responseWriterWithStatusText) Write(b []byte) (int, error) {
 	if crw.StatusText == "" {
 		crw.StatusText = string(b)
 	}
 	return crw.ResponseWriter.Write(b)
-}
-
-// Middleware
-func SplitRequestLogger(f *SplitLogFormatter) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			entry := f.NewLogEntry(r)
-			t1 := time.Now()
-
-			crw := &ResponseWriterWithStatusText{ResponseWriter: w}
-			ww := middleware.NewWrapResponseWriter(crw, r.ProtoMajor)
-
-			defer func() {
-				entry.Write(ww.Status(), ww.BytesWritten(), ww.Header(), time.Since(t1), crw)
-			}()
-
-			next.ServeHTTP(ww, middleware.WithLogEntry(r, entry))
-		}
-		return http.HandlerFunc(fn)
-	}
 }

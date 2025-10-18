@@ -625,7 +625,7 @@ func TestAsSignedInUser(t *testing.T) {
 	expected_args = []any{
 		mutil.EARLIEST_STARRERS_LIMIT, 
 		TEST_USER_ID, 
-		WithOptionalPluralOrSingularForm("go") + " AND " + WithOptionalPluralOrSingularForm("coding"), 
+		withOptionalPluralOrSingularForm("go") + " AND " + withOptionalPluralOrSingularForm("coding"), 
 		LINKS_PAGE_LIMIT,
 	}
 	for i, arg := range links_sql.Args {
@@ -778,7 +778,7 @@ func TestPage(t *testing.T) {
 	var expected_args = []any{
 		mutil.EARLIEST_STARRERS_LIMIT, 
 		TEST_USER_ID, 
-		WithOptionalPluralOrSingularForm("go") + " AND " + WithOptionalPluralOrSingularForm("coding"), 
+		withOptionalPluralOrSingularForm("go") + " AND " + withOptionalPluralOrSingularForm("coding"), 
 		LINKS_PAGE_LIMIT + 1, 
 		LINKS_PAGE_LIMIT,
 	}

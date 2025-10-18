@@ -17,16 +17,38 @@ var claims_defaults = map[string]any{
 
 // Requests with no token are allowed, but getting StarsAssigned
 // on links requires a token
-func VerifierOptional(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler {
-	return VerifyOptional(ja, jwtauth.TokenFromHeader, jwtauth.TokenFromCookie)
+func JWTContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// claims = {"user_id":"1234","login_name":"johndoe", "exp": 1234567890, "iat": 1234567890}
+		_, claims, err := jwtauth.FromContext(r.Context())
+		if len(claims) == 0 || err != nil {
+			claims = claims_defaults
+		} else {
+			for k, v := range claims {
+				if k == "user_id" || k == "login_name" {
+					_, ok := v.(string)
+					if !ok {
+						claims[k] = claims_defaults[k]
+					}
+				}
+			}
+		}
+
+		ctx := context.WithValue(r.Context(), JWTClaimsKey, claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
-func VerifyOptional(ja *jwtauth.JWTAuth, findTokenFns ...func(r *http.Request) string) func(http.Handler) http.Handler {
+func VerifierOptional(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler {
+	return verifyOptional(ja, jwtauth.TokenFromHeader, jwtauth.TokenFromCookie)
+}
+
+func verifyOptional(ja *jwtauth.JWTAuth, findTokenFns ...func(r *http.Request) string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		hfn := func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			token, err := VerifyRequestOptional(ja, r, findTokenFns...)
+			token, err := verifyRequestOptional(ja, r, findTokenFns...)
 			ctx = jwtauth.NewContext(ctx, token, err)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -35,7 +57,7 @@ func VerifyOptional(ja *jwtauth.JWTAuth, findTokenFns ...func(r *http.Request) s
 	}
 }
 
-func VerifyRequestOptional(ja *jwtauth.JWTAuth, r *http.Request, findTokenFns ...func(r *http.Request) string) (jwt.Token, error) {
+func verifyRequestOptional(ja *jwtauth.JWTAuth, r *http.Request, findTokenFns ...func(r *http.Request) string) (jwt.Token, error) {
 	var tokenString string
 
 	for _, fn := range findTokenFns {
@@ -70,26 +92,4 @@ func AuthenticatorOptional(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler 
 		}
 		return http.HandlerFunc(hfn)
 	}
-}
-
-// claims = {"user_id":"1234","login_name":"johndoe", "exp": 1234567890, "iat": 1234567890}
-func JWTContext(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, claims, err := jwtauth.FromContext(r.Context())
-		if len(claims) == 0 || err != nil {
-			claims = claims_defaults
-		} else {
-			for k, v := range claims {
-				if k == "user_id" || k == "login_name" {
-					_, ok := v.(string)
-					if !ok {
-						claims[k] = claims_defaults[k]
-					}
-				}
-			}
-		}
-
-		ctx := context.WithValue(r.Context(), JWTClaimsKey, claims)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
 }
