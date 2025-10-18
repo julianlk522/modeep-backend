@@ -694,7 +694,7 @@ SELECT
     b.summary,
     COALESCE(sc.summary_count, 0) as summary_count,
     COALESCE(ts.times_starred, 0) as times_starred,
-	COALESCE(avs.avg_stars, 0) as avg_stars,
+    COALESCE(avs.avg_stars, 0) as avg_stars,
     COALESCE(es.earliest_starrers, "") as earliest_starrers,
     COALESCE(ckc.click_count, 0) as click_count,
     COALESCE(tc.tag_count, 0) as tag_count,
@@ -733,7 +733,7 @@ func (sl *SingleLink) AsSignedInUser(user_id string) *SingleLink {
 		1,
 	)
 
-	sl.Args = append(sl.Args, user_id, user_id)
+	sl.Args = append(sl.Args, user_id)
 
 	return sl
 }
