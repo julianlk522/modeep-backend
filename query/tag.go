@@ -579,7 +579,25 @@ FROM CombinedRanks
 ORDER BY (MAX(min_distance, %d) / combined_rank), combined_rank DESC
 LIMIT ?;`, DISTANCE_LOWER_BOUND)
 
-func (sm *SpellfixMatches) FromTmap(tmap_owner_login_name string) *SpellfixMatches {
+func (sm *SpellfixMatches) FromRequestParams(params url.Values) *SpellfixMatches {
+	tmap_params := params.Get("from_tmap")
+	if tmap_params != "" {
+		sm = sm.fromTmap(tmap_params)
+	}
+	cat_filter_params := params.Get("omitted")
+	if cat_filter_params != "" {
+		cats_split := strings.Split(cat_filter_params, ",")
+		sm = sm.fromCats(cats_split)
+	}
+	new_link_cat_filter_params := params.Get("new_link_omitted")
+	if new_link_cat_filter_params != "" {
+		cats_split := strings.Split(new_link_cat_filter_params, ",")
+		sm = sm.fromCatsWhileSubmittingLink(cats_split)
+	}
+	return sm
+}
+
+func (sm *SpellfixMatches) fromTmap(tmap_owner_login_name string) *SpellfixMatches {
 	sm.Text = TMAP_SPELLFIX_BASE
 		
 	// Old: snippet, snippet*, LIMIT
@@ -727,13 +745,15 @@ FROM FilteredSpellfixMatches
 ORDER BY (MAX(distance, %d) / rank_in_context), rank_in_context DESC
 LIMIT ?;`, DISTANCE_LOWER_BOUND)
 
-func (sm *SpellfixMatches) FromCats(cat_filters []string) error {
+func (sm *SpellfixMatches) fromCats(cat_filters []string) *SpellfixMatches {
 	if len(cat_filters) == 0 || cat_filters[0] == "" {
-		return e.ErrNoCatFilters
+		sm.Error = e.ErrNoCatFilters
+		return sm
 	}
 
-	// Add placeholders to MatchingGlobalCats / MatchingCats CTEs (depending on if .FromTmap() called)
-	// NOT IN clause if more than 1 cat filter
+	// Add placeholders to MatchingGlobalCats / MatchingCats CTEs NOT IN clause 
+	// if more than 1 cat filter applied.
+	// (MatchingGlobalCats or MatchingCats depending on if .FromTmap() called first)
 	not_in_clause := "AND cat NOT IN (?"
 	not_in_args := []any{}
 	for i, cat := range cat_filters {
@@ -831,7 +851,7 @@ func (sm *SpellfixMatches) FromCats(cat_filters []string) error {
 		sm.Args = new_args
 	}
 
-	return nil
+	return sm
 }
 
 var CAT_FILTERS_GLOBAL_CATS_CTES = `RECURSIVE MatchingGlobalCatsSplit(link_id, cat, remaining, global_cats) AS (
@@ -883,3 +903,58 @@ var FILTERED_NORMALIZED_MATCHES_CTE = `NormalizedMatches AS (
 		END as normalized_word
 	FROM FilteredSpellfixMatches
 )`
+
+// They key difference while submitting a link is that we don't use counts of subcats.
+// When searching, it's useful to see only the cats that are included in the subset
+// of links that you are potentially searching, so you can know how many results
+// to expect. But when submitting a link you should choose whatever cats you want,
+// whether or not there are existing links with similar classifications. So for those
+// spellfix recommendations, we just show the number of links that have them in their
+// global cats regardless of already-applied filters.
+func (sm *SpellfixMatches) fromCatsWhileSubmittingLink(cats []string) *SpellfixMatches {
+	new_spellfix_matches_cte := SPELLFIX_MATCHES_FROM_CATS_WHILE_SUBMITTING_LINK_CTE
+	if len(cats) == 0 {
+		return sm
+	}
+	var not_in_args = []any{cats[0]}
+	if len(cats) > 1 {
+		not_in_clause := "AND gcs.word NOT IN (?"
+		for c:= 1; c < len(cats); c++ {
+			not_in_clause += ", ?"
+			not_in_args = append(not_in_args, cats[c])
+		}
+		not_in_clause += ")"
+		new_spellfix_matches_cte = strings.Replace(
+			new_spellfix_matches_cte,
+			"AND gcs.word NOT IN (?)",
+			not_in_clause,
+			1,
+		)
+	}
+
+	sm.Text = strings.Replace(
+		sm.Text,
+		SPELLFIX_MATCHES_CTE,
+		new_spellfix_matches_cte,
+		1,
+	)
+
+	// Insert args
+	// Old: snippet, snippet*, LIMIT
+	// New: snippet, snippet*, not_in_args..., LIMIT
+	sm.Args = sm.Args[:len(sm.Args) - 1]
+	sm.Args = append(sm.Args, not_in_args...)
+	sm.Args = append(sm.Args, SPELLFIX_MATCHES_LIMIT)
+
+	return sm
+}
+
+const SPELLFIX_MATCHES_FROM_CATS_WHILE_SUBMITTING_LINK_CTE = `SpellfixMatches AS (
+    SELECT word, rank, distance
+    FROM global_cats_spellfix gcs
+    WHERE 
+    	(gcs.word MATCH ? OR gcs.word MATCH ?)
+    AND gcs.word NOT IN (?)
+    ORDER BY distance, rank DESC
+)`
+
