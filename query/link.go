@@ -370,6 +370,7 @@ func (tl *TopLinks) Page(page int) *TopLinks {
 			tl.Args = append(tl.Args, (page-1)*LINKS_PAGE_LIMIT)
 
 	}
+
 	return tl
 }
 
@@ -443,12 +444,27 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 
 	// remove LIMIT and OFFET clause since there will be no links
 	// ranked, just a count
-	tl.Text = strings.Replace(
+	// and pop their respective args from the end
+	if strings.Contains(
 		tl.Text,
-		"\nLIMIT ? OFFSET ?",
-		"",
-		1,
-	)
+		"LIMIT ? OFFSET ?",
+	) {
+		tl.Text = strings.Replace(
+			tl.Text,
+			"LIMIT ? OFFSET ?",
+			"",
+			1,
+		)
+		tl.Args = tl.Args[:len(tl.Args) - 2]
+	} else {
+		tl.Text = strings.Replace(
+			tl.Text,
+			"LIMIT ?",
+			"",
+			1,
+		)
+		tl.Args = tl.Args[:len(tl.Args) - 1]
+	}
 
 	return tl
 }
