@@ -8,273 +8,6 @@ import (
 	mutil "github.com/julianlk522/modeep/model/util"
 )
 
-// TREASURE MAP PROFILE
-type TmapProfile struct {
-	*Query
-}
-
-func NewTmapProfile(login_name string) *TmapProfile {
-	return (&TmapProfile{
-		&Query{
-			Text: TMAP_PROFILE,
-			Args: []any{login_name},
-		},
-	})
-}
-
-const TMAP_PROFILE = `SELECT 
-	login_name, 
-	COALESCE(pfp,'') as pfp, 
-	COALESCE(about,'') as about,
-	COALESCE(email,'') as email,
-	created
-FROM Users 
-WHERE login_name = ?;`
-
-// NSFW LINKS COUNT
-// Communicates how many NSFW links are hidden if the user does not
-// opt into seeing them via the "?nsfw=true" URL params.
-// This clarifies the view somewhat when cat counts given via spellfix matches
-// or Top Cats totals appear to not equal the amount of matching links
-// (because some are hidden).
-type TmapNSFWLinksCount struct {
-	*Query
-}
-
-func NewTmapNSFWLinksCount(login_name string) *TmapNSFWLinksCount {
-	return &TmapNSFWLinksCount{
-		&Query{
-			Text: "WITH " + POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER + ",\n" +
-				NSFW_CATS_CTES + "\n" +
-				USER_STARS_CTE + `
-			SELECT count(*) as NSFW_link_count
-				FROM Links l` + "\n" +
-				"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id" +
-				NSFW_JOINS + "\n" +
-				NSFW_LINKS_COUNT_WHERE +
-				NSFW_LINKS_COUNT_FINAL_AND + ";",
-			Args: []any{
-				login_name,
-				login_name,
-				login_name,
-				login_name,
-			},
-		},
-	}
-}
-
-func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOptions) *TmapNSFWLinksCount {
-	if opts.OnlySection != "" {
-		switch opts.OnlySection {
-		case "submitted":
-			tnlc.submittedOnly()
-		case "starred":
-			tnlc.starredOnly()
-		case "tagged":
-			tnlc.taggedOnly()
-		default:
-			tnlc.Error = e.ErrInvalidOnlySectionParams
-			return tnlc
-		}
-	}
-	if len(opts.CatFiltersWithSpellingVariants) > 0 {
-		tnlc.fromCatFilters(opts.CatFiltersWithSpellingVariants)
-	}
-	if opts.Period != "" {
-		tnlc.duringPeriod(opts.Period)
-	}
-	if opts.SummaryContains != "" {
-		tnlc.withSummaryContaining(opts.SummaryContains)
-	}
-	if opts.URLContains != "" {
-		tnlc.withURLContaining(opts.URLContains)
-	}
-	if opts.URLLacks != "" {
-		tnlc.withURLLacking(opts.URLLacks)
-	}
-	return tnlc
-}
-
-func (tnlc *TmapNSFWLinksCount) submittedOnly() *TmapNSFWLinksCount {
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		NSFW_LINKS_COUNT_FINAL_AND,
-		"\nAND l.submitted_by = ?",
-		1,
-	)
-
-	return tnlc
-}
-
-func (tnlc *TmapNSFWLinksCount) starredOnly() *TmapNSFWLinksCount {
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		NSFW_LINKS_COUNT_FINAL_AND,
-		"\nAND l.id IN (SELECT link_id FROM UserStars)",
-		1,
-	)
-	// since NSFW_LINKS_COUNT_FINAL_AND had an arg placeholder,
-	// we remove the corresponding arg
-	tnlc.Args = tnlc.Args[:len(tnlc.Args)-1]
-
-	return tnlc
-}
-
-func (tnlc *TmapNSFWLinksCount) taggedOnly() *TmapNSFWLinksCount {
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		NSFW_LINKS_COUNT_FINAL_AND,
-		TAGGED_AND,
-		1,
-	)
-
-	return tnlc
-}
-
-func (tnlc *TmapNSFWLinksCount) fromCatFilters(cat_filters []string) *TmapNSFWLinksCount {
-	if len(cat_filters) == 0 || cat_filters[0] == "" {
-		return tnlc
-	}
-
-	// Insert CTEs
-	cat_filter_ctes_no_cats_from_user := strings.Replace(
-		CAT_FILTER_CTES,
-		`,
-		(cats IS NOT NULL) AS cats_from_user`,
-		"",
-		1,
-	)
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER,
-		cat_filter_ctes_no_cats_from_user,
-		1,
-	)
-
-	// Insert joins
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
-		CAT_FILTER_JOINS,
-		1,
-	)
-
-	// Add user/global cat filter condition
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		NSFW_LINKS_COUNT_WHERE,
-		NSFW_LINKS_COUNT_WHERE + "\n" + CAT_FILTER_AND,
-		1,
-	)
-
-	// Build MATCH clause
-	// (cat_filters already include spelling variants via
-	// GetTmapOptsFromRequestParams())
-	match_arg := cat_filters[0]
-	for i := 1; i < len(cat_filters); i++ {
-		match_arg += " AND " + cat_filters[i]
-	}
-
-	// Insert args
-	// args to add: login_name, match arg x2
-	new_args := make([]any, 0, len(tnlc.Args) + 3)
-	// since other methods push new args to end of slice,
-	// better to insert these from the start (always after the first 2,
-	// which are login_name x2)
-	login_name := tnlc.Args[0]
-	first_2_args := tnlc.Args[:2]
-	trailing_args := tnlc.Args[2:]
-
-	new_args = append(new_args, first_2_args...)
-	new_args = append(new_args, login_name, match_arg, match_arg)
-	new_args = append(new_args, trailing_args...)
-
-	tnlc.Args = new_args
-	return tnlc
-}
-
-func (tnlc *TmapNSFWLinksCount) duringPeriod(period string) *TmapNSFWLinksCount {
-	if period == "all" {
-		return tnlc
-	}
-
-	period_clause, err := getPeriodClause(period)
-	if err != nil {
-		tnlc.Error = err
-		return tnlc
-	}
-
-	period_clause = strings.Replace(
-		period_clause,
-		"submit_date",
-		"l.submit_date",
-		1,
-	)
-
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		";",
-		"\nAND " + period_clause + ";",
-		1,
-	)
-
-	return tnlc
-}
-
-// As with cat filters, the specified snippet must either be present on the user's
-// summary for a link, if they submitted one, or otherwise on the global summary
-func (tnlc *TmapNSFWLinksCount) withSummaryContaining(snippet string) *TmapNSFWLinksCount {
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER,
-		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER + "," + POSSIBLE_USER_SUMMARY_CTE,
-		1,
-	)
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
-		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id" + "\n" + "LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id",
-		1,
-	)
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		";",
-		"\nAND COALESCE(pus.user_summary,l.global_summary) LIKE ?;",
-		1,
-	)
-
-	// Prepend login_name arg for POSSIBLE_USER_SUMMARY_CTE
-	// (always first arg for TmapNSFWLinksCount queries)
-	login_name := tnlc.Args[0]
-	tnlc.Args = append([]any{login_name}, tnlc.Args...)
-	// Append summary snippet arg
-	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
-
-	return tnlc
-}
-
-func (tnlc *TmapNSFWLinksCount) withURLContaining(snippet string) *TmapNSFWLinksCount {
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		";",
-		"\nAND url LIKE ?;",
-		1,
-	)
-	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
-	return tnlc
-}
-
-func (tnlc *TmapNSFWLinksCount) withURLLacking(snippet string) *TmapNSFWLinksCount {
-	tnlc.Text = strings.Replace(
-		tnlc.Text,
-		";",
-		"\nAND url NOT LIKE ?;",
-		1,
-	)
-	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
-	return tnlc
-}
-
 // LINKS
 type TmapLinksQueryBuilder interface {
 	FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilder
@@ -883,6 +616,12 @@ func NewTmapTagged(login_name string) *TmapTagged {
 	return q
 }
 
+const USER_CATS_CTE = `UserCats AS (
+    SELECT link_id, cats as user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+)`
+
 var TAGGED_FIELDS = strings.Replace(
 	strings.Replace(
 		TMAP_BASE_FIELDS,
@@ -912,11 +651,6 @@ var TAGGED_NO_NSFW_CATS_WHERE = strings.ReplaceAll(
 	"puca.user_cats",
 	"uct.user_cats",
 )
-
-const TAGGED_AND = `
-AND l.submitted_by != ?
-AND l.id NOT IN
-	(SELECT link_id FROM UserStars)`
 
 func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilder {
 	if len(opts.CatFiltersWithSpellingVariants) > 0 {
@@ -1129,8 +863,7 @@ func (tt *TmapTagged) withURLLacking(snippet string) TmapLinksQueryBuilder {
 	return tt
 }
 
-// SHARED
-// Treasure Map Base
+// LINKS SHARED BUILDING BLOCKS
 const TMAP_BASE_CTES = `SummaryCount AS (
     SELECT link_id, COUNT(*) AS summary_count
     FROM Summaries
@@ -1171,22 +904,6 @@ TagCount AS (
     SELECT link_id, COUNT(*) AS tag_count
     FROM Tags
     GROUP BY link_id
-),`
-
-const NSFW_CATS_CTES = `PossibleUserCatsNSFW AS (
-    SELECT 
-		link_id, 
-		cats AS user_cats
-    FROM user_cats_fts
-    WHERE submitted_by = ?
-	AND cats MATCH 'NSFW'
-),
-GlobalNSFWCats AS (
-	SELECT
-		link_id,
-		global_cats
-	FROM global_cats_fts
-	WHERE global_cats MATCH 'NSFW'
 ),`
 
 const TMAP_BASE_FIELDS = `
@@ -1236,42 +953,6 @@ LEFT JOIN TagCount tc ON l.id = tc.link_id
 LEFT JOIN SummaryCount sc ON l.id = sc.link_id
 `
 
-const NSFW_JOINS = `
-LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
-LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id`
-
-// As with cat filters and summary filters on user Treasure Map pages,
-// NSFW filters are made against the Treasure Map owner's input if it exists,
-// otherwise global tags/cats. Links are considered NSFW (included in the count
-// and hidden by default) if either the Treasure Map owner tagged it "NSFW"
-// OR they have not tagged at all but the global tag contains "NSFW."
-// If the Treasure Map owner has tagged a link and _not_ assigned NSFW
-// as a cat in their tag, the link is visible by default.
-const NSFW_LINKS_COUNT_WHERE = `WHERE (
-	(puca.user_cats IS NULL AND gnsfwc.global_cats IS NOT NULL)
-	OR
-	pucnsfw.user_cats IS NOT NULL
-)`
-
-const NSFW_LINKS_COUNT_FINAL_AND = `
-AND (
-	l.submitted_by = ?
-	OR l.id IN (SELECT link_id FROM UserStars)
-	OR l.id IN 
-		(
-		SELECT link_id
-		FROM PossibleUserCatsNSFW
-		)
-	)`
-
-// Links which the Treasure Map owner has tagged "NSFW" are hidden by default.
-// Additionally, if they have not tagged one but its global tag contains "NSFW,"
-// it is hidden by default.
-const TMAP_NO_NSFW_CATS_WHERE = `WHERE (
-	(puca.user_cats IS NULL AND gnsfwc.global_cats IS NULL)
-	OR
-	(puca.user_cats IS NOT NULL AND pucnsfw.user_cats IS NULL)
-)`
 
 var tmap_order_by_clauses = map[string]string{
 	"times_starred": TMAP_ORDER_BY_TIMES_STARRED,
@@ -1346,20 +1027,7 @@ const TMAP_AUTH_JOIN = `
 LEFT JOIN StarsAssigned sa ON l.id = sa.link_id
 `
 
-// Other shared building blocks
-const USER_CATS_CTE = `UserCats AS (
-    SELECT link_id, cats as user_cats
-    FROM user_cats_fts
-    WHERE submitted_by = ?
-)`
-
-const USER_STARS_CTE = `UserStars AS (
-	SELECT s.link_id
-	FROM Stars s
-	INNER JOIN Users u ON u.id = s.user_id
-	WHERE u.login_name = ?
-)`
-
+// Other shared (links queries only)
 const POSSIBLE_USER_CATS_CTE = `PossibleUserCatsAny AS (
 	SELECT 
 		link_id, 
@@ -1367,6 +1035,317 @@ const POSSIBLE_USER_CATS_CTE = `PossibleUserCatsAny AS (
 		(cats IS NOT NULL) AS cats_from_user
 	FROM user_cats_fts
 	WHERE submitted_by = ?
+)`
+
+const POSSIBLE_USER_SUMMARY_CTE = `
+PossibleUserSummary AS (
+	SELECT
+		link_id, 
+		text as user_summary
+	FROM Summaries
+	INNER JOIN Users u ON u.id = submitted_by
+	WHERE u.login_name = ?
+)`
+
+const STARRED_JOIN = `
+INNER JOIN UserStars us ON l.id = us.link_id`
+
+// NSFW LINKS COUNT
+// Communicates how many NSFW links are hidden if the user does not
+// opt into seeing them via the "?nsfw=true" URL params.
+// This clarifies the view somewhat when cat counts given via spellfix matches
+// or Top Cats totals appear to not equal the amount of matching links
+// (because some are hidden).
+type TmapNSFWLinksCount struct {
+	*Query
+}
+
+func NewTmapNSFWLinksCount(login_name string) *TmapNSFWLinksCount {
+	return &TmapNSFWLinksCount{
+		&Query{
+			Text: "WITH " + POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER + ",\n" +
+				NSFW_CATS_CTES + "\n" +
+				USER_STARS_CTE + `
+			SELECT count(*) as NSFW_link_count
+				FROM Links l` + "\n" +
+				"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id" +
+				NSFW_JOINS + "\n" +
+				NSFW_LINKS_COUNT_WHERE +
+				NSFW_LINKS_COUNT_FINAL_AND + ";",
+			Args: []any{
+				login_name,
+				login_name,
+				login_name,
+				login_name,
+			},
+		},
+	}
+}
+
+func (tnlc *TmapNSFWLinksCount) FromOptions(opts *model.TmapNSFWLinksCountOptions) *TmapNSFWLinksCount {
+	if opts.OnlySection != "" {
+		switch opts.OnlySection {
+		case "submitted":
+			tnlc.submittedOnly()
+		case "starred":
+			tnlc.starredOnly()
+		case "tagged":
+			tnlc.taggedOnly()
+		default:
+			tnlc.Error = e.ErrInvalidOnlySectionParams
+			return tnlc
+		}
+	}
+	if len(opts.CatFiltersWithSpellingVariants) > 0 {
+		tnlc.fromCatFilters(opts.CatFiltersWithSpellingVariants)
+	}
+	if opts.Period != "" {
+		tnlc.duringPeriod(opts.Period)
+	}
+	if opts.SummaryContains != "" {
+		tnlc.withSummaryContaining(opts.SummaryContains)
+	}
+	if opts.URLContains != "" {
+		tnlc.withURLContaining(opts.URLContains)
+	}
+	if opts.URLLacks != "" {
+		tnlc.withURLLacking(opts.URLLacks)
+	}
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) submittedOnly() *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		NSFW_LINKS_COUNT_FINAL_AND,
+		"\nAND l.submitted_by = ?",
+		1,
+	)
+
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) starredOnly() *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		NSFW_LINKS_COUNT_FINAL_AND,
+		"\nAND l.id IN (SELECT link_id FROM UserStars)",
+		1,
+	)
+	// since NSFW_LINKS_COUNT_FINAL_AND had an arg placeholder,
+	// we remove the corresponding arg
+	tnlc.Args = tnlc.Args[:len(tnlc.Args)-1]
+
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) taggedOnly() *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		NSFW_LINKS_COUNT_FINAL_AND,
+		TAGGED_AND,
+		1,
+	)
+
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) fromCatFilters(cat_filters []string) *TmapNSFWLinksCount {
+	if len(cat_filters) == 0 || cat_filters[0] == "" {
+		return tnlc
+	}
+
+	// Insert CTEs
+	cat_filter_ctes_no_cats_from_user := strings.Replace(
+		CAT_FILTER_CTES,
+		`,
+		(cats IS NOT NULL) AS cats_from_user`,
+		"",
+		1,
+	)
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER,
+		cat_filter_ctes_no_cats_from_user,
+		1,
+	)
+
+	// Insert joins
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
+		CAT_FILTER_JOINS,
+		1,
+	)
+
+	// Add user/global cat filter condition
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		NSFW_LINKS_COUNT_WHERE,
+		NSFW_LINKS_COUNT_WHERE + "\n" + CAT_FILTER_AND,
+		1,
+	)
+
+	// Build MATCH clause
+	// (cat_filters already include spelling variants via
+	// GetTmapOptsFromRequestParams())
+	match_arg := cat_filters[0]
+	for i := 1; i < len(cat_filters); i++ {
+		match_arg += " AND " + cat_filters[i]
+	}
+
+	// Insert args
+	// args to add: login_name, match arg x2
+	new_args := make([]any, 0, len(tnlc.Args) + 3)
+	// since other methods push new args to end of slice,
+	// better to insert these from the start (always after the first 2,
+	// which are login_name x2)
+	login_name := tnlc.Args[0]
+	first_2_args := tnlc.Args[:2]
+	trailing_args := tnlc.Args[2:]
+
+	new_args = append(new_args, first_2_args...)
+	new_args = append(new_args, login_name, match_arg, match_arg)
+	new_args = append(new_args, trailing_args...)
+
+	tnlc.Args = new_args
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) duringPeriod(period string) *TmapNSFWLinksCount {
+	if period == "all" {
+		return tnlc
+	}
+
+	period_clause, err := getPeriodClause(period)
+	if err != nil {
+		tnlc.Error = err
+		return tnlc
+	}
+
+	period_clause = strings.Replace(
+		period_clause,
+		"submit_date",
+		"l.submit_date",
+		1,
+	)
+
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		";",
+		"\nAND " + period_clause + ";",
+		1,
+	)
+
+	return tnlc
+}
+
+// As with cat filters, the specified snippet must either be present on the user's
+// summary for a link, if they submitted one, or otherwise on the global summary
+func (tnlc *TmapNSFWLinksCount) withSummaryContaining(snippet string) *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER,
+		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER + "," + POSSIBLE_USER_SUMMARY_CTE,
+		1,
+	)
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
+		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id" + "\n" + "LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id",
+		1,
+	)
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		";",
+		"\nAND COALESCE(pus.user_summary,l.global_summary) LIKE ?;",
+		1,
+	)
+
+	// Prepend login_name arg for POSSIBLE_USER_SUMMARY_CTE
+	// (always first arg for TmapNSFWLinksCount queries)
+	login_name := tnlc.Args[0]
+	tnlc.Args = append([]any{login_name}, tnlc.Args...)
+	// Append summary snippet arg
+	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
+
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) withURLContaining(snippet string) *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		";",
+		"\nAND url LIKE ?;",
+		1,
+	)
+	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
+	return tnlc
+}
+
+func (tnlc *TmapNSFWLinksCount) withURLLacking(snippet string) *TmapNSFWLinksCount {
+	tnlc.Text = strings.Replace(
+		tnlc.Text,
+		";",
+		"\nAND url NOT LIKE ?;",
+		1,
+	)
+	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
+	return tnlc
+}
+
+// SHARED BUILDING BLOCKS FOR LINKS AND NSFW COUNT QUERIES
+const NSFW_CATS_CTES = `PossibleUserCatsNSFW AS (
+    SELECT 
+		link_id, 
+		cats AS user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+	AND cats MATCH 'NSFW'
+),
+GlobalNSFWCats AS (
+	SELECT
+		link_id,
+		global_cats
+	FROM global_cats_fts
+	WHERE global_cats MATCH 'NSFW'
+),`
+
+const NSFW_JOINS = `
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id`
+
+// As with cat filters and summary filters on user Treasure Map pages,
+// NSFW filters are made against the Treasure Map owner's input if it exists,
+// otherwise global tags/cats. Links are considered NSFW (included in the count
+// and hidden by default) if either the Treasure Map owner tagged it "NSFW"
+// OR they have not tagged at all but the global tag contains "NSFW."
+// If the Treasure Map owner has tagged a link and _not_ assigned NSFW
+// as a cat in their tag, the link is visible by default.
+const NSFW_LINKS_COUNT_WHERE = `WHERE (
+	(puca.user_cats IS NULL AND gnsfwc.global_cats IS NOT NULL)
+	OR
+	pucnsfw.user_cats IS NOT NULL
+)`
+
+const NSFW_LINKS_COUNT_FINAL_AND = `
+AND (
+	l.submitted_by = ?
+	OR l.id IN (SELECT link_id FROM UserStars)
+	OR l.id IN 
+		(
+		SELECT link_id
+		FROM PossibleUserCatsNSFW
+		)
+	)`
+
+// Links which the Treasure Map owner has tagged "NSFW" are hidden by default.
+// Additionally, if they have not tagged one but its global tag contains "NSFW,"
+// it is hidden by default.
+const TMAP_NO_NSFW_CATS_WHERE = `WHERE (
+	(puca.user_cats IS NULL AND gnsfwc.global_cats IS NULL)
+	OR
+	(puca.user_cats IS NOT NULL AND pucnsfw.user_cats IS NULL)
 )`
 
 var POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER = strings.Replace(
@@ -1378,15 +1357,17 @@ var POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER = strings.Replace(
 	1,
 )
 
-const POSSIBLE_USER_SUMMARY_CTE = `
-PossibleUserSummary AS (
-	SELECT
-		link_id, 
-		text as user_summary
-	FROM Summaries
-	INNER JOIN Users u ON u.id = submitted_by
+const USER_STARS_CTE = `UserStars AS (
+	SELECT s.link_id
+	FROM Stars s
+	INNER JOIN Users u ON u.id = s.user_id
 	WHERE u.login_name = ?
 )`
+
+const TAGGED_AND = `
+AND l.submitted_by != ?
+AND l.id NOT IN
+	(SELECT link_id FROM UserStars)`
 
 var CAT_FILTER_CTES = POSSIBLE_USER_CATS_CTE + `,
 PossibleUserCatsMatchingRequestParams AS (
@@ -1419,5 +1400,27 @@ const CAT_FILTER_AND = `AND (
 	pucmrp.user_cats IS NOT NULL
 )`
 
-const STARRED_JOIN = `
-INNER JOIN UserStars us ON l.id = us.link_id`
+// USER PROFILE
+// (visible on Treasure Map when no filters applied and no individual section
+// selected)
+type TmapProfile struct {
+	*Query
+}
+
+func NewTmapProfile(login_name string) *TmapProfile {
+	return (&TmapProfile{
+		&Query{
+			Text: TMAP_PROFILE,
+			Args: []any{login_name},
+		},
+	})
+}
+
+const TMAP_PROFILE = `SELECT 
+	login_name, 
+	COALESCE(pfp,'') as pfp, 
+	COALESCE(about,'') as about,
+	COALESCE(email,'') as email,
+	created
+FROM Users 
+WHERE login_name = ?;`

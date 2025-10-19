@@ -16,13 +16,9 @@ import (
 	m "github.com/julianlk522/modeep/middleware"
 )
 
-const (
-	API_URL = "api.modeep.org:1999"
-	// TEST_API_URL = "localhost:1999"
-)
+const API_URL = "api.modeep.org:1999"
 
 var token_auth *jwtauth.JWTAuth
-
 func init() {
 	token_auth = jwtauth.New("HS256", []byte(os.Getenv("MODEEP_JWT_SECRET")), nil)
 }
@@ -38,12 +34,6 @@ func main() {
 		); err != nil {
 			log.Fatal(err)
 		}
-		// if err := http.ListenAndServe(
-		// 	TEST_API_URL,
-		// 	r,
-		// ); err != nil {
-		// 	log.Fatal(err)
-		// }
 	}()
 
 	// ROUTER-WIDE MIDDLEWARE

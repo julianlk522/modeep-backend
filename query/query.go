@@ -18,20 +18,20 @@ type Query struct {
 
 func (q *Query) ValidateAndExecuteRows() (*sql.Rows, error) {
 	q.validateArgCount()
-
 	if q.Error != nil {
 		return nil, q.Error
 	}
+
 	rows, err := db.Client.Query(q.Text, q.Args...)
 	return rows, err
 }
 
 func (q *Query) ValidateAndExecuteRow() (*sql.Row, error) {
 	q.validateArgCount()
-
 	if q.Error != nil {
 		return nil, q.Error
 	}
+
 	row := db.Client.QueryRow(q.Text, q.Args...)
 	return row, nil
 }

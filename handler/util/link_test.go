@@ -131,7 +131,7 @@ func TestPaginateLinks(t *testing.T) {
 	}
 }
 
-func TestCountMergedCatSpellingVariants(t *testing.T) {
+func TestGetMergedCatSpellingVariantsInLinksFromCatFilters(t *testing.T) {
 	// no links; no merged cats
 	test_cat_filters := []string{"nonexistentcat"}
 	links_sql := query.NewTopLinks().FromRequestParams(
@@ -147,7 +147,7 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 	}
 
 	paginateLinks(links_page.Links)
-	links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+	links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 		links_page.Links,
 		test_cat_filters,
 	)
@@ -166,7 +166,7 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 	}
 
 	paginateLinks(links_page.Links)
-	links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+	links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 		links_page.Links,
 		test_cat_filters,
 	)
@@ -183,7 +183,7 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 	}
 
 	paginateLinks(links_page.Links)
-	links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+	links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 		links_page.Links,
 		test_cats,
 	)
@@ -202,7 +202,7 @@ func TestCountMergedCatSpellingVariants(t *testing.T) {
 	}
 
 	paginateLinks(links_page.Links)
-	links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+	links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 		links_page.Links,
 		test_cat_filters,
 	)

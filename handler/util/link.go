@@ -56,7 +56,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 
 	cat_filters := options.CatFilters
 	if len(cat_filters) > 0 {
-		links_page.MergedCats = countMergedCatSpellingVariantsInLinksFromCatFilters(
+		links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 			links_page.Links,
 			cat_filters,
 		)
@@ -219,12 +219,12 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 func paginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
 	if links == nil || len(*links) == 0 {
 		return
-	} else if len(*links) == query.LINKS_PAGE_LIMIT+1 {
+	} else if len(*links) == query.LINKS_PAGE_LIMIT + 1 {
 		*links = (*links)[0:query.LINKS_PAGE_LIMIT]
 	}
 }
 
-func countMergedCatSpellingVariantsInLinksFromCatFilters[T model.HasCats](links *[]T, cat_filters []string) []string {
+func getMergedCatSpellingVariantsInLinksFromCatFilters[T model.HasCats](links *[]T, cat_filters []string) []string {
 	if links == nil || len(*links) == 0 {
 		return nil
 	}

@@ -129,7 +129,7 @@ func TestGetLinks(t *testing.T) {
 		},
 	}
 
-	for _, tglr := range test_get_links_requests {
+	for i, tglr := range test_get_links_requests {
 		r := httptest.NewRequest(
 			http.MethodGet,
 			"/links",
@@ -163,10 +163,11 @@ func TestGetLinks(t *testing.T) {
 			}
 
 			t.Fatalf(
-				"expected status code %d, got %d (test request %+v)\n%s", 
+				"expected status code %d, got %d (test request %+v, index %d)\n%s", 
 				res.StatusCode,
 				http.StatusOK,
 				tglr.Params,
+				i,
 				text,
 			)
 		} else if !tglr.Valid && res.StatusCode != http.StatusBadRequest {

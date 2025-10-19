@@ -371,7 +371,7 @@ func TestMergeCountsOfCatSpellingVariants(t *testing.T) {
 	}
 }
 
-func TestCountTmapMergedCatsSpellingVariantsInLinksWithCatFilters(t *testing.T) {
+func TestGetTmapMergedCatsSpellingVariantsInLinksWithCatFilters(t *testing.T) {
 	var test_links = []model.TmapLink{
 		{Link: model.Link{
 			Cats: "tests,Tests",
@@ -397,7 +397,7 @@ func TestCountTmapMergedCatsSpellingVariantsInLinksWithCatFilters(t *testing.T) 
 		"Tests", // pluralization and capitalization variant
 	}
 
-	got := countTmapMergedCatsSpellingVariantsInLinksFromCatFilters(
+	got := getTmapMergedCatsSpellingVariantsInLinksFromCatFilters(
 		&test_links,
 		test_cat_filter,
 	)

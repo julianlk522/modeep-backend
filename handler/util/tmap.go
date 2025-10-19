@@ -168,7 +168,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		if has_cat_filter {
 			// Indicate any merged cats
-			merged_cats := countTmapMergedCatsSpellingVariantsInLinksFromCatFilters(links, cat_filters)
+			merged_cats := getTmapMergedCatsSpellingVariantsInLinksFromCatFilters(links, cat_filters)
 			return model.TmapIndividualSectionWithCatFiltersPage[T]{
 				TmapIndividualSectionPage: &model.TmapIndividualSectionPage[T]{
 					Links:          links,
@@ -222,7 +222,7 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 		if has_cat_filter {
 			// Indicate any merged cats
-			merged_cats := countTmapMergedCatsSpellingVariantsInLinksFromCatFilters(&combined_sections, cat_filters)
+			merged_cats := getTmapMergedCatsSpellingVariantsInLinksFromCatFilters(&combined_sections, cat_filters)
 			return model.TmapWithCatFiltersPage[T]{
 				TmapPage: &model.TmapPage[T]{
 					TmapSections:   tmap_sections,
@@ -544,7 +544,7 @@ func mergeCountsOfCatSpellingVariants(counts *[]model.CatCount) {
 	}
 }
 
-func countTmapMergedCatsSpellingVariantsInLinksFromCatFilters[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, cat_filters []string) []string {
+func getTmapMergedCatsSpellingVariantsInLinksFromCatFilters[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, cat_filters []string) []string {
 	if links == nil || len(*links) == 0 {
 		return nil
 	}
