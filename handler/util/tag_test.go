@@ -79,11 +79,8 @@ func TestScanTagRankings(t *testing.T) {
 }
 
 // Get top global cats
-// (and subcats of cats)
 func TestScanGlobalCatCounts(t *testing.T) {
 	global_cats_sql := query.NewTopGlobalCatCounts()
-	// GlobalCatCounts.Error already tested in query/tag_test.go
-
 	counts, err := ScanGlobalCatCounts(global_cats_sql)
 	if err != nil {
 		t.Fatal(err)

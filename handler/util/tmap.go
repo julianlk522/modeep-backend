@@ -148,6 +148,9 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 		}
 
 		links, err := buildTmapLinksQueryAndScan[T](section_query_builder, opts)
+		if err != nil {
+			return nil, err
+		}
 		if links == nil || len(*links) == 0 {
 			return model.TmapIndividualSectionPage[T]{
 				Links:          &[]T{},
@@ -585,9 +588,11 @@ func getTmapMergedCatsSpellingVariantsInLinksFromCatFilters[T model.TmapLink | m
 // (visible on Treasure Map page when no filters applied)
 func scanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 	var u model.Profile
-	if err := db.Client.
-		QueryRow(profile_sql.Text, profile_sql.Args...).
-		Scan(
+	row, err := profile_sql.ValidateAndExecuteRow()
+	if err != nil {
+		return nil, err
+	}
+	if err = row.Scan(
 			&u.LoginName,
 			&u.PFP,
 			&u.About,

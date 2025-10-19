@@ -10,11 +10,7 @@ import (
 func TestNewSummariesForLink(t *testing.T) {
 	var test_link_id = "1"
 	summaries_sql := NewSummariesForLink(test_link_id)
-	if summaries_sql.Error != nil {
-		t.Fatal(summaries_sql.Error)
-	}
-
-	rows, err := TestClient.Query(summaries_sql.Text, summaries_sql.Args...)
+	rows, err := summaries_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +24,7 @@ func TestNewSummariesForLink(t *testing.T) {
 	if len(cols) == 0 {
 		t.Fatal("no columns")
 	} else if len(cols) != 6 {
-		t.Fatalf("wrong column count (got %d, want 5)", len(cols))
+		t.Fatalf("wrong column count (got %d, want 6)", len(cols))
 	}
 
 	var test_cols = []struct {
@@ -59,15 +55,13 @@ func TestNewSummariesForLink(t *testing.T) {
 
 	// Verify link_ids
 	summaries_sql.Text = strings.Replace(summaries_sql.Text, SUMMARIES_BASE_FIELDS, "SELECT sumid", 1)
-
-	rows, err = TestClient.Query(summaries_sql.Text, summaries_sql.Args...)
+	rows, err = summaries_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer rows.Close()
 
 	summary_ids := []string{}
-
 	for rows.Next() {
 		var sumid string
 		if err := rows.Scan(&sumid); err != nil {
@@ -91,12 +85,7 @@ func TestNewSummariesForLink(t *testing.T) {
 func TestNewSummariesAsSignedInUser(t *testing.T) {
 	var test_link_id, test_user_id = "1", "2"
 	summaries_sql := NewSummariesForLink(test_link_id).AsSignedInUser(test_user_id)
-
-	if summaries_sql.Error != nil {
-		t.Fatal(summaries_sql.Error)
-	}
-
-	rows, err := TestClient.Query(summaries_sql.Text, summaries_sql.Args...)
+	rows, err := summaries_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}

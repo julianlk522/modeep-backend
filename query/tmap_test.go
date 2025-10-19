@@ -98,7 +98,7 @@ AND (
 		t.Fatalf("expected %d, got %d", expected_count, count)
 	}
 
-	// .FromCats()
+	// .FromCatFilters()
 	test_cat_filters := GetCatsOptionalPluralOrSingularForms(
 		[]string{"engine", "search"},
 	)
@@ -554,11 +554,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 
 	// Verify all submitted links are present after executing query
 	submitted_sql := NewTmapSubmitted(TEST_REQ_LOGIN_NAME)
-	if submitted_sql.Error != nil {
-		t.Fatal(submitted_sql.Error)
-	}
-
-	rows, err = TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	rows, err = submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -609,11 +605,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 
 func TestTmapSubmittedFromCatFilters(t *testing.T) {
 	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).fromCatFilters(test_cats).Build()
-	if submitted_sql.Error != nil {
-		t.Fatal(submitted_sql.Error)
-	}
-
-	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	rows, err := submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -648,11 +640,7 @@ func TestTmapSubmittedFromCatFilters(t *testing.T) {
 
 func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).Build()
-	if submitted_sql.Error != nil {
-		t.Fatal(submitted_sql.Error)
-	}
-
-	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	rows, err := submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -685,7 +673,7 @@ func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 
 func TestTmapSubmittedIncludeNSFW(t *testing.T) {
 	submitted_sql := NewTmapSubmitted(TEST_REQ_LOGIN_NAME).includeNSFW().Build()
-	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	rows, err := submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -737,105 +725,100 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 
 	for _, ts := range test_sorts {
 		submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).sortBy(ts.Sort).Build()
-		if ts.Valid {
-			if submitted_sql.Error != nil {
-				t.Fatal(submitted_sql.Error)
+		if !ts.Valid {
+			if submitted_sql.Error == nil {
+				t.Fatalf("expected error for sort %s", ts.Sort)
 			}
 		} else {
-			if submitted_sql.Error == nil {
-				t.Fatal("expected error, but got nil")
-			}
-		}
-
-		rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer rows.Close()
-
-		var links []model.TmapLink
-		for rows.Next() {
-			var l model.TmapLink
-			if err := rows.Scan(
-				&l.ID,
-				&l.URL,
-				&l.SubmittedBy,
-				&l.SubmitDate,
-				&l.Cats,
-				&l.CatsFromUser,
-				&l.Summary,
-				&l.SummaryCount,
-				&l.TimesStarred,
-				&l.AvgStars,
-				&l.EarliestStarrers,
-				&l.ClickCount,
-				&l.TagCount,
-				&l.PreviewImgFilename,
-			); err != nil {
+			rows, err := submitted_sql.ValidateAndExecuteRows()
+			if err != nil {
 				t.Fatal(err)
 			}
-			
-			links = append(links, l)
-		}
+			defer rows.Close()
 
-		// Verify sorting
-		switch ts.Sort {
-			case "newest":
-				last_date := time.Now() // most recent
-				for _, link := range links {
-					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
-					if err != nil {
-						t.Fatal(err)
-					}
-
-					if sd.After(last_date) {
-						t.Fatalf("link date %s after last date %s", sd, last_date)
-					} else if sd.Before(last_date) {
-						last_date = sd
-					}
-				}
-			case "times_starred":
-				var last_star_count int64 = 999 // arbitrary high number
-				for _, link := range links {
-					if link.TimesStarred > last_star_count {
-						t.Fatalf("link like count %d above previous min %d", link.TimesStarred, last_star_count)
-					} else if link.TimesStarred < last_star_count {
-						last_star_count = link.TimesStarred
-					}
-				}
-			case "avg_stars":
-				var last_avg_stars float32 = 999
-				for _, link := range links {
-					if link.AvgStars > last_avg_stars {
-						t.Fatalf("link avg stars %f above previous min %f", link.AvgStars, last_avg_stars)
-					} else if link.AvgStars < last_avg_stars {
-						last_avg_stars = link.AvgStars
-					}
-				}
-			case "oldest":
-				first_date := time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)
-				for _, link := range links {
-					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
-					if err != nil {
-						t.Fatal(err)
-					}
-
-					if sd.Before(first_date) {
-						t.Fatalf("link date %s before last date %s", sd, first_date)
-					} else if sd.Before(first_date) {
-						first_date = sd
-					}
-				}
-			case "clicks":
-				var highest_click_count int64 = 999
-				for _, link := range links {
-					if link.ClickCount > highest_click_count {
-						t.Fatalf("link click count %d above previous min %d", link.ClickCount, highest_click_count)
-					} else if link.ClickCount < highest_click_count {
-						highest_click_count = link.ClickCount
-					}
+			var links []model.TmapLink
+			for rows.Next() {
+				var l model.TmapLink
+				if err := rows.Scan(
+					&l.ID,
+					&l.URL,
+					&l.SubmittedBy,
+					&l.SubmitDate,
+					&l.Cats,
+					&l.CatsFromUser,
+					&l.Summary,
+					&l.SummaryCount,
+					&l.TimesStarred,
+					&l.AvgStars,
+					&l.EarliestStarrers,
+					&l.ClickCount,
+					&l.TagCount,
+					&l.PreviewImgFilename,
+				); err != nil {
+					t.Fatal(err)
 				}
 				
+				links = append(links, l)
+			}
+
+			// Verify sorting
+			switch ts.Sort {
+				case "newest":
+					last_date := time.Now() // most recent
+					for _, link := range links {
+						sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+						if err != nil {
+							t.Fatal(err)
+						}
+
+						if sd.After(last_date) {
+							t.Fatalf("link date %s after last date %s", sd, last_date)
+						} else if sd.Before(last_date) {
+							last_date = sd
+						}
+					}
+				case "times_starred":
+					var last_star_count int64 = 999 // arbitrary high number
+					for _, link := range links {
+						if link.TimesStarred > last_star_count {
+							t.Fatalf("link like count %d above previous min %d", link.TimesStarred, last_star_count)
+						} else if link.TimesStarred < last_star_count {
+							last_star_count = link.TimesStarred
+						}
+					}
+				case "avg_stars":
+					var last_avg_stars float32 = 999
+					for _, link := range links {
+						if link.AvgStars > last_avg_stars {
+							t.Fatalf("link avg stars %f above previous min %f", link.AvgStars, last_avg_stars)
+						} else if link.AvgStars < last_avg_stars {
+							last_avg_stars = link.AvgStars
+						}
+					}
+				case "oldest":
+					first_date := time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)
+					for _, link := range links {
+						sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+						if err != nil {
+							t.Fatal(err)
+						}
+
+						if sd.Before(first_date) {
+							t.Fatalf("link date %s before last date %s", sd, first_date)
+						} else if sd.Before(first_date) {
+							first_date = sd
+						}
+					}
+				case "clicks":
+					var highest_click_count int64 = 999
+					for _, link := range links {
+						if link.ClickCount > highest_click_count {
+							t.Fatalf("link click count %d above previous min %d", link.ClickCount, highest_click_count)
+						} else if link.ClickCount < highest_click_count {
+							highest_click_count = link.ClickCount
+						}
+					}
+			}
 		}
 	}
 }
@@ -847,7 +830,10 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 		submittted_links_with_week_period []model.TmapLink
 
 	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).sortBy("newest").Build()
-	rows, _ := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	rows, err := submitted_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for rows.Next() {
 		var l model.TmapLink
@@ -874,7 +860,10 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 	}
 
 	all_period_sql := NewTmapSubmitted(TEST_LOGIN_NAME).duringPeriod("all").Build()
-	rows, _ = TestClient.Query(all_period_sql.Text, all_period_sql.Args...)
+	rows, err = all_period_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer rows.Close()
 
 	for rows.Next() {
@@ -928,11 +917,10 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 	}
 
 	week_period_sql := NewTmapSubmitted(TEST_LOGIN_NAME).duringPeriod("week").Build()
-	rows, err := TestClient.Query(week_period_sql.Text, week_period_sql.Args...)
+	rows, err = week_period_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
-	
 	defer rows.Close()
 
 	for rows.Next() {
@@ -992,7 +980,7 @@ AND l.submitted_by = ?;`
 	}
 
 	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).withSummaryContaining(summary_snippet).Build()
-	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	rows, err := submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1046,7 +1034,7 @@ func TestTmapSubmittedWithURLContaining(t *testing.T) {
 	}
 
 	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).withURLContaining(url_snippet).Build()
-	rows, err := TestClient.Query(submitted_sql.Text, submitted_sql.Args...)
+	rows, err := submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1086,11 +1074,7 @@ func TestTmapSubmittedWithURLContaining(t *testing.T) {
 // Starred
 func TestNewTmapStarred(t *testing.T) {
 	starred_sql := NewTmapStarred(TEST_LOGIN_NAME)
-	if starred_sql.Error != nil {
-		t.Fatal(starred_sql.Error)
-	}
-
-	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err := starred_sql.Build().ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1138,11 +1122,7 @@ func TestNewTmapStarred(t *testing.T) {
 
 func TestTmapStarredFromCatFilters(t *testing.T) {
 	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).fromCatFilters(test_cats).Build()
-	if starred_sql.Error != nil {
-		t.Fatal(starred_sql.Error)
-	}
-
-	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err := starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1190,17 +1170,12 @@ func TestTmapStarredFromCatFilters(t *testing.T) {
 
 func TestTmapStarredAsSignedInUser(t *testing.T) {
 	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).Build()
-	if starred_sql.Error != nil {
-		t.Fatal(starred_sql.Error)
-	}
-
-	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err := starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer rows.Close()
 
-	// Scan links, verifying columns
 	links := []model.TmapLinkSignedIn{}
 	for rows.Next() {
 		var l model.TmapLinkSignedIn
@@ -1227,8 +1202,7 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 		links = append(links, l)
 	}
 
-	// Manually search Link Copies table to verify that all starred links,
-	// EXCEPT those with NSFW cats, are returned
+	// Verify that all starred links except those with NSFW cats are returned
 	var all_starred_link_ids []string
 	rows, err = TestClient.Query(`SELECT link_id
 		FROM Stars
@@ -1281,7 +1255,7 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 	// Retry with .includeNSFW() and verify that all links from
 	// all_starred_link_ids are returned
 	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).includeNSFW().Build()
-	rows, err = TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err = starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1327,9 +1301,8 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 }
 
 func TestTmapStarredIncludeNSFW(t *testing.T) {
-	// TEST_LOGIN_NAME (jlk) has starred 1 link with NSFW tag
 	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).includeNSFW().Build()
-	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err := starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1368,7 +1341,7 @@ func TestTmapStarredIncludeNSFW(t *testing.T) {
 func TestTmapStarredDuringPeriod(t *testing.T) {
 	var starred_no_period, starred_period_all, starred_period_week []model.TmapLink
 	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).Build()
-	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err := starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1399,7 +1372,7 @@ func TestTmapStarredDuringPeriod(t *testing.T) {
 	}
 
 	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).duringPeriod("all").Build()
-	rows, err = TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err = starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1434,7 +1407,7 @@ func TestTmapStarredDuringPeriod(t *testing.T) {
 	}
 
 	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).duringPeriod("week").Build()
-	rows, err = TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err = starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1496,7 +1469,7 @@ func TestTmapStarredWithSummaryContaining(t *testing.T) {
 	}
 
 	starred_sql := NewTmapSubmitted(TEST_LOGIN_NAME).withSummaryContaining(summary_snippet).Build()
-	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err := starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1552,7 +1525,7 @@ func TestTmapStarredWithURLContaining(t *testing.T) {
 	}
 
 	starred_sql := NewTmapSubmitted(TEST_LOGIN_NAME).withURLContaining(url_snippet).Build()
-	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err := starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1591,11 +1564,7 @@ func TestTmapStarredWithURLContaining(t *testing.T) {
 
 func TestNewTmapTagged(t *testing.T) {
 	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME)
-	if tagged_sql.Error != nil {
-		t.Fatal(tagged_sql.Error)
-	}
-
-	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	rows, err := tagged_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1641,11 +1610,7 @@ func TestNewTmapTagged(t *testing.T) {
 
 func TestTmapTaggedFromCatFilters(t *testing.T) {
 	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).fromCatFilters(test_cats).Build()
-	if tagged_sql.Error != nil {
-		t.Fatal(tagged_sql.Error)
-	}
-
-	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	rows, err := tagged_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1694,11 +1659,7 @@ func TestTmapTaggedFromCatFilters(t *testing.T) {
 
 func TestTmapTaggedAsSignedInUser(t *testing.T) {
 	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).Build()
-	if tagged_sql.Error != nil {
-		t.Fatal(tagged_sql.Error)
-	}
-
-	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	rows, err := tagged_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1730,9 +1691,8 @@ func TestTmapTaggedAsSignedInUser(t *testing.T) {
 }
 
 func TestTmapTaggedIncludeNSFW(t *testing.T) {
-	// TEST_LOGIN_NAME (jlk) has tagged 1 link with NSFW tag
 	starred_sql := NewTmapTagged(TEST_LOGIN_NAME).includeNSFW().Build()
-	rows, err := TestClient.Query(starred_sql.Text, starred_sql.Args...)
+	rows, err := starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1771,7 +1731,7 @@ func TestTmapTaggedIncludeNSFW(t *testing.T) {
 func TestTmapTaggedDuringPeriod(t *testing.T) {
 	var tagged_no_period, tagged_period_all, tagged_period_week []model.TmapLink
 	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).Build()
-	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	rows, err := tagged_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1802,7 +1762,7 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 	}
 
 	tagged_sql = NewTmapTagged(TEST_LOGIN_NAME).duringPeriod("all").Build()
-	rows, err = TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	rows, err = tagged_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1837,7 +1797,7 @@ func TestTmapTaggedDuringPeriod(t *testing.T) {
 	}
 
 	tagged_sql = NewTmapTagged(TEST_LOGIN_NAME).duringPeriod("week").Build()
-	rows, err = TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	rows, err = tagged_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1908,7 +1868,7 @@ func TestTmapTaggedWithSummaryContaining(t *testing.T) {
 	}
 
 	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).withSummaryContaining(summary_snippet).Build()
-	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	rows, err := tagged_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1946,7 +1906,7 @@ func TestTmapTaggedWithSummaryContaining(t *testing.T) {
 }
 
 func TestTmapTaggedWithURLContaining(t *testing.T) {
-	url_snippet := "cars" // should be 1 link tagged with URL containing "cars" 
+	url_snippet := "cars"
 	var expected_count int
 	expected_count_sql := `WITH UserCats AS (
 		SELECT link_id, cats as user_cats
@@ -1983,7 +1943,7 @@ func TestTmapTaggedWithURLContaining(t *testing.T) {
 	}
 
 	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).withURLContaining(url_snippet).Build()
-	rows, err := TestClient.Query(tagged_sql.Text, tagged_sql.Args...)
+	rows, err := tagged_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}

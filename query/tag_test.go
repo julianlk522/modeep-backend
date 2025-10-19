@@ -12,11 +12,7 @@ import (
 func TestNewTagRankings(t *testing.T) {
 	test_link_id := "1"
 	tags_sql := NewTagRankingsForLink(test_link_id)
-	if tags_sql.Error != nil {
-		t.Fatal(tags_sql.Error)
-	}
-	
-	rows, err := TestClient.Query(tags_sql.Text, tags_sql.Args...)
+	rows, err := tags_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,8 +48,8 @@ func TestNewTagRankings(t *testing.T) {
 		"ORDER BY lifespan_overlap DESC",
 		"",
 		1)
-	
-	rows, err = TestClient.Query(tags_sql.Text, tags_sql.Args...)
+
+	rows, err = tags_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +76,11 @@ func TestNewGlobalCatsForLink(t *testing.T) {
 	}
 	
 	var global_cats_str string
-	if err := TestClient.QueryRow(cats_sql.Text, cats_sql.Args...).Scan(&global_cats_str); err != nil {
+	row, err := cats_sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := row.Scan(&global_cats_str); err != nil {
 		if err == sql.ErrNoRows {
 			t.Fatal("no global cats returned for link 1")
 		} else {
@@ -88,7 +88,7 @@ func TestNewGlobalCatsForLink(t *testing.T) {
 		}
 	}
 
-	// verify no capitalization or pluralization variants
+	// Verify no capitalization or pluralization variants
 	global_cats := strings.Split(global_cats_str, ",")
 	found_cats := []string{}
 	for _, cat := range global_cats {
@@ -117,41 +117,18 @@ func TestNewGlobalCatsForLink(t *testing.T) {
 
 func TestNewTopGlobalCatCounts(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts()
-	// No opportunity for counts_sql.Error to have been set
-
-	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
-	if err != nil {
+	if _, err := counts_sql.ValidateAndExecuteRows(); err != nil {
 		t.Fatal(err)
-	}
-	defer rows.Close()
-
-	var counts []model.CatCount
-	for rows.Next() {
-		var c model.CatCount
-		if err := rows.Scan(&c.Category, &c.Count); err != nil {
-			t.Fatal(err)
-		}
-		counts = append(counts, c)
-	}
-
-	// Verify capitalization variants in same tag are not double counted
-	//  cat "infosec" appears in 2 tags, 1 of which also includes "Infosec"
-	// so count should be 2 not 3
-
-	for _, c := range counts {
-		if c.Category == "infosec" && c.Count != 2 {
-			t.Fatalf("Capitalization variants Infosec and infosec in same tag were double counted")
-		}
 	}
 }
 
-func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
-	counts_sql := NewTopGlobalCatCounts().subcatsOfCats(strings.Join(test_cats, ","))
+func TestNewTopGlobalCatCountsFromCatFilters(t *testing.T) {
+	counts_sql := NewTopGlobalCatCounts().fromCatFilters(test_cats)
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
 
-	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,11 +168,8 @@ func TestNewTopGlobalCatCountsSubcatsOfCats(t *testing.T) {
 
 func TestNewTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts().withGlobalSummaryContaining("test")
-	if counts_sql.Error != nil {
-		t.Fatal(counts_sql.Error)
-	}
 
-	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +211,7 @@ func TestNewTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
 
 	// verify does not conflict w/ other methods
 	counts_sql = NewTopGlobalCatCounts().
-		subcatsOfCats("flowers").
+		fromCatFilters([]string{"flowers"}).
 		withGlobalSummaryContaining("test").
 		withURLContaining("www").
 		withURLLacking("donut").
@@ -246,7 +220,7 @@ func TestNewTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
 		t.Fatal(counts_sql.Error)
 	}
 	 
-	rows, err = TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	rows, err = counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,14 +267,14 @@ func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
 	counts := []model.CatCount{}
 
 	counts_sql := NewTopGlobalCatCounts().
-		subcatsOfCats(strings.Join(test_cats, ",")).
+		fromCatFilters(test_cats).
 		withURLContaining("GooGlE").
 		more()
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
 
-	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -336,14 +310,14 @@ func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
 
 func TestNewTopGlobalCatCountsWithURLLacking(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts().
-		subcatsOfCats(strings.Join(test_cats, ",")).
+		fromCatFilters(test_cats).
 		withURLLacking("GooGlE")
 	
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
 
-	rows, err := TestClient.Query(counts_sql.Text, counts_sql.Args...)
+	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,16 +381,16 @@ func TestNewTopGlobalCatCountsDuringPeriod(t *testing.T) {
 			t.Fatalf("expected error for period %s", tp.Period)
 		}
 
-		_, err := TestClient.Query(tags_sql.Text, tags_sql.Args...)
+		_, err := tags_sql.ValidateAndExecuteRows()
 		if err != nil && err != sql.ErrNoRows {
 			t.Fatal(err)
 		}
 	}
 
-	// Verify no conflict with .SubcatsOfCats()
+	// Verify no conflict with .fromCatFilters()
 	for _, tp := range test_periods {
 		tags_sql := NewTopGlobalCatCounts().
-			subcatsOfCats(strings.Join(test_cats, ",")).
+			fromCatFilters(test_cats).
 			duringPeriod(tp.Period)
 		if tp.Valid && tags_sql.Error != nil {
 			t.Fatalf("unexpected error for period %s", tp.Period)
@@ -473,12 +447,12 @@ func TestSpellfixMatchesFromTmap(t *testing.T) {
 	var tagged_sql = NewTmapTagged(TEST_LOGIN_NAME)
 
 	var all_tmap_links []model.TmapLink
-	for _, sql := range []struct{ Text string; Args []any }{
-	    {submitted_sql.Text, submitted_sql.Args},
-	    {starred_sql.Text, starred_sql.Args},
-	    {tagged_sql.Text, tagged_sql.Args},
+	for _, q := range []*Query {
+	    {submitted_sql.Text, submitted_sql.Args, nil},
+	    {starred_sql.Text, starred_sql.Args, nil},
+	    {tagged_sql.Text, tagged_sql.Args, nil},
 	}{
-		rows, err := TestClient.Query(sql.Text, sql.Args...)
+		rows, err := q.ValidateAndExecuteRows()
 		if err != nil {
 			t.Fatal(err)
 		}

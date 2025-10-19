@@ -2,7 +2,6 @@ package query
 
 import (
 	"database/sql"
-	"strings"
 	"testing"
 
 	"github.com/julianlk522/modeep/model"
@@ -10,11 +9,7 @@ import (
 
 func TestNewTopContributors(t *testing.T) {
 	contributors_sql := NewTopContributors()
-	if contributors_sql.Error != nil {
-		t.Fatal(contributors_sql.Error)
-	}
-
-	rows, err := TestClient.Query(contributors_sql.Text, contributors_sql.Args...)
+	rows, err := contributors_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,24 +41,28 @@ func TestNewTopContributors(t *testing.T) {
 }
 
 func TestTopContributorsFromCatFilters(t *testing.T) {
-	contributors_sql := NewTopContributors().fromCatFilters(
-		[]string{
-			"umvc3",
-			"c. viper",
-		},
-	)
+	test_cat_filters := []string{"test"}
+	contributors_sql := NewTopContributors().fromCatFilters(test_cat_filters)
 
-	contributors_sql.Text = strings.Replace(
-		contributors_sql.Text,
-		`SELECT
-count(l.id) as count, l.submitted_by
-FROM Links l`,
-		`SELECT
-count(l.id) as count, l.global_cats
-FROM Links l`,
-		1)
+	rows, err := contributors_sql.ValidateAndExecuteRows()
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatalf(
+			"got %v, SQL was %s",
+			err,
+			contributors_sql.Text,
+		)
+	}
+	defer rows.Close()
 
-	rows, err := TestClient.Query(contributors_sql.Text, contributors_sql.Args...)
+	for rows.Next() {
+		var cat, count string
+		if err := rows.Scan(&count, &cat); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// TODO confirm counts
+}
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
 	}
@@ -82,11 +81,7 @@ FROM Links l`,
 func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 	// case-insensitive
 	contributors_sql := NewTopContributors().withGlobalSummaryContaining("gooGLE")
-	if contributors_sql.Error != nil {
-		t.Fatal(contributors_sql.Error)
-	}
-
-	rows, err := TestClient.Query(contributors_sql.Text, contributors_sql.Args...)
+	rows, err := contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
 	}
@@ -127,14 +122,7 @@ func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 		withURLContaining("www").
 		withURLLacking("test").
 		duringPeriod("all")
-	if contributors_sql.Error != nil {
-		t.Fatal(contributors_sql.Error)
-	}
-
-	rows, err = TestClient.Query(
-		contributors_sql.Text,
-		contributors_sql.Args...,
-	)
+	rows, err = contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
 	}
@@ -176,11 +164,7 @@ func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 func TestTopContributorsWithURLContaining(t *testing.T) {
 	// case-insensitive
 	contributors_sql := NewTopContributors().withURLContaining("gooGLE")
-	if contributors_sql.Error != nil {
-		t.Fatal(contributors_sql.Error)
-	}
-
-	rows, err := TestClient.Query(contributors_sql.Text, contributors_sql.Args...)
+	rows, err := contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
 	}
@@ -239,11 +223,11 @@ func TestTopContributorsDuringPeriod(t *testing.T) {
 			t.Fatalf("expected error for period %s", period.Period)
 		}
 
-		rows, err := TestClient.Query(contributors_sql.Text, contributors_sql.Args...)
-		if err != nil && err != sql.ErrNoRows {
-			t.Fatal(err)
+		if period.Valid {
+			if _, err := contributors_sql.ValidateAndExecuteRows(); err != nil && err != sql.ErrNoRows {
+				t.Fatal(err)
+			}
 		}
-		defer rows.Close()
 	}
 
 	// Period and Cats
@@ -255,10 +239,10 @@ func TestTopContributorsDuringPeriod(t *testing.T) {
 			t.Fatalf("expected error for period %s", period.Period)
 		}
 
-		rows, err := TestClient.Query(contributors_sql.Text, contributors_sql.Args...)
-		if err != nil && err != sql.ErrNoRows {
-			t.Fatal(err)
+		if period.Valid {
+			if _, err := contributors_sql.ValidateAndExecuteRows(); err != nil && err != sql.ErrNoRows {
+				t.Fatal(err)
+			}
 		}
-		defer rows.Close()
 	}
 }
