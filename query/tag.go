@@ -139,7 +139,6 @@ func NewTopGlobalCatCounts() *TopGlobalCatCounts {
 	})
 }
 
-// id used for .SubcatsOfCats(): don't remove
 const TOP_GLOBAL_CATS_BASE = `WITH RECURSIVE GlobalCatsSplit(id, global_cat, str) AS (
     SELECT id, '', global_cats||','
     FROM Links
@@ -150,13 +149,13 @@ const TOP_GLOBAL_CATS_BASE = `WITH RECURSIVE GlobalCatsSplit(id, global_cat, str
     FROM GlobalCatsSplit
     WHERE str != ''
 ),
-RawCatCounts AS (
+IndividualCatCounts AS (
     SELECT global_cat, count(DISTINCT id) as count
     FROM GlobalCatsSplit
     WHERE global_cat != ''
     GROUP BY LOWER(global_cat)
 ),
-NormalizedGlobalCats AS (
+NormalizedCatCounts AS (
     SELECT 
         global_cat,
         count,
@@ -165,22 +164,22 @@ NormalizedGlobalCats AS (
             WHEN LOWER(global_cat) LIKE '%s' AND NOT LOWER(global_cat) LIKE '%ss' THEN substr(LOWER(global_cat), 1, length(LOWER(global_cat)) - 1)
             ELSE LOWER(global_cat)
         END as normalized_global_cat
-    FROM RawCatCounts
+    FROM IndividualCatCounts
 ),
 IdealSpellingVariants AS (
     SELECT 
         normalized_global_cat,
         SUM(count) as count_across_spelling_variations,
         (SELECT 
-	    global_cat FROM NormalizedGlobalCats ngc2 
-	    WHERE ngc2.normalized_global_cat = ngc1.normalized_global_cat 
+	    global_cat FROM NormalizedCatCounts ncc2 
+	    WHERE ncc2.normalized_global_cat = ncc1.normalized_global_cat 
 	    ORDER BY 
 		count DESC, 
 		length(global_cat) DESC, 
 		global_cat DESC 
 	    LIMIT 1
 	) as ideal_cat_spelling
-    FROM NormalizedGlobalCats ngc1
+    FROM NormalizedCatCounts ncc1
     GROUP BY normalized_global_cat
 )
 SELECT 
@@ -191,31 +190,36 @@ ORDER BY count_across_spelling_variations DESC
 LIMIT ?;`
 
 func (gcc *TopGlobalCatCounts) FromRequestParams(params url.Values) *TopGlobalCatCounts {
-	cats_params := params.Get("cats")
-	if cats_params != "" {
-		gcc = gcc.subcatsOfCats(cats_params)
+	cat_filters_params := params.Get("cats")
+	if cat_filters_params != "" {
+		cat_filters := GetCatsOptionalPluralOrSingularForms(
+			strings.Split(cat_filters_params, ","),
+		)
+		gcc = gcc.fromCatFilters(cat_filters)
 	}
-
+	neutered_params := params.Get("neutered")
+	if neutered_params != "" {
+		neutered_cat_filters := GetCatsOptionalPluralOrSingularForms(
+			strings.Split(neutered_params, ","),
+		)
+		gcc = gcc.fromNeuteredCatFilters(neutered_cat_filters)
+	}
 	summary_contains_params := params.Get("summary_contains")
 	if summary_contains_params != "" {
 		gcc = gcc.withGlobalSummaryContaining(summary_contains_params)
 	}
-
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
 		gcc = gcc.withURLContaining(url_contains_params)
 	}
-
 	url_lacks_params := params.Get("url_lacks")
 	if url_lacks_params != "" {
 		gcc = gcc.withURLLacking(url_lacks_params)
 	}
-
 	period_params := params.Get("period")
 	if period_params != "" {
 		gcc = gcc.duringPeriod(period_params)
 	}
-
 	more_params := params.Get("more")
 	if more_params == "true" {
 		gcc = gcc.more()
@@ -226,39 +230,28 @@ func (gcc *TopGlobalCatCounts) FromRequestParams(params url.Values) *TopGlobalCa
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) subcatsOfCats(cats_params string) *TopGlobalCatCounts {
-	// lowercase cats to ensure all case variations are returned
-	cats := strings.Split(strings.ToLower(cats_params), ",")
+func (gcc *TopGlobalCatCounts) fromCatFilters(cat_filters []string) *TopGlobalCatCounts {
+	if len(cat_filters) == 0 {
+		return gcc
+	}
 
+	// Build NOT IN clause
 	not_in_clause := `
 	AND LOWER(global_cat) NOT IN (?`
-
-	// add cat filter args to 2nd-to-last position
-	// (LIMIT stays at the end - it is easier to add back after)
-	limit_arg := gcc.Args[len(gcc.Args) - 1]
-	gcc.Args = gcc.Args[:len(gcc.Args) - 1]
-
-	gcc.Args = append(gcc.Args, cats[0])
-	for i := 1; i < len(cats); i++ {
+	for i := 1; i < len(cat_filters); i++ {
 		not_in_clause += ", ?"
-		gcc.Args = append(gcc.Args, cats[i])
 	}
 	not_in_clause += ")"
 
-	// Add optional singular/plural variants
-	// (skipped for NOT IN clause otherwise subcats include filters)
-	match_arg := withOptionalPluralOrSingularForm(cats[0])
-	for i := 1; i < len(cats); i++ {
-		match_arg += " AND " + withOptionalPluralOrSingularForm(cats[i])
-	}
-	gcc.Args = append(gcc.Args, match_arg)
-
+	// Build MATCH clause
 	match_clause := `
 	AND id IN (
 		SELECT link_id
 		FROM global_cats_fts
 		WHERE global_cats MATCH ?
 		)`
+
+	// Add clauses
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"WHERE global_cat != ''",
@@ -268,8 +261,62 @@ func (gcc *TopGlobalCatCounts) subcatsOfCats(cats_params string) *TopGlobalCatCo
 		1,
 	)
 
-	gcc.Args = append(gcc.Args, limit_arg)
+	// Build NOT IN args
+	not_in_args := []any{strings.ToLower(cat_filters[0])}
+	for i := 1; i < len(cat_filters); i++ {
+		not_in_args = append(not_in_args, strings.ToLower(cat_filters[i]))
+	}
 
+	// Build MATCH arg
+	match_arg := cat_filters[0]
+	for i := 1; i < len(cat_filters); i++ {
+		match_arg += " AND " + cat_filters[i]
+	}
+
+	// Add args: {not_in_args...}, match_arg
+	// old: [GLOBAL_CATS_PAGE_LIMIT]
+	// new: [not_in_args..., match_arg, GLOBAL_CATS_PAGE_LIMIT]
+	gcc.Args = append(not_in_args, match_arg, GLOBAL_CATS_PAGE_LIMIT)
+	return gcc
+}
+
+func (gcc *TopGlobalCatCounts) fromNeuteredCatFilters(neutered_cat_filters []string) *TopGlobalCatCounts {
+	if len(neutered_cat_filters) == 0 {
+		return gcc
+	}
+
+	// Build NOT IN clause
+	not_in_clause := "AND LOWER(global_cat) NOT IN (?"
+	for i := 1; i < len(neutered_cat_filters); i++ {
+		not_in_clause += ", ?"
+	}
+	not_in_clause += ")"
+
+	// Add clause
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"WHERE global_cat != ''",
+		"WHERE global_cat != ''" + "\n" + not_in_clause,
+		1,
+	)
+
+	// Build NOT IN args
+	not_in_args := []any{strings.ToLower(neutered_cat_filters[0])}
+	for i := 1; i < len(neutered_cat_filters); i++ {
+		not_in_args = append(not_in_args, strings.ToLower(neutered_cat_filters[i]))
+	}
+
+	// Add args
+	// old: [GLOBAL_CATS_PAGE_LIMIT]
+	// new: [cat_filters..., GLOBAL_CATS_PAGE_LIMIT]
+
+	// OR if .fromCatFilters() called first:
+
+	// old: [cat_filters..., cat_filters_match_arg, GLOBAL_CATS_PAGE_LIMIT]
+	// new: [not_in_args..., cat_filters..., cat_filters_match_arg, 
+	// GLOBAL_CATS_PAGE_LIMIT]
+	// so can insert at the beginning
+	gcc.Args = append(not_in_args, gcc.Args...)
 	return gcc
 }
 
@@ -909,8 +956,9 @@ var FILTERED_NORMALIZED_MATCHES_CTE = `NormalizedMatches AS (
 // of links that you are potentially searching, so you can know how many results
 // to expect. But when submitting a link you should choose whatever cats you want,
 // whether or not there are existing links with similar classifications. So for those
-// spellfix recommendations, we just show the number of links that have them in their
-// global cats regardless of already-applied filters.
+// spellfix recommendations, we show the number of links that have them in their
+// global cats regardless of already-applied filters, excluding already-selected
+// cats.)
 func (sm *SpellfixMatches) fromCatFiltersWhileSubmittingLink(cat_filters []string) *SpellfixMatches {
 	new_spellfix_matches_cte := SPELLFIX_MATCHES_FROM_CATS_WHILE_SUBMITTING_LINK_CTE
 	if len(cat_filters) == 0 {

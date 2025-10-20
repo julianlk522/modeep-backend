@@ -103,25 +103,27 @@ type TmapOptions struct {
 	// bundled) is stored in addition to CatsFilter so that
 	// GetCatCountsFromTmapLinks() can know the exact values passed in
 	// the request and not count them
-	RawCatFiltersParams            string
-	CatFiltersWithSpellingVariants []string
-	Period                         string
-	SortBy                         string
-	IncludeNSFW                    bool
-	SummaryContains                string
-	URLContains                    string
-	URLLacks                       string
-	Section                        string
-	Page                           int
+	RawCatFiltersParams                    string
+	CatFiltersWithSpellingVariants         []string
+	NeuteredCatFiltersWithSpellingVariants []string
+	Period                                 string
+	SortBy                                 string
+	IncludeNSFW                            bool
+	SummaryContains                        string
+	URLContains                            string
+	URLLacks                               string
+	Section                                string
+	Page                                   int
 }
 
 type TmapNSFWLinksCountOptions struct {
-	OnlySection                    string // "Submitted", "Starred", "Tagged"
-	CatFiltersWithSpellingVariants []string
-	Period                         string
-	SummaryContains                string
-	URLContains                    string
-	URLLacks                       string
+	OnlySection                            string // "Submitted", "Starred", "Tagged"
+	CatFiltersWithSpellingVariants         []string
+	NeuteredCatFiltersWithSpellingVariants []string
+	Period                                 string
+	SummaryContains                        string
+	URLContains                            string
+	URLLacks                               string
 }
 
 type TmapCatCountsOptions struct {

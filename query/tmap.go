@@ -14,6 +14,7 @@ type TmapLinksQueryBuilder interface {
 	Build() *Query
 
 	fromCatFilters(cat_filters []string) TmapLinksQueryBuilder
+	fromNeuteredCatFilters(neutered_cat_filters []string) TmapLinksQueryBuilder
 	asSignedInUser(user_id string) TmapLinksQueryBuilder
 	sortBy(metric string) TmapLinksQueryBuilder
 	includeNSFW() TmapLinksQueryBuilder
@@ -49,7 +50,7 @@ func NewTmapSubmitted(login_name string) *TmapSubmitted {
 		Query: &Query{
 			Text: "WITH " + TMAP_BASE_CTES + "\n" +
 				NSFW_CATS_CTES + "\n" +
-				POSSIBLE_USER_CATS_CTE + "," +
+				POSSIBLE_USER_CATS_CTE + "\n," +
 				POSSIBLE_USER_SUMMARY_CTE +
 				TMAP_BASE_FIELDS +
 				TMAP_FROM +
@@ -75,6 +76,9 @@ AND l.submitted_by = ?`
 func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilder {
 	if len(opts.CatFiltersWithSpellingVariants) > 0 {
 		ts.fromCatFilters(opts.CatFiltersWithSpellingVariants)
+	}
+	if len(opts.NeuteredCatFiltersWithSpellingVariants) > 0 {
+		ts.fromNeuteredCatFilters(opts.NeuteredCatFiltersWithSpellingVariants)
 	}
 	if opts.AsSignedInUser != "" {
 		ts.asSignedInUser(opts.AsSignedInUser)
@@ -105,14 +109,14 @@ func (ts *TmapSubmitted) fromCatFilters(cat_filters []string) TmapLinksQueryBuil
 	ts.Text = strings.Replace(
 		ts.Text,
 		POSSIBLE_USER_CATS_CTE,
-		"\n" + CAT_FILTER_CTES,
+		"\n" + TMAP_CAT_FILTERS_CTES,
 		1,
 	)
-	// Add joins
+	// Add JOINs
 	ts.Text = strings.Replace(
 		ts.Text,
 		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
-		CAT_FILTER_JOINS,
+		TMAP_CAT_FILTERS_JOINS,
 		1,
 	)
 	// Edit fields
@@ -122,11 +126,11 @@ func (ts *TmapSubmitted) fromCatFilters(cat_filters []string) TmapLinksQueryBuil
 		TMAP_FROM_CATS_FIELDS,
 		1,
 	)
-	// Add necessary cats condition
+	// Add AND condition
 	ts.Text = strings.Replace(
 		ts.Text,
-		TMAP_NO_NSFW_CATS_WHERE,
-		TMAP_NO_NSFW_CATS_WHERE + "\n" + CAT_FILTER_AND,
+		SUBMITTED_AND,
+		"\n" + TMAP_CAT_FILTERS_AND + SUBMITTED_AND,
 		1,
 	)
 
@@ -138,11 +142,11 @@ func (ts *TmapSubmitted) fromCatFilters(cat_filters []string) TmapLinksQueryBuil
 		match_arg += " AND " + cat_filters[i]
 	}
 
-	// Insert args
-	// old: [{earliest_starrers_limit}, login_name x 4]
-	// new: [{earliest_starrers_limit}, login_name x 3,
+	// Add args: match_arg x2, login_name
+	// old: [EARLIEST_STARRERS_LIMIT, login_name x 4]
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 3,
 	// match_arg x 2, login_name x 2]
-	// so can insert before last 2 args
+	// so can insert before last 2
 	login_name := ts.Args[1]
 	up_to_last_2_args := ts.Args[:len(ts.Args) - 2]
 	last_2_args := ts.Args[len(ts.Args) - 2:]
@@ -156,19 +160,77 @@ func (ts *TmapSubmitted) fromCatFilters(cat_filters []string) TmapLinksQueryBuil
 	return ts
 }
 
+func (ts *TmapSubmitted) fromNeuteredCatFilters(neutered_cat_filters []string) TmapLinksQueryBuilder {
+	// Build IN clause
+	in_clause := "WHERE LOWER(cat) IN (?"
+	for i := 1; i < len(neutered_cat_filters); i++ {
+		in_clause += ", ?"
+	}
+	in_clause += ")"
+
+	// Build and add CTEs
+	neutered_cat_filters_ctes := strings.Replace(
+		TMAP_NEUTERED_CAT_FILTERS_CTES,
+		"WHERE LOWER(cat) IN (?)",
+		in_clause,
+		1,
+	)
+	// (after cat filters CTEs so that args come after)
+	ts.Text = strings.Replace(
+		ts.Text,
+		POSSIBLE_USER_SUMMARY_CTE,
+		POSSIBLE_USER_SUMMARY_CTE + ",\n" + neutered_cat_filters_ctes,
+		1,
+	)
+	// Add AND condition
+	ts.Text = strings.Replace(
+		ts.Text,
+		SUBMITTED_AND,
+		"\n" + TMAP_NEUTERED_CAT_FILTERS_AND + SUBMITTED_AND,
+		1,
+	)
+
+	// Add args: {neutered_cat_filters...}
+	// Since we use IN, not FTS MATCH, casing matters and spelling variants
+	// are not needed.
+	neutered_cat_filters_args := make([]any, len(neutered_cat_filters))
+	for i, cat := range neutered_cat_filters {
+		neutered_cat_filters_args[i] = strings.ToLower(cat)
+	}
+
+	// old: [EARLIEST_STARRERS_LIMIT, login_name x 4]
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 3,
+	// neutered_cat_filters..., login_name]
+
+	// OR if .fromCatFilters called first:
+
+	// old: [EARLIEST_STARRERS_LIMIT, login_name x 3,
+	// cat_filters x 2, login_name x 2]
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 3,
+	// cat_filters x 2, login_name, neutered_cat_filters..., login_name]
+
+	// so can insert 2nd-to-last before login_name
+	login_name := ts.Args[1]
+
+	ts.Args = append(ts.Args[:len(ts.Args) - 1], neutered_cat_filters_args...)
+	ts.Args = append(ts.Args, login_name)
+
+	return ts
+}
+
 func (ts *TmapSubmitted) asSignedInUser(user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
 		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
 		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
-		// in vase TMAP_BASE_FIELDS are modified by .fromCatFilters
+		// in case TMAP_BASE_FIELDS are modified by .fromCatFilters
 		TMAP_FROM_CATS_FIELDS, TMAP_FROM_CATS_FIELDS + TMAP_AUTH_FIELD,
 		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
 		// in case TMAP_BASE_JOINS are modified by .fromCatFilters
-		CAT_FILTER_JOINS, CAT_FILTER_JOINS + TMAP_AUTH_JOIN,
+		TMAP_CAT_FILTERS_JOINS, TMAP_CAT_FILTERS_JOINS + TMAP_AUTH_JOIN,
 	)
 	ts.Text = fields_replacer.Replace(ts.Text)
 
-	// Insert args after first index
+	// Add args after first index
 	new_args := make([]any, 0, len(ts.Args) + 1)
 
 	first_arg := ts.Args[0]
@@ -192,17 +254,17 @@ func (ts *TmapSubmitted) includeNSFW() TmapLinksQueryBuilder {
 	// Swap following condition keyword
 	if strings.Contains(
 		ts.Text,
-		CAT_FILTER_AND,
+		TMAP_CAT_FILTERS_AND,
 	) {
 		cat_filter_where := strings.Replace(
-			CAT_FILTER_AND,
+			TMAP_CAT_FILTERS_AND,
 			"AND",
 			"WHERE",
 			1,
 		)
 		ts.Text = strings.Replace(
 			ts.Text,
-			CAT_FILTER_AND,
+			TMAP_CAT_FILTERS_AND,
 			cat_filter_where,
 			1,
 		)
@@ -317,7 +379,7 @@ func NewTmapStarred(login_name string) *TmapStarred {
 		Query: &Query{
 			Text: "WITH " + TMAP_BASE_CTES + "\n" +
 				NSFW_CATS_CTES + "\n" +
-				USER_STARS_CTE + "," +
+				USER_STARS_CTE + ",\n" +
 				POSSIBLE_USER_CATS_CTE + ",\n" +
 				POSSIBLE_USER_SUMMARY_CTE +
 				TMAP_BASE_FIELDS +
@@ -349,6 +411,9 @@ func (ts *TmapStarred) FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilde
 	if len(opts.CatFiltersWithSpellingVariants) > 0 {
 		ts.fromCatFilters(opts.CatFiltersWithSpellingVariants)
 	}
+	if len(opts.NeuteredCatFiltersWithSpellingVariants) > 0 {
+		ts.fromNeuteredCatFilters(opts.NeuteredCatFiltersWithSpellingVariants)
+	}
 	if opts.AsSignedInUser != "" {
 		ts.asSignedInUser(opts.AsSignedInUser)
 	}
@@ -378,14 +443,14 @@ func (ts *TmapStarred) fromCatFilters(cat_filters []string) TmapLinksQueryBuilde
 	ts.Text = strings.Replace(
 		ts.Text,
 		POSSIBLE_USER_CATS_CTE,
-		"\n" + CAT_FILTER_CTES,
+		"\n" + TMAP_CAT_FILTERS_CTES,
 		1,
 	)
-	// Add joins
+	// Add JOINs
 	ts.Text = strings.Replace(
 		ts.Text,
 		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
-		CAT_FILTER_JOINS,
+		TMAP_CAT_FILTERS_JOINS,
 		1,
 	)
 	// Edit fields
@@ -395,11 +460,11 @@ func (ts *TmapStarred) fromCatFilters(cat_filters []string) TmapLinksQueryBuilde
 		TMAP_FROM_CATS_FIELDS,
 		1,
 	)
-	// Add cat filter condition
+	// Add AND condition
 	ts.Text = strings.Replace(
 		ts.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
-		TMAP_NO_NSFW_CATS_WHERE + "\n" + CAT_FILTER_AND,
+		TMAP_NO_NSFW_CATS_WHERE + "\n" + TMAP_CAT_FILTERS_AND,
 		1,
 	)
 
@@ -409,9 +474,9 @@ func (ts *TmapStarred) fromCatFilters(cat_filters []string) TmapLinksQueryBuilde
 		match_arg += " AND " + cat_filters[i]
 	}
 
-	// Insert args
-	// old: [{earliest_starrers_limit}, login_name x 5]
-	// new: [{earliest_starrers_limit}, login_name x 4,
+	// Add args: match_arg x2, login_name
+	// old: [EARLIEST_STARRERS_LIMIT, login_name x 5]
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4,
 	// match_arg x 2, login_name x 2]
 	// so insert before last 2
 	login_name := ts.Args[1]
@@ -425,25 +490,87 @@ func (ts *TmapStarred) fromCatFilters(cat_filters []string) TmapLinksQueryBuilde
 	return ts
 }
 
+func (ts *TmapStarred) fromNeuteredCatFilters(neutered_cat_filters []string) TmapLinksQueryBuilder {
+	if len(neutered_cat_filters) == 0 {
+		return ts
+	}
+
+	// Build IN clause
+	in_clause := "WHERE LOWER(cat) IN (?"
+	for i := 1; i < len(neutered_cat_filters); i++ {
+		in_clause += ", ?"
+	}
+	in_clause += ")"
+
+	// Build and add CTEs
+	neutered_cat_filters_ctes := strings.Replace(
+		TMAP_NEUTERED_CAT_FILTERS_CTES,
+		"WHERE LOWER(cat) IN (?)",
+		in_clause,
+		1,
+	)
+	// (after cat filters CTEs so that args come after)
+	ts.Text = strings.Replace(
+		ts.Text,
+		POSSIBLE_USER_SUMMARY_CTE,
+		POSSIBLE_USER_SUMMARY_CTE + ",\n" + neutered_cat_filters_ctes,
+		1,
+	)
+	// Add AND condition
+	ts.Text = strings.Replace(
+		ts.Text,
+		STARRED_AND,
+		"\n" + TMAP_NEUTERED_CAT_FILTERS_AND + STARRED_AND,
+		1,
+	)
+
+	// Add args: {neutered_cat_filters...}
+	// Since we use IN, not FTS MATCH, casing matters and spelling variants
+	// are not needed.
+	neutered_cat_filters_args := make([]any, len(neutered_cat_filters))
+	for i, cat := range neutered_cat_filters {
+		neutered_cat_filters_args[i] = strings.ToLower(cat)
+	}
+
+	// old: [EARLIEST_STARRERS_LIMIT, login_name x 5]
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4, 
+	// neutered_cat_filters..., login_name]
+
+	// OR if .fromCatFilters called first:
+
+	// old: [EARLIEST_STARRERS_LIMIT, login_name x 4,
+	// cat_filters x 2, login_name x 2]
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 3,
+	// cat_filters x 2, login_name, neutered_cat_filters..., login_name]
+
+	// so can insert 2nd-to-last before login_name
+	login_name := ts.Args[1]
+
+	ts.Args = append(ts.Args[:len(ts.Args) - 1], neutered_cat_filters_args...)
+	ts.Args = append(ts.Args, login_name)
+
+	return ts
+}
+
 func (ts *TmapStarred) asSignedInUser(req_user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
 		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
 		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
-		// in vase TMAP_BASE_FIELDS are modified by .fromCatFilters
+		// in case TMAP_BASE_FIELDS are modified by .fromCatFilters
 		TMAP_FROM_CATS_FIELDS, TMAP_FROM_CATS_FIELDS + TMAP_AUTH_FIELD,
 		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
 		// in case TMAP_BASE_JOINS are modified by .fromCatFilters
-		CAT_FILTER_JOINS, CAT_FILTER_JOINS + TMAP_AUTH_JOIN,
+		TMAP_CAT_FILTERS_JOINS, TMAP_CAT_FILTERS_JOINS + TMAP_AUTH_JOIN,
 	)
 
 	ts.Text = fields_replacer.Replace(ts.Text)
 
-	// insert args:
-	// old: [[{earliest_starrers_limit} login_name x 3,
+	// Add args: req_user_id
+	// old: [EARLIEST_STARRERS_LIMIT login_name x 3,
 	// match_arg x 2, login_name x 2] (if cat filter applied)
-	// new: {earliest_starrers_limit}, req_user_id, login_name x 3,
+	// new: [EARLIEST_STARRERS_LIMIT, req_user_id, login_name x 3,
 	// match_arg x 2, login_name x 2]
-	// so insert req_user_id after earliest_starrers_limit
+	// so insert after EARLIEST_STARRERS_LIMIT
 	first_arg := ts.Args[0]
 	trailing_args := ts.Args[1:]
 
@@ -467,17 +594,17 @@ func (ts *TmapStarred) includeNSFW() TmapLinksQueryBuilder {
 	// Swap following condition keyword
 	if strings.Contains(
 		ts.Text,
-		CAT_FILTER_AND,
+		TMAP_CAT_FILTERS_AND,
 	) {
 		cat_filter_where := strings.Replace(
-			CAT_FILTER_AND,
+			TMAP_CAT_FILTERS_AND,
 			"AND",
 			"WHERE",
 			1,
 		)
 		ts.Text = strings.Replace(
 			ts.Text,
-			CAT_FILTER_AND,
+			TMAP_CAT_FILTERS_AND,
 			cat_filter_where,
 			1,
 		)
@@ -592,8 +719,8 @@ func NewTmapTagged(login_name string) *TmapTagged {
 				TMAP_BASE_CTES + "\n" +
 				NSFW_CATS_CTES + "\n" +
 				USER_CATS_CTE + ",\n" +
-				USER_STARS_CTE + "," +
-				POSSIBLE_USER_SUMMARY_CTE + "\n" +
+				USER_STARS_CTE + ",\n" +
+				POSSIBLE_USER_SUMMARY_CTE +
 				TAGGED_FIELDS +
 				TMAP_FROM +
 				TAGGED_JOINS +
@@ -656,6 +783,9 @@ func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) TmapLinksQueryBuilder
 	if len(opts.CatFiltersWithSpellingVariants) > 0 {
 		tt.fromCatFilters(opts.CatFiltersWithSpellingVariants)
 	}
+	if len(opts.NeuteredCatFiltersWithSpellingVariants) > 0 {
+		tt.fromNeuteredCatFilters(opts.NeuteredCatFiltersWithSpellingVariants)
+	}
 	if opts.AsSignedInUser != "" {
 		tt.asSignedInUser(opts.AsSignedInUser)
 	}
@@ -685,7 +815,7 @@ func (tt *TmapTagged) fromCatFilters(cat_filters []string) TmapLinksQueryBuilder
 		return tt
 	}
 
-	// Append MATCH clause
+	// Add MATCH clause
 	match_clause := `
 	AND uct.user_cats MATCH ?`
 
@@ -707,6 +837,88 @@ func (tt *TmapTagged) fromCatFilters(cat_filters []string) TmapLinksQueryBuilder
 
 	return tt
 }
+
+func (tt *TmapTagged) fromNeuteredCatFilters(neutered_cat_filters []string) TmapLinksQueryBuilder {
+	if len(neutered_cat_filters) == 0 {
+		return tt
+	}
+
+	// Build IN clause
+	in_clause := "WHERE LOWER(cat) IN (?"
+	for i := 1; i < len(neutered_cat_filters); i++ {
+		in_clause += ", ?"
+	}
+	in_clause += ")"
+
+	// Build and add CTEs
+	neutered_cat_filters_ctes := strings.Replace(
+		TAGGED_NEUTERED_CAT_FILTER_CTES,
+		"WHERE LOWER(cat) IN (?)",
+		in_clause,
+		1,
+	)
+
+	// Add CTEs
+	tt.Text = strings.Replace(
+		tt.Text,
+		TAGGED_FIELDS,
+		",\n" + neutered_cat_filters_ctes + TAGGED_FIELDS,
+		1,
+	)
+	
+	// Add AND condition
+	// .sortBy hasn't been called yet - can safely assume
+	// it will have this one
+	tt.Text = strings.Replace(
+		tt.Text,
+		TMAP_ORDER_BY_TIMES_STARRED,
+		"\n" + TMAP_NEUTERED_CAT_FILTERS_AND + TMAP_ORDER_BY_TIMES_STARRED,
+		1,
+	)
+	// this works a bit better than replacing TAGGED_AND since it arranges the
+	// query such that args can be added at the end of the slice.
+
+	// Add args: {neutered_cat_filters...}
+	// Since we use IN, not FTS MATCH, casing matters and spelling variants
+	// are not needed.
+	neutered_cat_filters_args := make([]any, len(neutered_cat_filters))
+	for i, cat := range neutered_cat_filters {
+		neutered_cat_filters_args[i] = strings.ToLower(cat)
+	}
+
+	// old: [EARLIEST_STARRERS_LIMIT, login_name x 5]
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4, 
+	// neutered_cat_filters..., login_name]
+
+	// OR if .fromCatFilters called first:
+
+	// old: [EARLIEST_STARRERS_LIMIT, login_name x 4, match_arg, login_name]
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4, match_arg, 
+	// neutered_cat_filters..., login_name]
+
+	// so can insert in 2nd-to-last position before login_name
+	login_name := tt.Args[len(tt.Args) - 1]
+	tt.Args = append(tt.Args[:len(tt.Args) - 1], neutered_cat_filters_args...)
+	tt.Args = append(tt.Args, login_name)
+	
+	return tt
+}
+
+const TAGGED_NEUTERED_CAT_FILTER_CTES = `UserCatsSplit(link_id, cat, str) AS (
+    SELECT link_id, '', user_cats||','
+    FROM UserCats
+    UNION ALL SELECT
+        link_id,
+        substr(str, 0, instr(str, ',')),
+        substr(str, instr(str, ',') + 1)
+    FROM UserCatsSplit
+    WHERE str != ''
+),
+ExcludedLinksDueToNeutering AS (
+	SELECT link_id
+	FROM UserCatsSplit
+	WHERE LOWER(cat) IN (?)
+)`
 
 func (tt *TmapTagged) asSignedInUser(req_user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
@@ -741,17 +953,17 @@ func (tt *TmapTagged) includeNSFW() TmapLinksQueryBuilder {
 	// Swap following condition keyword
 	if strings.Contains(
 		tt.Text,
-		CAT_FILTER_AND,
+		TMAP_CAT_FILTERS_AND,
 	) {
 		cat_filter_where := strings.Replace(
-			CAT_FILTER_AND,
+			TMAP_CAT_FILTERS_AND,
 			"AND",
 			"WHERE",
 			1,
 		)
 		tt.Text = strings.Replace(
 			tt.Text,
-			CAT_FILTER_AND,
+			TMAP_CAT_FILTERS_AND,
 			cat_filter_where,
 			1,
 		)
@@ -950,8 +1162,7 @@ LEFT JOIN AverageStars avs ON l.id = avs.link_id
 LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
-LEFT JOIN SummaryCount sc ON l.id = sc.link_id
-`
+LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
 
 
 var tmap_order_by_clauses = map[string]string{
@@ -1037,8 +1248,7 @@ const POSSIBLE_USER_CATS_CTE = `PossibleUserCatsAny AS (
 	WHERE submitted_by = ?
 )`
 
-const POSSIBLE_USER_SUMMARY_CTE = `
-PossibleUserSummary AS (
+const POSSIBLE_USER_SUMMARY_CTE = `PossibleUserSummary AS (
 	SELECT
 		link_id, 
 		text as user_summary
@@ -1155,9 +1365,9 @@ func (tnlc *TmapNSFWLinksCount) fromCatFilters(cat_filters []string) *TmapNSFWLi
 		return tnlc
 	}
 
-	// Insert CTEs
+	// Add CTEs
 	cat_filter_ctes_no_cats_from_user := strings.Replace(
-		CAT_FILTER_CTES,
+		TMAP_CAT_FILTERS_CTES,
 		`,
 		(cats IS NOT NULL) AS cats_from_user`,
 		"",
@@ -1170,11 +1380,11 @@ func (tnlc *TmapNSFWLinksCount) fromCatFilters(cat_filters []string) *TmapNSFWLi
 		1,
 	)
 
-	// Insert joins
+	// Add JOINs
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
-		CAT_FILTER_JOINS,
+		TMAP_CAT_FILTERS_JOINS,
 		1,
 	)
 
@@ -1182,7 +1392,7 @@ func (tnlc *TmapNSFWLinksCount) fromCatFilters(cat_filters []string) *TmapNSFWLi
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		NSFW_LINKS_COUNT_WHERE,
-		NSFW_LINKS_COUNT_WHERE + "\n" + CAT_FILTER_AND,
+		NSFW_LINKS_COUNT_WHERE + "\n" + TMAP_CAT_FILTERS_AND,
 		1,
 	)
 
@@ -1194,8 +1404,7 @@ func (tnlc *TmapNSFWLinksCount) fromCatFilters(cat_filters []string) *TmapNSFWLi
 		match_arg += " AND " + cat_filters[i]
 	}
 
-	// Insert args
-	// args to add: login_name, match arg x2
+	// Add args: login_name, match arg x2
 	new_args := make([]any, 0, len(tnlc.Args) + 3)
 	// since other methods push new args to end of slice,
 	// better to insert these from the start (always after the first 2,
@@ -1246,7 +1455,7 @@ func (tnlc *TmapNSFWLinksCount) withSummaryContaining(snippet string) *TmapNSFWL
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER,
-		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER + "," + POSSIBLE_USER_SUMMARY_CTE,
+		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER + ",\n" + POSSIBLE_USER_SUMMARY_CTE,
 		1,
 	)
 	tnlc.Text = strings.Replace(
@@ -1369,7 +1578,7 @@ AND l.submitted_by != ?
 AND l.id NOT IN
 	(SELECT link_id FROM UserStars)`
 
-var CAT_FILTER_CTES = POSSIBLE_USER_CATS_CTE + `,
+var TMAP_CAT_FILTERS_CTES = POSSIBLE_USER_CATS_CTE + `,
 PossibleUserCatsMatchingRequestParams AS (
 	SELECT 
 		link_id,
@@ -1387,18 +1596,43 @@ GlobalCatsMatchingRequestParams AS (
     WHERE global_cats MATCH ?
 )`
 
-const CAT_FILTER_JOINS = `
+const TMAP_CAT_FILTERS_JOINS = `
 LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id
 LEFT JOIN PossibleUserCatsMatchingRequestParams pucmrp ON l.id = pucmrp.link_id
 LEFT JOIN GlobalCatsMatchingRequestParams gcmrp ON l.id = gcmrp.link_id`
 
 // Cats passed in filters are checked against user's assigned cats
 // if they submitted a tag, otherwise the global tag.
-const CAT_FILTER_AND = `AND (
+const TMAP_CAT_FILTERS_AND = `AND (
 	(puca.user_cats IS NULL AND gcmrp.global_cats IS NOT NULL)
 	OR 
 	pucmrp.user_cats IS NOT NULL
 )`
+
+const TMAP_NEUTERED_CAT_FILTERS_CTES = `FinalCatsValue AS (
+	SELECT 
+		l.id AS link_id,
+		COALESCE(puca.user_cats, l.global_cats) AS cats
+	FROM Links l
+	LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id
+),
+FinalCatsSplit(link_id, cat, str) AS (
+    SELECT link_id, '', cats||','
+    FROM FinalCatsValue
+    UNION ALL SELECT
+        link_id,
+        substr(str, 0, instr(str, ',')),
+        substr(str, instr(str, ',') + 1)
+    FROM FinalCatsSplit
+    WHERE str != ''
+),
+ExcludedLinksDueToNeutering AS (
+	SELECT link_id
+	FROM FinalCatsSplit
+	WHERE LOWER(cat) IN (?)
+)`
+
+const TMAP_NEUTERED_CAT_FILTERS_AND = "AND l.id NOT IN ExcludedLinksDueToNeutering"
 
 // USER PROFILE
 // (visible on Treasure Map when no filters applied and no individual section

@@ -27,7 +27,7 @@ func NewTopLinks() *TopLinks {
 
 func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 
-	// this first because using sort_params value helps with
+	// sort_params first because using sort_params value helps with
 	// later text replaces (hence the methods below using a sort_params arg)
 	// ORDER BY goes at the end so it's convenient to prepend new clauses before it
 	// and the sort_params value indicates exactly which ORDER BY clause to replace
@@ -36,40 +36,40 @@ func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
 	if sort_params != "" {
 		tl = tl.sortBy(sort_params)
 	}
-
+	// For cats that the links must have
 	cats_params := params.Get("cats")
 	if cats_params != "" {
-		cat_filters := strings.Split(cats_params, ",")
+		cat_filters := GetCatsOptionalPluralOrSingularForms(strings.Split(cats_params, ","))
 		tl = tl.fromCatFilters(cat_filters)
 	}
-
+	// For cats that the links must NOT have
+	neutered_params := params.Get("neutered")
+	if neutered_params != "" {
+		neutered_cat_filters := GetCatsOptionalPluralOrSingularForms(strings.Split(neutered_params, ","))
+		tl = tl.fromNeuteredCatFilters(neutered_cat_filters)
+	}
 	summary_contains_params := params.Get("summary_contains")
 	if summary_contains_params != "" {
 		tl = tl.withGlobalSummaryContaining(summary_contains_params, sort_params)
 	}
-
 	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
 		tl = tl.withURLContaining(url_contains_params, sort_params)
 	}
-
 	url_lacks_params := params.Get("url_lacks")
 	if url_lacks_params != "" {
 		tl = tl.withURLLacking(url_lacks_params, sort_params)
 	}
-
 	period_params := params.Get("period")
 	if period_params != "" {
 		tl = tl.duringPeriod(period_params, sort_params)
 	}
-
 	var nsfw_params string
 	if params.Get("nsfw") != "" {
 		nsfw_params = params.Get("nsfw")
 	} else if params.Get("NSFW") != "" {
 		nsfw_params = params.Get("NSFW")
 	}
-
 	if nsfw_params == "true" {
 		tl = tl.nsfw()
 	} else if nsfw_params != "false" && nsfw_params != "" {
@@ -85,47 +85,123 @@ func (tl *TopLinks) fromCatFilters(cat_filters []string) *TopLinks {
 		return tl
 	}
 
-	// Build CTE from match_clause
-	cats_CTE := `,
-		CatsFilter AS (
-			SELECT link_id
-			FROM global_cats_fts
-			WHERE global_cats MATCH ?
-		)`
-
-	// Prepend CTE
+	// Add CTE
 	tl.Text = strings.Replace(
 		tl.Text,
-		LINKS_BASE_CTES,
-		LINKS_BASE_CTES + cats_CTE,
-		1)
-
-	// Append join
-	const LINKS_CATS_JOIN = `
-	INNER JOIN CatsFilter f ON l.id = f.link_id`
-	tl.Text = strings.Replace(
-		tl.Text,
-		LINKS_FROM,
-		LINKS_FROM + LINKS_CATS_JOIN,
+		LINKS_BASE_FIELDS,
+		",\n" + LINKS_CATS_FILTER_CTE + LINKS_BASE_FIELDS,
 		1,
 	)
 
-	// Pop limit arg
-	tl.Args = tl.Args[:len(tl.Args) - 1]
+	// Add join
+	tl.Text = strings.Replace(
+		tl.Text,
+		LINKS_FROM,
+		LINKS_FROM + "\n" + LINKS_CATS_FILTER_JOIN,
+		1,
+	)
 
 	// Build and add match arg
-	cat_filters = GetCatsOptionalPluralOrSingularForms(cat_filters)
+	// Cats have their singular/plural variant forms added first
+	// in TopLinks.FromRequestParams()
 	var match_arg = cat_filters[0]
 	for i := 1; i < len(cat_filters); i++ {
 		match_arg += " AND " + cat_filters[i]
 	}
-	tl.Args = append(tl.Args, match_arg)
 
-	// Re-add limit
+	// Insert before last arg (LIMIT)
+	tl.Args = append(tl.Args[:len(tl.Args) - 1], match_arg, LINKS_PAGE_LIMIT)
+
+	return tl
+}
+
+const LINKS_CATS_FILTER_CTE = `CatsFilter AS (
+	SELECT link_id
+	FROM global_cats_fts
+	WHERE global_cats MATCH ?
+)`
+const LINKS_CATS_FILTER_JOIN = `INNER JOIN CatsFilter cf ON l.id = cf.link_id`
+
+func (tl *TopLinks) fromNeuteredCatFilters(neutered_cat_filters []string) *TopLinks {
+	if len(neutered_cat_filters) == 0 || neutered_cat_filters[0] == "" {
+		tl.Error = e.ErrNoCats
+		return tl
+	}
+
+	// Build IN clause
+	in_clause := "WHERE LOWER(global_cat) IN (?"
+	for i := 1; i < len(neutered_cat_filters); i++ {
+		in_clause += ", ?"
+	}
+	in_clause += ")"
+
+	// Build CTEs
+	neutered_cat_filters_ctes := strings.Replace(
+		LINKS_NEUTERED_CATS_FILTER_CTES,
+		"WHERE LOWER(global_cat) IN (?)",
+		in_clause,
+		1,
+	)
+
+	// Add CTEs
+	tl.Text = strings.Replace(
+		tl.Text,
+		LINKS_BASE_FIELDS,
+		",\n" + neutered_cat_filters_ctes + LINKS_BASE_FIELDS,
+		1,
+	)
+
+	// Add AND
+	// all except the correct ORDER BY will no-op
+	for _, clause := range links_order_by_clauses {
+		tl.Text = strings.Replace(
+			tl.Text,
+			clause,
+			"\n" + LINKS_NEUTERED_CATS_AND + clause,
+			1,
+		)
+	}
+
+	
+	// Add args: {neutered_cat_filters...}
+	// Since we use IN, not FTS MATCH, casing matters and spelling variants
+	// are not needed.
+	neutered_cat_filters_args := make([]any, len(neutered_cat_filters))
+	for i, cat := range neutered_cat_filters {
+		neutered_cat_filters_args[i] = strings.ToLower(cat)
+	}
+
+	// old: [EARLIEST_STARRERS_LIMIT, LINKS_PAGE_LIMIT]
+	// new: [EARLIEST_STARRERS_LIMIT, neutered_cat_filters..., LINKS_PAGE_LIMIT]
+
+	// OR if .fromCatFilters() was called first:
+
+	// old: [EARLIEST_STARRERS_LIMIT, cat_filters, LINKS_PAGE_LIMIT]
+	// new: [EARLIEST_STARRERS_LIMIT, cat_filters, neutered_cat_filters..., LINKS_PAGE_LIMIT]
+	
+	// so can insert 2nd-to-last before LINKS_PAGE_LIMIT
+	tl.Args = append(tl.Args[:len(tl.Args) - 1], neutered_cat_filters_args...)
 	tl.Args = append(tl.Args, LINKS_PAGE_LIMIT)
 
 	return tl
 }
+
+const LINKS_NEUTERED_CATS_FILTER_CTES = `GlobalCatsSplit(link_id, global_cat, str) AS (
+    SELECT id, '', global_cats||','
+    FROM Links
+    UNION ALL SELECT
+        link_id,
+        substr(str, 0, instr(str, ',')),
+        substr(str, instr(str, ',') + 1)
+    FROM GlobalCatsSplit
+    WHERE str != ''
+),
+ExcludedLinksDueToNeutering AS (
+	SELECT link_id
+	FROM GlobalCatsSplit
+	WHERE LOWER(global_cat) IN (?)
+)`
+const LINKS_NEUTERED_CATS_AND = "AND l.id NOT IN ExcludedLinksDueToNeutering"
 
 func (tl *TopLinks) withGlobalSummaryContaining(snippet string, sort_by string) *TopLinks {
 	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED

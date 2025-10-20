@@ -71,15 +71,11 @@ func TestNewTagRankings(t *testing.T) {
 
 func TestNewGlobalCatsForLink(t *testing.T) {
 	cats_sql := NewGlobalCatsForLink("1")
-	if cats_sql.Error != nil {
-		t.Fatal(cats_sql.Error)
-	}
-	
-	var global_cats_str string
 	row, err := cats_sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
 	}
+	var global_cats_str string
 	if err := row.Scan(&global_cats_str); err != nil {
 		if err == sql.ErrNoRows {
 			t.Fatal("no global cats returned for link 1")
@@ -122,15 +118,15 @@ func TestNewTopGlobalCatCounts(t *testing.T) {
 	}
 }
 
-func TestNewTopGlobalCatCountsFromCatFilters(t *testing.T) {
+func TestTopGlobalCatCountsFromCatFilters(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts().fromCatFilters(test_cats)
-	if counts_sql.Error != nil {
-		t.Fatal(counts_sql.Error)
-	}
-
 	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if !rows.Next() {
+		t.Fatal("no rows")
 	}
 
 	var counts []model.CatCount
@@ -166,9 +162,46 @@ func TestNewTopGlobalCatCountsFromCatFilters(t *testing.T) {
 	}
 }
 
-func TestNewTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
-	counts_sql := NewTopGlobalCatCounts().withGlobalSummaryContaining("test")
+func TestTopGlobalCatCountsFromNeuteredCatFilters(t *testing.T) {
+	counts_sql := NewTopGlobalCatCounts().fromNeuteredCatFilters(test_cats)
+	rows, err := counts_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatalf(
+			"err: %v, sql text: %s, args: %v",
+			err,
+			counts_sql.Text,
+			counts_sql.Args,
+		)
+	}
+	defer rows.Close()
 
+	if !rows.Next() {
+		t.Fatal("no rows")
+	}
+
+	var counts []model.CatCount
+	for rows.Next() {
+		var c model.CatCount
+		if err := rows.Scan(&c.Category, &c.Count); err != nil {
+			t.Fatal(err)
+		}
+		counts = append(counts, c)
+	}
+	
+	for _, cc := range counts {
+		if slices.Contains(test_cats, cc.Category) {
+			t.Fatalf(
+				"cat %s was not neutered, sql text: %s, args: %v",
+				cc.Category,
+				counts_sql.Text,
+				counts_sql.Args,
+			)
+		}
+	}
+}
+
+func TestTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
+	counts_sql := NewTopGlobalCatCounts().withGlobalSummaryContaining("test")
 	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
@@ -263,22 +296,25 @@ func TestNewTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
 	}
 }
 
-func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
-	counts := []model.CatCount{}
-
+func TestTopGlobalCatCountsWithURLContaining(t *testing.T) {
+	test_url_snippet := "gOoGlE"
 	counts_sql := NewTopGlobalCatCounts().
-		fromCatFilters(test_cats).
-		withURLContaining("GooGlE").
+		withURLContaining(test_url_snippet).
 		more()
-	if counts_sql.Error != nil {
-		t.Fatal(counts_sql.Error)
-	}
-
 	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	if !rows.Next() {
+		t.Fatalf(
+			"no rows, sql text: %s, args: %v",
+			counts_sql.Text,
+			counts_sql.Args,
+		)
+	}
+
+	counts := []model.CatCount{}
 	for rows.Next() {
 		var c model.CatCount
 		if err := rows.Scan(&c.Category, &c.Count); err != nil {
@@ -289,12 +325,16 @@ func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
 
 	for _, c := range counts {
 		var count int32
-		if err := TestClient.QueryRow(`SELECT count(id) as count 
-		FROM LINKS 
-		WHERE ',' || global_cats || ',' LIKE '%' || ? || '%'
-		AND url LIKE '%' || ? || '%'`,
-			c.Category,
-			"google",
+		if err := TestClient.QueryRow(`SELECT count(DISTINCT id) as count
+		FROM LINKS
+		WHERE url LIKE '%' || ? || '%'
+		AND id IN (
+			SELECT link_id 
+			FROM global_cats_fts 
+			WHERE global_cats MATCH ?
+		)`,
+			test_url_snippet,
+			withOptionalPluralOrSingularForm(c.Category),
 		).Scan(&count); err != nil {
 			t.Fatal(err)
 		} else if count != c.Count {
@@ -308,7 +348,7 @@ func TestNewTopGlobalCatCountsWithURLContaining(t *testing.T) {
 	}
 }
 
-func TestNewTopGlobalCatCountsWithURLLacking(t *testing.T) {
+func TestTopGlobalCatCountsWithURLLacking(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts().
 		fromCatFilters(test_cats).
 		withURLLacking("GooGlE")
@@ -360,7 +400,7 @@ func TestNewTopGlobalCatCountsWithURLLacking(t *testing.T) {
 	}
 }
 
-func TestNewTopGlobalCatCountsDuringPeriod(t *testing.T) {
+func TestTopGlobalCatCountsDuringPeriod(t *testing.T) {
 	var test_periods = []struct {
 		Period string
 		Valid  bool

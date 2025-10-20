@@ -17,6 +17,7 @@ var (
 	ErrNoLinkID            error = errors.New("no link ID provided")
 	ErrNoLinkWithID        error = errors.New("no link found with given ID")
 	ErrNoCats              error = errors.New("no cats provided")
+	ErrNoNeuteredCats      error = errors.New("no neutered cat filters provided")
 	ErrNoPeriod            error = errors.New("no period provided")
 	// Preview Img
 	ErrPreviewImgNotFound error = errors.New("preview image not found at specified path")
@@ -26,8 +27,8 @@ var (
 	ErrGoogleAPIsKeyNotFound error = errors.New("gAPIs key not found")
 	ErrRedirect              error = errors.New("invalid link destination: redirect detected")
 	ErrCannotStarOwnLink     error = errors.New("cannot star your own link")
-	ErrLinkAlreadyStarred     error = errors.New("link already starred")
-	ErrLinkNotStarred         error = errors.New("link is not starred")
+	ErrLinkAlreadyStarred    error = errors.New("link already starred")
+	ErrLinkNotStarred        error = errors.New("link is not starred")
 	// Delete link
 	ErrDoesntOwnLink error = errors.New("not your link; cannot delete")
 	// Click link

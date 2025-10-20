@@ -82,7 +82,7 @@ func TestNewSummariesForLink(t *testing.T) {
 	}
 }
 
-func TestNewSummariesAsSignedInUser(t *testing.T) {
+func TestSummariesAsSignedInUser(t *testing.T) {
 	var test_link_id, test_user_id = "1", "2"
 	summaries_sql := NewSummariesForLink(test_link_id).AsSignedInUser(test_user_id)
 	rows, err := summaries_sql.ValidateAndExecuteRows()

@@ -25,6 +25,7 @@ import (
 func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
 	var opts = &model.TmapOptions{}
 	var cat_filters_params,
+		neutered_cat_filters_params,
 		period_params,
 		summary_contains_params,
 		url_contains_params,
@@ -42,27 +43,29 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 		)
 		opts.CatFiltersWithSpellingVariants = cat_filters_with_spelling_variants
 	}
-
+	neutered_cat_filters_params = params.Get("neutered")
+	if neutered_cat_filters_params != "" {
+		neutered_cat_filters_with_spelling_variants := query.GetCatsOptionalPluralOrSingularForms(
+			strings.Split(neutered_cat_filters_params, ","),
+		)
+		opts.NeuteredCatFiltersWithSpellingVariants = neutered_cat_filters_with_spelling_variants
+	}
 	period_params = params.Get("period")
 	if period_params != "" {
 		opts.Period = period_params
 	}
-
 	summary_contains_params = params.Get("summary_contains")
 	if summary_contains_params != "" {
 		opts.SummaryContains = summary_contains_params
 	}
-
 	url_contains_params = params.Get("url_contains")
 	if url_contains_params != "" {
 		opts.URLContains = url_contains_params
 	}
-
 	url_lacks_params = params.Get("url_lacks")
 	if url_lacks_params != "" {
 		opts.URLLacks = url_lacks_params
 	}
-
 	if params.Get("nsfw") != "" {
 		nsfw_params = params.Get("nsfw")
 	} else if params.Get("NSFW") != "" {
@@ -73,12 +76,10 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	} else if nsfw_params != "false" && nsfw_params != "" {
 		return nil, e.ErrInvalidNSFWParams
 	}
-
 	sort_params = params.Get("sort_by")
 	if sort_params != "" && sort_params != "times_starred" {
 		opts.SortBy = sort_params
 	}
-
 	section_params = strings.ToLower(params.Get("section"))
 	if section_params != "" {
 		switch section_params {
@@ -88,7 +89,6 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 			return nil, e.ErrInvalidSectionParams
 		}
 	}
-
 	page_params = params.Get("page")
 	if page_params != "" && page_params != "0" {
 		page, err := strconv.Atoi(page_params)

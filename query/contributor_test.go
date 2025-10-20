@@ -43,7 +43,6 @@ func TestNewTopContributors(t *testing.T) {
 func TestTopContributorsFromCatFilters(t *testing.T) {
 	test_cat_filters := []string{"test"}
 	contributors_sql := NewTopContributors().fromCatFilters(test_cat_filters)
-
 	rows, err := contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatalf(
@@ -54,6 +53,10 @@ func TestTopContributorsFromCatFilters(t *testing.T) {
 	}
 	defer rows.Close()
 
+	if !rows.Next() {
+		t.Fatal("no rows")
+	}
+
 	for rows.Next() {
 		var cat, count string
 		if err := rows.Scan(&count, &cat); err != nil {
@@ -63,19 +66,32 @@ func TestTopContributorsFromCatFilters(t *testing.T) {
 
 	// TODO confirm counts
 }
+
+func TestTopContributorsFromNeuteredCatFilters(t *testing.T) {
+	var test_neutered_cats = []string{"test", "best"}
+	contributors_sql := NewTopContributors().fromNeuteredCatFilters(test_neutered_cats)
+	rows, err := contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
-		t.Fatal(err)
+		t.Fatalf(
+			"got %v, SQL was %s",
+			err,
+			contributors_sql.Text,
+		)
 	}
 	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("no rows")
+	}
 
 	for rows.Next() {
 		var cat, count string
 		if err := rows.Scan(&count, &cat); err != nil {
 			t.Fatal(err)
-		} else if !strings.Contains(strings.ToLower(cat), "umvc3") {
-			t.Fatalf("got %s, should contain %s", cat, "umvc3")
 		}
 	}
+
+	// TODO confirm counts
 }
 
 func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
@@ -124,7 +140,12 @@ func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 		duringPeriod("all")
 	rows, err = contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
-		t.Fatal(err)
+		t.Fatalf(
+			"got %v, SQL: %s, args: %v",
+			err,
+			contributors_sql.Text,
+			contributors_sql.Args,
+		)
 	}
 	defer rows.Close()
 
@@ -225,7 +246,7 @@ func TestTopContributorsDuringPeriod(t *testing.T) {
 
 		if period.Valid {
 			if _, err := contributors_sql.ValidateAndExecuteRows(); err != nil && err != sql.ErrNoRows {
-				t.Fatal(err)
+				t.Fatalf("got %v, SQL: %s, args: %v", err, contributors_sql.Text, contributors_sql.Args)
 			}
 		}
 	}

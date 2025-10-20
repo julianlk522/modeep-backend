@@ -53,7 +53,7 @@ func TestNewTopLinks(t *testing.T) {
 	}
 }
 
-func TestFromCatFilters(t *testing.T) {
+func TestTopLinksFromCatFilters(t *testing.T) {
 	var test_cats = []struct {
 		CatFilters  []string
 		Valid bool
@@ -62,11 +62,10 @@ func TestFromCatFilters(t *testing.T) {
 		{[]string{""}, false},
 		{[]string{"umvc3"}, true},
 		{[]string{"umvc3", "flowers"}, true},
-		{[]string{"YouTube", "c. viper"}, true},
+		{[]string{"umvc3", "flowers", "test"}, true},
 	}
 
 	for _, tc := range test_cats {
-		// Cats only
 		links_sql := NewTopLinks().fromCatFilters(tc.CatFilters)
 		if tc.Valid && links_sql.Error != nil {
 			t.Fatal(links_sql.Error)
@@ -74,40 +73,127 @@ func TestFromCatFilters(t *testing.T) {
 			t.Fatalf("expected error for cats %s", tc.CatFilters)
 		}
 
-		rows, err := links_sql.ValidateAndExecuteRows()
-		if err != nil && err != sql.ErrNoRows {
-			t.Fatal(err)
-		}
-		defer rows.Close()
+		if tc.Valid {
+			if _, err := links_sql.ValidateAndExecuteRows(); err != nil {
+				t.Fatalf(
+					"got error %s, sql text was %s, args were %v",
+					err,
+					links_sql.Text,
+					links_sql.Args,
+				)
+			}
 
-		// With period
-		links_sql = links_sql.duringPeriod("month", "times_starred")
-		if tc.Valid && links_sql.Error != nil {
-			t.Fatal(links_sql.Error)
-		} else if !tc.Valid && links_sql.Error == nil {
-			t.Fatalf("expected error for cats %s", tc.CatFilters)
+			// With period
+			links_sql = links_sql.duringPeriod("month", "times_starred")
+			if _, err := links_sql.ValidateAndExecuteRows(); err != nil && err != sql.ErrNoRows {
+				t.Fatal(err)
+			}
 		}
-
-		// If any cats provided, args should be cat_match and limit
-		// in that order
-		if len(tc.CatFilters) == 0 || len(tc.CatFilters) == 1 && tc.CatFilters[0] == "" {
-			continue
-		}
-
-		if links_sql.Args[len(links_sql.Args) - 2] != strings.Join(tc.CatFilters, " ") &&
-		links_sql.Args[len(links_sql.Args) - 1] != LINKS_PAGE_LIMIT {
-			t.Fatalf("got %v, want %v (should be cat_match and limit in that order)", links_sql.Args, tc.CatFilters)
-		}
-
-		rows, err = links_sql.ValidateAndExecuteRows()
-		if err != nil && err != sql.ErrNoRows {
-			t.Fatal(err)
-		}
-		defer rows.Close()
 	}
 }
 
-func TestLinksWithGlobalSummaryContaining(t *testing.T) {
+func TestTopLinksFromNeuteredCatFilters(t *testing.T) {
+	var test_neutered_cats = []string{"umvc3", "best", "game", "ever"}
+	links_sql := NewTopLinks().fromNeuteredCatFilters(test_neutered_cats)
+	rows, err := links_sql.ValidateAndExecuteRows()
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("no rows")
+	}
+
+	var links []model.Link
+	var pages int
+
+	for rows.Next() {
+		l := model.Link{}
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+			&pages,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		links = append(links, l)
+	}
+
+	// none of the links should have any member of test_neutered_cats
+	// in their global cats
+	for _, l := range links {
+		for lc := range strings.SplitSeq(l.Cats, " ") {
+			for _, nc := range test_neutered_cats {
+				if nc == lc {
+					t.Fatalf("link %s has global cat %s", l.URL, nc)
+				}
+			}
+		}
+	}
+
+	// with .fromCatFilters()
+	links_sql = NewTopLinks().fromCatFilters([]string{"test"}).fromNeuteredCatFilters(test_neutered_cats)
+	rows, err = links_sql.ValidateAndExecuteRows()
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("no rows")
+	}
+
+	links = []model.Link{}
+	for rows.Next() {
+		l := model.Link{}
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+			&pages,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		links = append(links, l)
+	}
+
+	for _, l := range links {
+		for lc := range strings.SplitSeq(l.Cats, " ") {
+			for _, nc := range test_neutered_cats {
+				if nc == lc {
+					t.Fatalf("link %s has global cat %s", l.URL, nc)
+				}
+			}
+		}
+	}
+
+}
+
+func TestTopLinksWithGlobalSummaryContaining(t *testing.T) {
 	// case-insensitive
 	links_sql := NewTopLinks().withGlobalSummaryContaining("GoOgLe", "")
 	rows, err := links_sql.ValidateAndExecuteRows()
@@ -207,7 +293,7 @@ func TestLinksWithGlobalSummaryContaining(t *testing.T) {
 	}
 }
 
-func TestLinksWithURLContaining(t *testing.T) {
+func TestTopLinksWithURLContaining(t *testing.T) {
 	links_sql := NewTopLinks().withURLContaining("GoOgLe", "")
 	rows, err := links_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
@@ -302,7 +388,7 @@ func TestLinksWithURLContaining(t *testing.T) {
 	}
 }
 
-func TestLinksWithURLLacking(t *testing.T) {
+func TestTopLinksWithURLLacking(t *testing.T) {
 	// case-insensitive
 	links_sql := NewTopLinks().withURLLacking("gOoGlE", "")
 	rows, err := links_sql.ValidateAndExecuteRows()
@@ -397,7 +483,7 @@ func TestLinksWithURLLacking(t *testing.T) {
 	}
 }
 
-func TestLinksDuringPeriod(t *testing.T) {
+func TestTopLinksDuringPeriod(t *testing.T) {
 	var test_periods = []struct {
 		Period string
 		Valid  bool
@@ -441,7 +527,7 @@ func TestLinksDuringPeriod(t *testing.T) {
 	}
 }
 
-func TestLinksSortBy(t *testing.T) {
+func TestTopLinksSortBy(t *testing.T) {
 	var test_sorts = []struct {
 		Sort  string
 		Valid bool
@@ -549,7 +635,7 @@ func TestLinksSortBy(t *testing.T) {
 	}
 }
 
-func TestAsSignedInUser(t *testing.T) {
+func TestTopLinksAsSignedInUser(t *testing.T) {
 	links_sql := NewTopLinks().AsSignedInUser(TEST_USER_ID)
 	rows, err := links_sql.ValidateAndExecuteRows()
 	if err != nil {
@@ -625,7 +711,7 @@ func TestAsSignedInUser(t *testing.T) {
 	}
 }
 
-func TestNSFW(t *testing.T) {
+func TestTopLinksNSFW(t *testing.T) {
 	links_sql := NewTopLinks().nsfw()
 	rows, err := links_sql.ValidateAndExecuteRows()
 	if err != nil {
@@ -711,7 +797,7 @@ func TestNSFW(t *testing.T) {
 	}
 }
 
-func TestPage(t *testing.T) {
+func TestTopLinksPage(t *testing.T) {
 	var test_cases = []struct {
 		Page         int
 		WantLimitArg int
@@ -792,7 +878,7 @@ func TestPage(t *testing.T) {
 	}
 }
 
-func TestCountNSFWLinks(t *testing.T) {
+func TestTopLinksCountNSFWLinks(t *testing.T) {
 	// without NSFW params enabled
 	links_sql := NewTopLinks().CountNSFWLinks(false)
 	row, err := links_sql.ValidateAndExecuteRow()

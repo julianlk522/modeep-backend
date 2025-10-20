@@ -20,546 +20,16 @@ const (
 
 var test_cats = []string{"go", "coding"}
 
-func TestNewTmapProfile(t *testing.T) {
-	profile_sql := NewTmapProfile(TEST_LOGIN_NAME)
-	row, err := profile_sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var profile model.Profile
-	if err := row.Scan(
-		&profile.LoginName,
-		&profile.PFP,
-		&profile.About,
-		&profile.Email,
-		&profile.CreatedAt,
-	); err != nil && err != sql.ErrNoRows {
-		t.Fatal(err)
-	}
-}
-
-func TestNewTmapNSFWLinksCount(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME)
-	row, err := sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count int
-	if err = row.Scan(&count); err != nil {
-		t.Fatal(err)
-	}
-
-	// (submitted, starred, or tagged links with global_cat "NSFW"
-	// OR where user's tag contains "NSFW")
-	var expected_count int
-	sql_manual := `WITH PossibleUserCatsNSFW AS (
-    SELECT
-        link_id,
-        cats AS user_cats
-    FROM user_cats_fts
-    WHERE submitted_by = ?
-        AND cats MATCH 'NSFW'
-),
-GlobalNSFWCats AS (
-    SELECT
-        link_id,
-        global_cats
-    FROM global_cats_fts
-    WHERE global_cats MATCH 'NSFW'
-),
-UserStars AS (
-    SELECT s.link_id
-    FROM Stars s
-    INNER JOIN Users u ON u.id = s.user_id
-    WHERE u.login_name = ?
-)
-SELECT count(*) as NSFW_link_count
-FROM Links l
-LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
-LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
-WHERE
-    (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
-AND (
-	l.submitted_by = ?
-	OR l.id IN (SELECT link_id FROM UserStars)
-	OR l.id IN
-		(
-		SELECT link_id
-		FROM PossibleUserCatsNSFW
-		)
-	);`
-
-	if err := TestClient.QueryRow(
-		sql_manual,
-		TEST_LOGIN_NAME, TEST_LOGIN_NAME, TEST_LOGIN_NAME,
-	).Scan(&expected_count); err != nil {
-		t.Fatal(err)
-	} else if count != expected_count {
-		t.Fatalf("expected %d, got %d", expected_count, count)
-	}
-
-	// .FromCatFilters()
-	test_cat_filters := GetCatsOptionalPluralOrSingularForms(
-		[]string{"engine", "search"},
-	)
-	sql = sql.fromCatFilters(test_cat_filters)
-	row, err = sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := row.Scan(&count); err != nil {
-		t.Fatal(err)
-	}
-
-	sql_manual = `WITH PossibleUserCatsNSFW AS (
-	SELECT
-		link_id,
-		cats AS user_cats
-	FROM user_cats_fts
-	WHERE submitted_by = ?
-		AND cats MATCH 'NSFW'
-),
-GlobalNSFWCats AS (
-	SELECT
-			link_id,
-			global_cats
-	FROM global_cats_fts
-	WHERE global_cats MATCH 'NSFW'
-),
-PossibleUserCatsMatchingRequestParams AS (
-	SELECT
-			link_id,
-			cats AS user_cats
-	FROM user_cats_fts
-	WHERE submitted_by = ?
-	AND cats MATCH ?
-),
-GlobalCatsMatchingRequestParams AS (
-    SELECT
-        link_id,
-        global_cats
-    FROM global_cats_fts
-    WHERE global_cats MATCH ?
-),
-UserStars AS (
-	SELECT s.link_id
-	FROM Stars s
-	INNER JOIN Users u ON u.id = s.user_id
-	WHERE u.login_name = ?
-)
-SELECT count(*) as NSFW_link_count
-FROM Links l
-LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
-LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
-LEFT JOIN PossibleUserCatsMatchingRequestParams pucmrp ON l.id = pucmrp.link_id
-LEFT JOIN GlobalCatsMatchingRequestParams gcmrp ON l.id = gcmrp.link_id
-WHERE
-		(gnsfwc.global_cats IS NOT NULL
-		OR
-		pucnsfw.user_cats IS NOT NULL)
-AND (gcmrp.global_cats IS NOT NULL OR pucmrp.user_cats IS NOT NULL)
-AND (
-	l.submitted_by = ?
-	OR l.id IN (SELECT link_id FROM UserStars)
-	OR l.id IN
-			(
-			SELECT link_id
-			FROM PossibleUserCatsNSFW
-			)
-	);`
-	if err := TestClient.QueryRow(
-		sql_manual,
-		TEST_LOGIN_NAME, 
-		TEST_LOGIN_NAME,
-		strings.Join(test_cat_filters, " AND "),
-		strings.Join(test_cat_filters, " AND "),
-		TEST_LOGIN_NAME,
-		TEST_LOGIN_NAME,
-	).Scan(&expected_count); err != nil { 
-		t.Fatal(err)
-	} else if count != expected_count {
-		t.Fatalf("expected %d, got %d", expected_count, count)
-	}
-}
-
-func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).submittedOnly() 
-	row, err := sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count int
-	if err = row.Scan(&count); err != nil {
-		t.Fatal(err)
-	}
-
-	sql_manual := `WITH PossibleUserCatsNSFW AS (
-    SELECT
-        link_id,
-        cats AS user_cats
-    FROM user_cats_fts
-    WHERE submitted_by = ?
-        AND cats MATCH 'NSFW'
-),
-GlobalNSFWCats AS (
-    SELECT
-        link_id,
-        global_cats
-    FROM global_cats_fts
-    WHERE global_cats MATCH 'NSFW'
-)
-SELECT count(*) as NSFW_link_count
-FROM Links l
-LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
-LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
-WHERE (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
-AND l.submitted_by = ?;`
-
-	var expected_count int
-	if err := TestClient.QueryRow(
-		sql_manual,
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
-	).Scan(&expected_count); err != nil {
-		t.Fatal(err)
-	} else if count != expected_count {
-		t.Fatalf("expected %d, got %d", expected_count, count)
-	}
-}
-
-func TestTmapNSFWLinksCountStarredOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).starredOnly()
-	row, err := sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count int
-	if err := row.Scan(&count); err != nil {
-		t.Fatal(err)
-	}
-
-	var expected_count int
-	sql_manual := `WITH PossibleUserCatsNSFW AS (
-    SELECT
-        link_id,
-        cats AS user_cats
-    FROM user_cats_fts
-    WHERE submitted_by = ?
-        AND cats MATCH 'NSFW'
-),
-GlobalNSFWCats AS (
-    SELECT
-        link_id,
-        global_cats
-    FROM global_cats_fts
-    WHERE global_cats MATCH 'NSFW'
-),
-UserStars AS (
-    SELECT s.link_id
-    FROM Stars s
-    INNER JOIN Users u ON u.id = s.user_id
-    WHERE u.login_name = ?
-)
-SELECT count(*) as NSFW_link_count
-FROM Links l
-LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
-LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
-WHERE
-    (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
-AND l.id IN (SELECT link_id FROM UserStars);`
-	if err := TestClient.QueryRow(
-		sql_manual, 
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
-	).Scan(&expected_count); err != nil {
-		t.Fatal(err)
-	}
-
-	if count != expected_count {
-		t.Fatalf("expected %d, got %d", expected_count, count)
-	}
-}
-
-func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).taggedOnly()
-	row, err := sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count int
-	if err := row.Scan(&count); err != nil {
-		t.Fatal(err)
-	}
-
-	var expected_count int
-	sql_manual := `WITH PossibleUserCatsNSFW AS (
-    SELECT
-        link_id,
-        cats AS user_cats
-    FROM user_cats_fts
-    WHERE submitted_by = ?
-        AND cats MATCH 'NSFW'
-),
-GlobalNSFWCats AS (
-    SELECT
-        link_id,
-        global_cats
-    FROM global_cats_fts
-    WHERE global_cats MATCH 'NSFW'
-),
-UserStars AS (
-    SELECT s.link_id
-    FROM Stars s
-    INNER JOIN Users u ON u.id = s.user_id
-    WHERE u.login_name = ?
-)
-SELECT count(*) as NSFW_link_count
-FROM Links l
-LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
-LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
-WHERE (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
-AND l.submitted_by != ?
-AND l.id NOT IN
-	(SELECT link_id FROM UserStars);`
-
-	if err := TestClient.QueryRow(
-		sql_manual, 
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
-	).Scan(&expected_count); err != nil {
-		t.Fatal(err)
-	} else if count != expected_count {
-		t.Fatalf("expected %d, got %d", expected_count, count)
-	}
-}
-
-func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
-	row, err := sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var total_count int
-	if err := row.Scan(&total_count); err != nil {
-		t.Fatal(err)
-	}
-
-	// should equal "all" period
-	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).duringPeriod("all")
-	row, err = sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count_during_all_period int
-	if err := row.Scan(&count_during_all_period); err != nil {
-		t.Fatal(err)
-	}
-
-	if total_count != count_during_all_period {
-		t.Fatalf("expected %d, got %d", total_count, count_during_all_period)
-	}
-
-	// last week (none)
-	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).duringPeriod("week")
-	row, err = sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count_during_last_week int
-	if err := row.Scan(&count_during_last_week); err != nil {
-		t.Fatal(err)
-	}
-
-	if count_during_last_week != 0 {
-		t.Fatalf("expected %d, got %d", 0, count_during_last_week)
-	}
-}
-
-func TestTmapNSFWLinksCountWithSummaryContaining(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withSummaryContaining("web")
-	row, err := sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count int
-	if err := row.Scan(&count); err != nil {
-		t.Fatal(err)
-	}
-
-	var expected_count int
-	nsfw_links_sql := `SELECT COUNT(DISTINCT L.id) as nsfw_links
-FROM Links L
-LEFT JOIN Users U ON L.submitted_by = U.login_name
-LEFT JOIN Stars S ON S.user_id = U.id
-LEFT JOIN Tags T ON T.submitted_by = L.submitted_by
-WHERE L.global_cats LIKE '%' || 'NSFW' || '%'
-	AND L.global_summary LIKE '%' || ? || '%'
-  	AND (L.submitted_by = ? OR T.submitted_by = ? OR U.login_name = ?);`
-	if err := TestClient.QueryRow(
-		nsfw_links_sql,
-		"web",
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
-	).Scan(&expected_count); err != nil {
-		t.Fatal(err)
-	} else if count != expected_count {
-		t.Fatalf("expected %d, got %d", expected_count, count)
-	}
-}
-
-func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
-	row, err := sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var overall_count int
-	if err := row.Scan(&overall_count); err != nil {
-		t.Fatal(err)
-	}
-
-	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withURLContaining("googler")
-	row, err = sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count_with_url_containing int
-	if err := row.Scan(&count_with_url_containing); err != nil {
-		t.Fatal(err)
-	}
-
-	if overall_count != count_with_url_containing {
-		t.Fatalf("expected %d, got %d", overall_count, count_with_url_containing)
-	}
-
-	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withURLContaining("not_googler")
-	row, err = sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count_with_url_not_containing int
-	if err := row.Scan(&count_with_url_not_containing); err != nil {
-		t.Fatal(err)
-	}
-
-	if count_with_url_not_containing != 0 {
-		t.Fatalf("expected %d, got %d", 0, count_with_url_not_containing)
-	}
-}
-
-func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
-	var test_cat_filters = []string{
-		"search",
-		"engine",
-	}
-	// cat filters are always first expanded into optional singular/plural
-	// forms by GetTmapOptsFromRequestParams()
-	test_cat_filters = GetCatsOptionalPluralOrSingularForms(test_cat_filters)
-
-	var test_options_and_expected_counts = []struct {
-		Options model.TmapNSFWLinksCountOptions
-		Valid bool
-	}{
-		{
-			model.TmapNSFWLinksCountOptions{
-				CatFiltersWithSpellingVariants: test_cat_filters,
-				Period: "all",
-				URLContains: "googler",
-			}, 
-			true,
-		},
-		{
-			model.TmapNSFWLinksCountOptions{
-				CatFiltersWithSpellingVariants: test_cat_filters,
-				Period: "all",
-				URLContains: "not_googler",
-			}, 
-			true,
-		},
-		{
-			model.TmapNSFWLinksCountOptions{
-				CatFiltersWithSpellingVariants: test_cat_filters,
-				Period: "all",
-			},
-			true,
-		},
-		{
-			model.TmapNSFWLinksCountOptions{
-				OnlySection: "submitted",
-				CatFiltersWithSpellingVariants: test_cat_filters,
-			},
-			true,
-		},
-		{
-			model.TmapNSFWLinksCountOptions{
-				OnlySection: "tagged",
-				CatFiltersWithSpellingVariants: test_cat_filters, 
-			},
-			true,
-		},
-		{
-			model.TmapNSFWLinksCountOptions{
-				OnlySection: "starred",
-				CatFiltersWithSpellingVariants: test_cat_filters,
-			},
-			true,
-		},
-		{
-			model.TmapNSFWLinksCountOptions{
-				OnlySection: "boop",
-				CatFiltersWithSpellingVariants: test_cat_filters, 
-			},
-			false,
-		},
-	}
-
-	for _, test := range test_options_and_expected_counts {
-		sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).FromOptions(&test.Options)
-		row, err := sql.ValidateAndExecuteRow()
-		if (test.Valid && err != nil) || (!test.Valid && err == nil) {
-			t.Fatalf("expected %t, got %t", test.Valid, err == nil)
-		}
-
-		if test.Valid {
-			var count int
-			if err = row.Scan(&count); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-}
-
+// LINKS
 func TestNewTmapSubmitted(t *testing.T) {
-	// Retrieve all IDs of links submitted by user
-	var submitted_ids []string
-	rows, err := TestClient.Query(`SELECT id 
-		FROM Links 
-		WHERE submitted_by = ?
-		AND global_cats NOT LIKE '%' || 'NSFW' || '%';`, // exclude NSFW in base query
-		TEST_REQ_LOGIN_NAME)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		submitted_ids = append(submitted_ids, id)
-	}
-
-	// Verify all submitted links are present after executing query
 	submitted_sql := NewTmapSubmitted(TEST_REQ_LOGIN_NAME)
-	rows, err = submitted_sql.ValidateAndExecuteRows()
+	rows, err := submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer rows.Close()
 
+	var submitted_links []model.TmapLink
 	for rows.Next() {
 		var l model.TmapLink
 		if err := rows.Scan(
@@ -581,25 +51,40 @@ func TestNewTmapSubmitted(t *testing.T) {
 			t.Fatal(err)
 		} else if l.SubmittedBy != TEST_REQ_LOGIN_NAME {
 			t.Fatalf("SubmittedBy != test login_name (%s)", TEST_REQ_LOGIN_NAME)
-		} else if l.TagCount == 0 {
-			t.Fatalf("TagCount == 0: %+v", l)
 		} else if strings.Contains(l.Cats, "NSFW") {
 			t.Fatal("should not contain NSFW in base query")
+		} else if l.TagCount == 0 {
+			t.Fatalf("TagCount == 0: %+v", l)
 		}
 
-		// Remove from submitted_ids if returned by query
-		for i := 0; i < len(submitted_ids); i++ {
-			if l.ID == submitted_ids[i] {
-				submitted_ids = append(submitted_ids[0:i], submitted_ids[i+1:]...)
-				break
-			}
+		submitted_links = append(submitted_links, l)
+	}	
+
+	var submitted_ids []string
+	rows, err = TestClient.Query(`SELECT id 
+		FROM Links 
+		WHERE submitted_by = ?
+		AND global_cats NOT LIKE '%' || 'NSFW' || '%';`,
+		TEST_REQ_LOGIN_NAME)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
 		}
+		submitted_ids = append(submitted_ids, id)
 	}
 
-	// If any IDs are left in submitted_ids then they were incorrectly
-	// omitted by query
-	if len(submitted_ids) > 0 {
-		t.Fatalf("not all submitted links returned, see missing IDs: %+v", submitted_ids)
+	if len(submitted_ids) != len(submitted_links) {
+		t.Fatalf(
+			"len(submitted_ids) != len(submitted_links) (%d != %d)",
+			len(submitted_ids),
+			len(submitted_links),
+		)
 	}
 }
 
@@ -638,6 +123,95 @@ func TestTmapSubmittedFromCatFilters(t *testing.T) {
 	}
 }
 
+func TestTmapSubmittedFromNeuteredCatFilters(t *testing.T) {
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).fromNeuteredCatFilters(test_cats).Build()
+	rows, err := submitted_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("no results")
+	}
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		for _, tc := range test_cats {
+			for cat := range strings.SplitSeq(l.Cats, ",") {
+				if cat == tc {
+					t.Fatalf("got %s, should not contain %s", l.Cats, tc)
+				}
+			}
+		}
+	}
+
+	// with .fromCatFilters()
+	var neutered_cat_filters = []string{"test", "best"}
+	submitted_sql = NewTmapSubmitted(TEST_LOGIN_NAME).
+		fromCatFilters(test_cats).
+		fromNeuteredCatFilters(neutered_cat_filters).
+		Build()
+	rows, err = submitted_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("no results")
+	}
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		for _, nc := range neutered_cat_filters {
+			for cat := range strings.SplitSeq(l.Cats, ",") {
+				if cat == nc {
+					t.Fatalf("got %s, should not contain %s", l.Cats, nc)
+				}
+			}
+		}
+	}
+}
+
 func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).Build()
 	rows, err := submitted_sql.ValidateAndExecuteRows()
@@ -647,6 +221,7 @@ func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 	defer rows.Close()
 
 	// Verify columns
+	// (should now have the StarsAssigned field)
 	if rows.Next() {
 		var l model.TmapLinkSignedIn
 		if err := rows.Scan(
@@ -678,7 +253,6 @@ func TestTmapSubmittedIncludeNSFW(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Verify TEST_REQ_LOGIN_NAME's tmap contains link with NSFW tag
 	var found_NSFW_link bool
 	for rows.Next() {
 		var l model.TmapLink
@@ -1165,6 +739,93 @@ func TestTmapStarredFromCatFilters(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestTmapStarredFromNeuteredCatFilters(t *testing.T) {
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).fromNeuteredCatFilters(test_cats).Build()
+	rows, err := starred_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("no results")
+	}
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		for _, tc := range test_cats {
+			for cat := range strings.SplitSeq(l.Cats, ",") {
+				if cat == tc {
+					t.Fatalf("got %s, should not contain %s", l.Cats, tc)
+				}
+			}
+		}
+	}
+
+	// with .fromCatFilters()
+	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).
+		fromCatFilters([]string{"test"}).
+		fromNeuteredCatFilters(test_cats).
+		Build()
+	rows, err = starred_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	// should also check here if there are no rows.. but need more test data
+	// to provide the rows
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		for cat := range strings.SplitSeq(l.Cats, ",") {
+				for _, nc := range test_cats {
+					if cat == nc {
+						t.Fatalf("got %s, should not contain %s", l.Cats, nc)
+					}
+				}
+			}
 	}
 }
 
@@ -1657,6 +1318,94 @@ func TestTmapTaggedFromCatFilters(t *testing.T) {
 	}
 }
 
+func TestTmapTaggedFromNeuteredCatFilters(t *testing.T) {
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).fromNeuteredCatFilters(test_cats).Build()
+	rows, err := tagged_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("no results")
+	}
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		for _, tc := range test_cats {
+			for cat := range strings.SplitSeq(l.Cats, ",") {
+				if cat == tc {
+					t.Fatalf("got %s, should not contain %s", l.Cats, tc)
+				}
+			}
+		}
+	}
+
+	// with .fromCatFilters()
+	tagged_sql = NewTmapTagged(TEST_LOGIN_NAME).
+		fromCatFilters([]string{"test"}).
+		fromNeuteredCatFilters(test_cats).
+		Build()
+	rows, err = tagged_sql.ValidateAndExecuteRows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("no results")
+	}
+
+	for rows.Next() {
+		var l model.TmapLink
+		if err := rows.Scan(
+			&l.ID,
+			&l.URL,
+			&l.SubmittedBy,
+			&l.SubmitDate,
+			&l.Cats,
+			&l.CatsFromUser,
+			&l.Summary,
+			&l.SummaryCount,
+			&l.TimesStarred,
+			&l.AvgStars,
+			&l.EarliestStarrers,
+			&l.ClickCount,
+			&l.TagCount,
+			&l.PreviewImgFilename,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		for cat := range strings.SplitSeq(l.Cats, ",") {
+				for _, tc := range test_cats {
+					if cat == tc {
+						t.Fatalf("got %s, should not contain %s", l.Cats, tc)
+					}
+				}
+			}
+	}
+}
+
 func TestTmapTaggedAsSignedInUser(t *testing.T) {
 	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).Build()
 	rows, err := tagged_sql.ValidateAndExecuteRows()
@@ -1977,5 +1726,518 @@ func TestTmapTaggedWithURLContaining(t *testing.T) {
 
 	if len(links) != expected_count {
 		t.Fatal("len(links) != expected_count")
+	}
+}
+
+// NSFW LINKS COUNT
+func TestNewTmapNSFWLinksCount(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME)
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err = row.Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	// (submitted, starred, or tagged links with global_cat "NSFW"
+	// OR where user's tag contains "NSFW")
+	var expected_count int
+	sql_manual := `WITH PossibleUserCatsNSFW AS (
+    SELECT
+        link_id,
+        cats AS user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+        AND cats MATCH 'NSFW'
+),
+GlobalNSFWCats AS (
+    SELECT
+        link_id,
+        global_cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH 'NSFW'
+),
+UserStars AS (
+    SELECT s.link_id
+    FROM Stars s
+    INNER JOIN Users u ON u.id = s.user_id
+    WHERE u.login_name = ?
+)
+SELECT count(*) as NSFW_link_count
+FROM Links l
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+WHERE
+    (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
+AND (
+	l.submitted_by = ?
+	OR l.id IN (SELECT link_id FROM UserStars)
+	OR l.id IN
+		(
+		SELECT link_id
+		FROM PossibleUserCatsNSFW
+		)
+	);`
+
+	if err := TestClient.QueryRow(
+		sql_manual,
+		TEST_LOGIN_NAME, TEST_LOGIN_NAME, TEST_LOGIN_NAME,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)
+	} else if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+
+	// .FromCatFilters()
+	test_cat_filters := GetCatsOptionalPluralOrSingularForms(
+		[]string{"engine", "search"},
+	)
+	sql = sql.fromCatFilters(test_cat_filters)
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := row.Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	sql_manual = `WITH PossibleUserCatsNSFW AS (
+	SELECT
+		link_id,
+		cats AS user_cats
+	FROM user_cats_fts
+	WHERE submitted_by = ?
+		AND cats MATCH 'NSFW'
+),
+GlobalNSFWCats AS (
+	SELECT
+			link_id,
+			global_cats
+	FROM global_cats_fts
+	WHERE global_cats MATCH 'NSFW'
+),
+PossibleUserCatsMatchingRequestParams AS (
+	SELECT
+			link_id,
+			cats AS user_cats
+	FROM user_cats_fts
+	WHERE submitted_by = ?
+	AND cats MATCH ?
+),
+GlobalCatsMatchingRequestParams AS (
+    SELECT
+        link_id,
+        global_cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH ?
+),
+UserStars AS (
+	SELECT s.link_id
+	FROM Stars s
+	INNER JOIN Users u ON u.id = s.user_id
+	WHERE u.login_name = ?
+)
+SELECT count(*) as NSFW_link_count
+FROM Links l
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+LEFT JOIN PossibleUserCatsMatchingRequestParams pucmrp ON l.id = pucmrp.link_id
+LEFT JOIN GlobalCatsMatchingRequestParams gcmrp ON l.id = gcmrp.link_id
+WHERE
+		(gnsfwc.global_cats IS NOT NULL
+		OR
+		pucnsfw.user_cats IS NOT NULL)
+AND (gcmrp.global_cats IS NOT NULL OR pucmrp.user_cats IS NOT NULL)
+AND (
+	l.submitted_by = ?
+	OR l.id IN (SELECT link_id FROM UserStars)
+	OR l.id IN
+			(
+			SELECT link_id
+			FROM PossibleUserCatsNSFW
+			)
+	);`
+	if err := TestClient.QueryRow(
+		sql_manual,
+		TEST_LOGIN_NAME, 
+		TEST_LOGIN_NAME,
+		strings.Join(test_cat_filters, " AND "),
+		strings.Join(test_cat_filters, " AND "),
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+	).Scan(&expected_count); err != nil { 
+		t.Fatal(err)
+	} else if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
+func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
+	var test_cat_filters = []string{
+		"search",
+		"engine",
+	}
+	// cat filters are always first expanded into optional singular/plural
+	// forms by GetTmapOptsFromRequestParams()
+	test_cat_filters = GetCatsOptionalPluralOrSingularForms(test_cat_filters)
+
+	var test_options_and_expected_counts = []struct {
+		Options model.TmapNSFWLinksCountOptions
+		Valid bool
+	}{
+		{
+			model.TmapNSFWLinksCountOptions{
+				CatFiltersWithSpellingVariants: test_cat_filters,
+				Period: "all",
+				URLContains: "googler",
+			}, 
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				CatFiltersWithSpellingVariants: test_cat_filters,
+				Period: "all",
+				URLContains: "not_googler",
+			}, 
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				CatFiltersWithSpellingVariants: test_cat_filters,
+				Period: "all",
+			},
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				OnlySection: "submitted",
+				CatFiltersWithSpellingVariants: test_cat_filters,
+			},
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				OnlySection: "tagged",
+				CatFiltersWithSpellingVariants: test_cat_filters, 
+			},
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				OnlySection: "starred",
+				CatFiltersWithSpellingVariants: test_cat_filters,
+			},
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				OnlySection: "boop",
+				CatFiltersWithSpellingVariants: test_cat_filters, 
+			},
+			false,
+		},
+	}
+
+	for _, test := range test_options_and_expected_counts {
+		sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).FromOptions(&test.Options)
+		row, err := sql.ValidateAndExecuteRow()
+		if (test.Valid && err != nil) || (!test.Valid && err == nil) {
+			t.Fatalf("expected %t, got %t", test.Valid, err == nil)
+		}
+
+		if test.Valid {
+			var count int
+			if err = row.Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).submittedOnly() 
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err = row.Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	sql_manual := `WITH PossibleUserCatsNSFW AS (
+    SELECT
+        link_id,
+        cats AS user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+        AND cats MATCH 'NSFW'
+),
+GlobalNSFWCats AS (
+    SELECT
+        link_id,
+        global_cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH 'NSFW'
+)
+SELECT count(*) as NSFW_link_count
+FROM Links l
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+WHERE (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
+AND l.submitted_by = ?;`
+
+	var expected_count int
+	if err := TestClient.QueryRow(
+		sql_manual,
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)
+	} else if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
+func TestTmapNSFWLinksCountStarredOnly(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).starredOnly()
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := row.Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	var expected_count int
+	sql_manual := `WITH PossibleUserCatsNSFW AS (
+    SELECT
+        link_id,
+        cats AS user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+        AND cats MATCH 'NSFW'
+),
+GlobalNSFWCats AS (
+    SELECT
+        link_id,
+        global_cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH 'NSFW'
+),
+UserStars AS (
+    SELECT s.link_id
+    FROM Stars s
+    INNER JOIN Users u ON u.id = s.user_id
+    WHERE u.login_name = ?
+)
+SELECT count(*) as NSFW_link_count
+FROM Links l
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+WHERE
+    (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
+AND l.id IN (SELECT link_id FROM UserStars);`
+	if err := TestClient.QueryRow(
+		sql_manual, 
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)
+	}
+
+	if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
+func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).taggedOnly()
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := row.Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	var expected_count int
+	sql_manual := `WITH PossibleUserCatsNSFW AS (
+    SELECT
+        link_id,
+        cats AS user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+        AND cats MATCH 'NSFW'
+),
+GlobalNSFWCats AS (
+    SELECT
+        link_id,
+        global_cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH 'NSFW'
+),
+UserStars AS (
+    SELECT s.link_id
+    FROM Stars s
+    INNER JOIN Users u ON u.id = s.user_id
+    WHERE u.login_name = ?
+)
+SELECT count(*) as NSFW_link_count
+FROM Links l
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+WHERE (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
+AND l.submitted_by != ?
+AND l.id NOT IN
+	(SELECT link_id FROM UserStars);`
+
+	if err := TestClient.QueryRow(
+		sql_manual, 
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)
+	} else if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
+func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var total_count int
+	if err := row.Scan(&total_count); err != nil {
+		t.Fatal(err)
+	}
+
+	// should equal "all" period
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).duringPeriod("all")
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count_during_all_period int
+	if err := row.Scan(&count_during_all_period); err != nil {
+		t.Fatal(err)
+	}
+
+	if total_count != count_during_all_period {
+		t.Fatalf("expected %d, got %d", total_count, count_during_all_period)
+	}
+
+	// last week (none)
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).duringPeriod("week")
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count_during_last_week int
+	if err := row.Scan(&count_during_last_week); err != nil {
+		t.Fatal(err)
+	}
+
+	if count_during_last_week != 0 {
+		t.Fatalf("expected %d, got %d", 0, count_during_last_week)
+	}
+}
+
+func TestTmapNSFWLinksCountWithSummaryContaining(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withSummaryContaining("web")
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := row.Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+
+	var expected_count int
+	nsfw_links_sql := `SELECT COUNT(DISTINCT L.id) as nsfw_links
+FROM Links L
+LEFT JOIN Users U ON L.submitted_by = U.login_name
+LEFT JOIN Stars S ON S.user_id = U.id
+LEFT JOIN Tags T ON T.submitted_by = L.submitted_by
+WHERE L.global_cats LIKE '%' || 'NSFW' || '%'
+	AND L.global_summary LIKE '%' || ? || '%'
+  	AND (L.submitted_by = ? OR T.submitted_by = ? OR U.login_name = ?);`
+	if err := TestClient.QueryRow(
+		nsfw_links_sql,
+		"web",
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
+		TEST_REQ_LOGIN_NAME,
+	).Scan(&expected_count); err != nil {
+		t.Fatal(err)
+	} else if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
+	}
+}
+
+func TestTmapNSFWLinksCountWithURLContaining(t *testing.T) {
+	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
+	row, err := sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var overall_count int
+	if err := row.Scan(&overall_count); err != nil {
+		t.Fatal(err)
+	}
+
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withURLContaining("googler")
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count_with_url_containing int
+	if err := row.Scan(&count_with_url_containing); err != nil {
+		t.Fatal(err)
+	}
+
+	if overall_count != count_with_url_containing {
+		t.Fatalf("expected %d, got %d", overall_count, count_with_url_containing)
+	}
+
+	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).withURLContaining("not_googler")
+	row, err = sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count_with_url_not_containing int
+	if err := row.Scan(&count_with_url_not_containing); err != nil {
+		t.Fatal(err)
+	}
+
+	if count_with_url_not_containing != 0 {
+		t.Fatalf("expected %d, got %d", 0, count_with_url_not_containing)
+	}
+}
+
+// PROFILE
+func TestNewTmapProfile(t *testing.T) {
+	profile_sql := NewTmapProfile(TEST_LOGIN_NAME)
+	row, err := profile_sql.ValidateAndExecuteRow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var profile model.Profile
+	if err := row.Scan(
+		&profile.LoginName,
+		&profile.PFP,
+		&profile.About,
+		&profile.Email,
+		&profile.CreatedAt,
+	); err != nil && err != sql.ErrNoRows {
+		t.Fatal(err)
 	}
 }
