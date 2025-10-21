@@ -94,9 +94,9 @@ func TestTopContributorsFromNeuteredCatFilters(t *testing.T) {
 	// TODO confirm counts
 }
 
-func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
+func TestTopContributorsWhereGlobalSummaryContains(t *testing.T) {
 	// case-insensitive
-	contributors_sql := NewTopContributors().withGlobalSummaryContaining("gooGLE")
+	contributors_sql := NewTopContributors().whereGlobalSummaryContains("gooGLE")
 	rows, err := contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
@@ -134,9 +134,9 @@ func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 
 	// no conflict w/ other methods
 	contributors_sql = NewTopContributors().
-		withGlobalSummaryContaining("TEST").
-		withURLContaining("www").
-		withURLLacking("test").
+		whereGlobalSummaryContains("TEST").
+		whereURLContains("www").
+		whereURLLacks("test").
 		duringPeriod("all")
 	rows, err = contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
@@ -182,9 +182,9 @@ func TestTopContributorsWithGlobalSummaryContaining(t *testing.T) {
 	}
 }
 
-func TestTopContributorsWithURLContaining(t *testing.T) {
+func TestTopContributorsWhereURLContains(t *testing.T) {
 	// case-insensitive
-	contributors_sql := NewTopContributors().withURLContaining("gooGLE")
+	contributors_sql := NewTopContributors().whereURLContains("gooGLE")
 	rows, err := contributors_sql.ValidateAndExecuteRows()
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatal(err)
@@ -223,8 +223,8 @@ func TestTopContributorsWithURLContaining(t *testing.T) {
 }
 
 func TestTopContributorsDuringPeriod(t *testing.T) {
-	var test_periods = [7]struct {
-		Period string
+	var test_periods = []struct {
+		Period model.Period
 		Valid  bool
 	}{
 		{"day", true},
@@ -251,7 +251,7 @@ func TestTopContributorsDuringPeriod(t *testing.T) {
 		}
 	}
 
-	// Period and Cats
+	// Period and cat filter
 	for _, period := range test_periods {
 		contributors_sql := NewTopContributors().duringPeriod(period.Period).fromCatFilters([]string{"umvc3"})
 		if period.Valid && contributors_sql.Error != nil {

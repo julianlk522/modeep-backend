@@ -4,7 +4,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/julianlk522/modeep/db"
@@ -14,56 +13,55 @@ import (
 
 func TestPrepareLinksPage(t *testing.T) {
 	var test_requests = []struct {
-		LinksSQL   *query.TopLinks
-		Options     *model.LinksPageOptions
+		LinksOptions   *model.TopLinksOptions
+		PageOptions     *model.LinksPageOptions
 		Valid      bool
 	}{
 		{
-			LinksSQL:   query.NewTopLinks().FromRequestParams(url.Values{"page": []string{"1"}}),
-			Options: &model.LinksPageOptions{},
+			LinksOptions:   &model.TopLinksOptions{
+				Page: 1,
+			},
+			PageOptions: &model.LinksPageOptions{},
 			Valid:      true,
 		},
 		{
-			LinksSQL: query.NewTopLinks().FromRequestParams(
-				url.Values{
-					"cats": test_multiple_cats,
-					"page": []string{"1"},
-				},
-			),
-			Options: &model.LinksPageOptions{
+			LinksOptions: &model.TopLinksOptions{
+				CatFiltersWithSpellingVariants: test_multiple_cats,
+				Page: 1,
+			},
+			PageOptions: &model.LinksPageOptions{
 				CatFilters: test_multiple_cats, 
 			},
 			Valid:      true,
 		},
 		{
-			LinksSQL: query.NewTopLinks().FromRequestParams(
-				url.Values{
-					"period": []string{"batman"},
-					"page": []string{"1"},
-				},
-			),
-			Options: &model.LinksPageOptions{
-				IncludeNSFW: true,
+			LinksOptions: &model.TopLinksOptions{
+				Period: "batman",
+				Page: 1,
 			},
-			Valid:      false,
-		},
-		{
-			LinksSQL: &query.TopLinks{
-				Query: query.Query{
-					Text: "spiderman",
-				},
-			},
-			Options: &model.LinksPageOptions{},
 			Valid:      false,
 		},
 	}
 
 	for _, tr := range test_requests {
-		_, err := PrepareLinksPage[model.Link](tr.LinksSQL, tr.Options)
+		links_sql, err := query.NewTopLinks().FromOptions(tr.LinksOptions)
 		if tr.Valid && err != nil {
 			t.Fatal(err)
 		} else if !tr.Valid && err == nil {
-			t.Fatalf("expected error for request %+v\n", tr)
+			t.Fatalf("expected error for request %v", tr)
+		}
+		
+		if !tr.Valid {
+			continue
+		}
+
+		if _, err = PrepareLinksPage[model.Link](links_sql, tr.PageOptions); err != nil {
+			t.Fatalf(
+				"got error %s, SQL text was %s, args were %v",
+				err,
+				links_sql.Text,
+				links_sql.Args,
+			)
 		}
 	}
 }
@@ -80,7 +78,14 @@ func TestScanRawLinksPageData(t *testing.T) {
 	}
 
 	// signed in
-	links_sql = links_sql.AsSignedInUser(TEST_REQ_USER_ID)
+	links_sql, err = links_sql.FromOptions(
+		&model.TopLinksOptions{
+			AsSignedInUser: TEST_REQ_USER_ID,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	signed_in_links_page, err := scanRawLinksPageData[model.LinkSignedIn](links_sql)
 	if err != nil {
 		t.Fatal(err)
@@ -105,24 +110,17 @@ func TestScanSingleLink(t *testing.T) {
 
 func TestPaginateLinks(t *testing.T) {
 	// single page
-	links_sql := query.NewTopLinks().FromRequestParams(url.Values{"cats": []string{"umvc3,flowers"}}).Page(1)
+	opts := &model.TopLinksOptions{
+		CatFiltersWithSpellingVariants: []string{"test"},
+		Page: 1,
+	}
+	links_sql, err := query.NewTopLinks().FromOptions(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	links_page, err := scanRawLinksPageData[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	paginateLinks(links_page.Links)
-	if len(*links_page.Links) == 0 {
-		t.Fatal("expected links")
-	}
-
-	// multiple pages
-	links_sql = query.NewTopLinks().Page(1)
-	links_page, err = scanRawLinksPageData[model.Link](links_sql)
-	if err != nil {
-		t.Fatal(err)
-	} else if len(*links_page.Links) == 0 {
-		t.Fatal("expected links")
 	}
 
 	paginateLinks(links_page.Links)
@@ -132,21 +130,22 @@ func TestPaginateLinks(t *testing.T) {
 }
 
 func TestGetMergedCatSpellingVariantsInLinksFromCatFilters(t *testing.T) {
+	// NOTE cats need to have spelling variants added for this to work
+	// (done by GetTopLinksOptionsFromRequestParams())
+
 	// no links; no merged cats
 	test_cat_filters := []string{"nonexistentcat"}
-	links_sql := query.NewTopLinks().FromRequestParams(
-		url.Values{
-			"cats": test_cat_filters,
-			"period": []string{"day"},
-			"page": []string{"1"},
-		},
-	)
+	opts := &model.TopLinksOptions{
+		CatFiltersWithSpellingVariants: query.GetCatsOptionalPluralOrSingularForms(test_cat_filters),
+	}
+	links_sql, err := query.NewTopLinks().FromOptions(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	links_page, err := scanRawLinksPageData[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	paginateLinks(links_page.Links)
 	links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 		links_page.Links,
 		test_cat_filters,
@@ -157,57 +156,82 @@ func TestGetMergedCatSpellingVariantsInLinksFromCatFilters(t *testing.T) {
 
 	// should merge results for "flowers"
 	test_cat_filters = []string{"flower"}
-	links_sql = query.NewTopLinks().FromRequestParams(url.Values{
-		"cats": test_cat_filters,
+	links_sql, err = query.NewTopLinks().FromOptions(&model.TopLinksOptions{
+		CatFiltersWithSpellingVariants: query.GetCatsOptionalPluralOrSingularForms(test_cat_filters),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	links_page, err = scanRawLinksPageData[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	paginateLinks(links_page.Links)
 	links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 		links_page.Links,
 		test_cat_filters,
 	)
 	if len(links_page.MergedCats) != 1 {
-		t.Fatalf("expected 1 merged cat, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
+		t.Fatalf(
+			"expected 1 merged cat, got %d (%v)",
+			len(links_page.MergedCats),
+			links_page.MergedCats,
+		)
 	}
 
 	// multiple merged cats
 	test_cats := []string{"flower", "tests"} // should merge "flowers" and "test"
-	links_sql = query.NewTopLinks().FromRequestParams(url.Values{"cats": test_cats})
+	links_sql, err = query.NewTopLinks().FromOptions(
+		&model.TopLinksOptions{
+			CatFiltersWithSpellingVariants: query.GetCatsOptionalPluralOrSingularForms(
+				test_cat_filters,
+			),
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	links_page, err = scanRawLinksPageData[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	paginateLinks(links_page.Links)
 	links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 		links_page.Links,
 		test_cats,
 	)
 	if len(links_page.MergedCats) != 2 {
-		t.Fatalf("expected 2 merged cats, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
+		t.Fatalf(
+			"expected 2 merged cats, got %d (%v)",
+			len(links_page.MergedCats),
+			links_page.MergedCats,
+		)
 	}
 
 	// inconsistent capitalization: should still merge
 	test_cat_filters = []string{"FlOwEr"} // should merge "flowers"
-	links_sql = query.NewTopLinks().FromRequestParams(url.Values{
-		"cats": test_cat_filters,
-	})
+	links_sql, err = query.NewTopLinks().FromOptions(
+		&model.TopLinksOptions{
+			CatFiltersWithSpellingVariants: query.GetCatsOptionalPluralOrSingularForms(
+				test_cat_filters,
+			),
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	links_page, err = scanRawLinksPageData[model.Link](links_sql)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	paginateLinks(links_page.Links)
 	links_page.MergedCats = getMergedCatSpellingVariantsInLinksFromCatFilters(
 		links_page.Links,
 		test_cat_filters,
 	)
 	if len(links_page.MergedCats) != 1 {
-		t.Fatalf("expected 1 merged cat, got %d (%v)", len(links_page.MergedCats), links_page.MergedCats)
+		t.Fatalf(
+			"expected 1 merged cat, got %d (%v)",
+			len(links_page.MergedCats),
+			links_page.MergedCats,
+		)
 	}
 
 }
@@ -218,9 +242,9 @@ func TestGetLinkExtraMetadataFromResponse(t *testing.T) {
 		new_link *model.NewLink
 		Valid    bool
 	}{
-		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "abc.com"}}, true},
-		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "www.abc.com"}}, true},
-		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "https://www.abc.com"}}, true},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "modeep.org"}}, true},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "www.modeep.org"}}, true},
+		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "https://www.modeep.org"}}, true},
 		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "about.google.com"}}, true},
 		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "julianlk.com/notreal"}}, false},
 		{&model.NewLink{NewLinkRequest: &model.NewLinkRequest{URL: "gobblety gook"}}, false},

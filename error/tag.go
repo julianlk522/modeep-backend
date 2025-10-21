@@ -8,7 +8,7 @@ import (
 var (
 	ErrNoTagID             error = errors.New("no tag ID provided")
 	ErrNoTagCats           error = errors.New("no tag cat(s) provided")
-	ErrNoGlobalCatsSnippet error = errors.New("no global cats snippet provided")
+	ErrNoCatsSnippet       error = errors.New("no cats snippet provided")
 	ErrNoCatFilters        error = errors.New("no cat filters provided")
 	ErrNoTagWithID         error = errors.New("no tag found with given ID")
 	ErrNoUserWithLoginName error = errors.New("no user found with given login name")

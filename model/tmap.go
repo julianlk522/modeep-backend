@@ -8,7 +8,42 @@ import (
 	util "github.com/julianlk522/modeep/model/util"
 )
 
-// Links
+// OPTIONS
+type TmapOptions struct {
+	OwnerLoginName string
+	// RawCatFiltersParams (reserved chars unescaped, plural/singular variations not
+	// bundled) is stored in addition to CatFilters so that
+	// GetCatCountsFromTmapLinks() can know the exact values passed in
+	// the request and not count them
+	RawCatFiltersParams                    string
+	CatFiltersWithSpellingVariants         []string
+	NeuteredCatFiltersWithSpellingVariants []string
+	AsSignedInUser                         string
+	IncludeNSFW                            bool
+	SortBy                                 SortBy
+	Period                                 Period
+	SummaryContains                        string
+	URLContains                            string
+	URLLacks                               string
+	Section                                TmapIndividualSectionName
+	Page                                   int
+}
+
+type TmapNSFWLinksCountOptions struct {
+	Section                                TmapIndividualSectionName
+	CatFiltersWithSpellingVariants         []string
+	NeuteredCatFiltersWithSpellingVariants []string
+	Period                                 Period
+	SummaryContains                        string
+	URLContains                            string
+	URLLacks                               string
+}
+
+type TmapCatCountsOptions struct {
+	RawCatsParams string
+}
+
+// LINKS
 type TmapLink struct {
 	Link
 	CatsFromUser bool
@@ -19,7 +54,7 @@ type TmapLinkSignedIn struct {
 	CatsFromUser bool
 }
 
-// Sections
+// SECTIONS
 type TmapSections[T TmapLink | TmapLinkSignedIn] struct {
 	Submitted        *[]T
 	Starred          *[]T
@@ -71,7 +106,7 @@ type Profile struct {
 	CreatedAt string
 }
 
-// Profile
+// REQUESTS
 type EditAboutRequest struct {
 	About string `json:"about"`
 }
@@ -95,37 +130,3 @@ type EditProfilePicRequest struct {
 	ProfilePic string `json:"pfp,omitempty"`
 }
 
-// Options
-type TmapOptions struct {
-	OwnerLoginName string
-	AsSignedInUser string
-	// RawCatFiltersParams (reserved chars unescaped, plural/singular variations not
-	// bundled) is stored in addition to CatsFilter so that
-	// GetCatCountsFromTmapLinks() can know the exact values passed in
-	// the request and not count them
-	RawCatFiltersParams                    string
-	CatFiltersWithSpellingVariants         []string
-	NeuteredCatFiltersWithSpellingVariants []string
-	Period                                 string
-	SortBy                                 string
-	IncludeNSFW                            bool
-	SummaryContains                        string
-	URLContains                            string
-	URLLacks                               string
-	Section                                string
-	Page                                   int
-}
-
-type TmapNSFWLinksCountOptions struct {
-	OnlySection                            string // "Submitted", "Starred", "Tagged"
-	CatFiltersWithSpellingVariants         []string
-	NeuteredCatFiltersWithSpellingVariants []string
-	Period                                 string
-	SummaryContains                        string
-	URLContains                            string
-	URLLacks                               string
-}
-
-type TmapCatCountsOptions struct {
-	RawCatsParams string
-}

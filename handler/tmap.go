@@ -18,6 +18,48 @@ import (
 	"github.com/julianlk522/modeep/model"
 )
 
+func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
+	var login_name string = chi.URLParam(r, "login_name")
+	if login_name == "" {
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLoginName))
+		return
+	}
+
+	user_exists, err := util.UserExists(login_name)
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	} else if !user_exists {
+		render.Render(w, r, e.ErrNotFound(e.ErrNoUserWithLoginName))
+		return
+	}
+
+	var tmap any
+
+	opts, err := util.GetTmapOptionsFromRequestParams(
+		r.URL.Query(),
+	)
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
+	opts.OwnerLoginName = login_name
+	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
+	if req_user_id != "" {
+		opts.AsSignedInUser = req_user_id
+		tmap, err = util.BuildTmapFromOptions[model.TmapLinkSignedIn](opts)
+	} else {
+		tmap, err = util.BuildTmapFromOptions[model.TmapLink](opts)
+	}
+
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
+
+	render.JSON(w, r, tmap)
+}
+
 func EditAbout(w http.ResponseWriter, r *http.Request) {
 	edit_about_data := &model.EditAboutRequest{}
 	if err := render.Bind(r, edit_about_data); err != nil {
@@ -150,47 +192,4 @@ func DeleteProfilePic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func GetTreasureMap(w http.ResponseWriter, r *http.Request) {
-	var login_name string = chi.URLParam(r, "login_name")
-	if login_name == "" {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoLoginName))
-		return
-	}
-
-	user_exists, err := util.UserExists(login_name)
-	if err != nil {
-		render.Render(w, r, e.ErrInvalidRequest(err))
-		return
-	} else if !user_exists {
-		render.Render(w, r, e.ErrNotFound(e.ErrNoUserWithLoginName))
-		return
-	}
-
-	opts, err := util.GetTmapOptsFromRequestParams(
-		r.URL.Query(),
-	)
-	if err != nil {
-		render.Render(w, r, e.ErrInvalidRequest(err))
-		return
-	}
-	opts.OwnerLoginName = login_name
-
-	var tmap any
-
-	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
-	if req_user_id != "" {
-		opts.AsSignedInUser = req_user_id
-		tmap, err = util.BuildTmapFromOpts[model.TmapLinkSignedIn](opts)
-	} else {
-		tmap, err = util.BuildTmapFromOpts[model.TmapLink](opts)
-	}
-
-	if err != nil {
-		render.Render(w, r, e.ErrInvalidRequest(err))
-		return
-	}
-
-	render.JSON(w, r, tmap)
 }

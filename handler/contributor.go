@@ -10,17 +10,18 @@ import (
 )
 
 func GetTopContributors(w http.ResponseWriter, r *http.Request) {
-	contributors_sql := query.
-		NewTopContributors().
-		FromRequestParams(
-			r.URL.Query(),
-		)
-
-	if contributors_sql.Error != nil {
-		render.Render(w, r, e.ErrInvalidRequest(contributors_sql.Error))
+	opts, err := util.GetTopContributorsOptionsFromRequestParams(r.URL.Query())
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
 		return
 	}
-
+	contributors_sql, err := query.
+		NewTopContributors().
+		FromOptions(opts)
+	if err != nil {
+		render.Render(w, r, e.ErrInternalServerError(err))
+		return
+	}
 	contributors := util.ScanContributors(contributors_sql)
 
 	render.Status(r, http.StatusOK)

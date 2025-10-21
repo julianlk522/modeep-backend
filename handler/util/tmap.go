@@ -22,20 +22,10 @@ import (
 	"github.com/julianlk522/modeep/query"
 )
 
-func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
+func GetTmapOptionsFromRequestParams(params url.Values) (*model.TmapOptions, error) {
 	var opts = &model.TmapOptions{}
-	var cat_filters_params,
-		neutered_cat_filters_params,
-		period_params,
-		summary_contains_params,
-		url_contains_params,
-		url_lacks_params,
-		nsfw_params,
-		sort_params,
-		section_params,
-		page_params string
 
-	cat_filters_params = params.Get("cats")
+	cat_filters_params := params.Get("cats")
 	if cat_filters_params != "" {
 		opts.RawCatFiltersParams = cat_filters_params
 		cat_filters_with_spelling_variants := query.GetCatsOptionalPluralOrSingularForms(
@@ -43,53 +33,73 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 		)
 		opts.CatFiltersWithSpellingVariants = cat_filters_with_spelling_variants
 	}
-	neutered_cat_filters_params = params.Get("neutered")
+	neutered_cat_filters_params := params.Get("neutered")
 	if neutered_cat_filters_params != "" {
 		neutered_cat_filters_with_spelling_variants := query.GetCatsOptionalPluralOrSingularForms(
 			strings.Split(neutered_cat_filters_params, ","),
 		)
 		opts.NeuteredCatFiltersWithSpellingVariants = neutered_cat_filters_with_spelling_variants
 	}
-	period_params = params.Get("period")
+	period_params := params.Get("period")
 	if period_params != "" {
-		opts.Period = period_params
+		period := model.Period(period_params)
+		if _, ok := model.ValidPeriodsInDays[period]; !ok {
+			return nil, e.ErrInvalidPeriod
+		}
+		opts.Period = period
 	}
-	summary_contains_params = params.Get("summary_contains")
+	summary_contains_params := params.Get("summary_contains")
 	if summary_contains_params != "" {
 		opts.SummaryContains = summary_contains_params
 	}
-	url_contains_params = params.Get("url_contains")
+	url_contains_params := params.Get("url_contains")
 	if url_contains_params != "" {
 		opts.URLContains = url_contains_params
 	}
-	url_lacks_params = params.Get("url_lacks")
+	url_lacks_params := params.Get("url_lacks")
 	if url_lacks_params != "" {
 		opts.URLLacks = url_lacks_params
 	}
-	if params.Get("nsfw") != "" {
-		nsfw_params = params.Get("nsfw")
-	} else if params.Get("NSFW") != "" {
-		nsfw_params = params.Get("NSFW")
+	var nsfw_params string
+	if params.Get("include_nsfw") != "" {
+		nsfw_params = params.Get("include_nsfw")
 	}
 	if nsfw_params == "true" {
 		opts.IncludeNSFW = true
 	} else if nsfw_params != "false" && nsfw_params != "" {
 		return nil, e.ErrInvalidNSFWParams
 	}
-	sort_params = params.Get("sort_by")
-	if sort_params != "" && sort_params != "times_starred" {
-		opts.SortBy = sort_params
+	sort_params := params.Get("sort_by")
+	if sort_params != "" {
+		sort_by := model.SortBy(sort_params)
+		found := false
+		for _, s := range model.ValidSortBys {
+			if sort_by == s {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, e.ErrInvalidSortByParams
+		}
+		opts.SortBy = sort_by
 	}
-	section_params = strings.ToLower(params.Get("section"))
+	section_params := strings.ToLower(params.Get("section"))
 	if section_params != "" {
-		switch section_params {
-		case "submitted", "starred", "tagged":
-			opts.Section = section_params
-		default:
+		section := model.TmapIndividualSectionName(section_params)
+		found := false
+		for _, s := range model.ValidTmapSections {
+			if section == s {
+				opts.Section = section
+				found = true
+				break
+			}
+		}
+		if !found {
 			return nil, e.ErrInvalidSectionParams
 		}
 	}
-	page_params = params.Get("page")
+	page_params := params.Get("page")
 	if page_params != "" && page_params != "0" {
 		page, err := strconv.Atoi(page_params)
 		if err != nil || page < 1 {
@@ -101,7 +111,7 @@ func GetTmapOptsFromRequestParams(params url.Values) (*model.TmapOptions, error)
 	return opts, nil
 }
 
-func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.TmapOptions) (any, error) {
+func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model.TmapOptions) (any, error) {
 	if opts.OwnerLoginName == "" {
 		return nil, e.ErrNoTmapOwnerLoginName
 	}
@@ -110,16 +120,19 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	// Get number of NSFW links (so can indicate that they are hidden)
 	var nsfw_links_count int
 	nsfw_links_count_opts := &model.TmapNSFWLinksCountOptions{
-		OnlySection:                    opts.Section,
+		Section:                        opts.Section,
 		CatFiltersWithSpellingVariants: opts.CatFiltersWithSpellingVariants,
 		Period:                         opts.Period,
 		SummaryContains:                opts.SummaryContains,
 		URLContains:                    opts.URLContains,
 		URLLacks:                       opts.URLLacks,
 	}
-	nsfw_links_count_sql := query.
+	nsfw_links_count_sql, err := query.
 		NewTmapNSFWLinksCount(tmap_owner).
 		FromOptions(nsfw_links_count_opts)
+	if err != nil {
+		return nil, err
+	}
 	row, err := nsfw_links_count_sql.ValidateAndExecuteRow()
 	if err != nil {
 		return nil, err
@@ -142,11 +155,10 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 
 	// Individual section
 	if opts.Section != "" {
-		section_query_builder, err := getTmapLinksQueryBuilderForSectionForOwner(opts.Section, tmap_owner)
-		if err != nil {
-			return nil, err
-		}
-
+		section_query_builder := getTmapLinksQueryBuilderForSectionForOwner(
+			opts.Section,
+			tmap_owner,
+		)
 		links, err := buildTmapLinksQueryAndScan[T](section_query_builder, opts)
 		if err != nil {
 			return nil, err
@@ -254,17 +266,20 @@ func BuildTmapFromOpts[T model.TmapLink | model.TmapLinkSignedIn](opts *model.Tm
 	}
 }
 
-func getTmapLinksQueryBuilderForSectionForOwner(section string, tmap_owner string) (query.TmapLinksQueryBuilder, error) {
+func getTmapLinksQueryBuilderForSectionForOwner(
+	section model.TmapIndividualSectionName, 
+	tmap_owner string,
+) query.TmapLinksQueryBuilder {
 	switch section {
 	case "submitted":
-		return query.NewTmapSubmitted(tmap_owner), nil
+		return query.NewTmapSubmitted(tmap_owner)
 	case "starred":
-		return query.NewTmapStarred(tmap_owner), nil
+		return query.NewTmapStarred(tmap_owner)
 	case "tagged":
-		return query.NewTmapTagged(tmap_owner), nil
-	default:
-		return nil, e.ErrInvalidOnlySectionParams
+		return query.NewTmapTagged(tmap_owner)
 	}
+	// impossible
+	return nil
 }
 
 func getPageOfIndividualTmapSectionLinks[T model.TmapLink | model.TmapLinkSignedIn](page int, links *[]T) (*[]T, int, error) {
@@ -357,14 +372,11 @@ func limitTmapSectionsAndGetLimitedOnes[T model.TmapLink | model.TmapLinkSignedI
 }
 
 func buildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](builder query.TmapLinksQueryBuilder, opts *model.TmapOptions) (*[]T, error) {
-	get_links_query := builder.
-		FromOptions(opts).
-		Build()
-	if get_links_query.Error != nil {
-		return nil, get_links_query.Error
+	get_links_query, err := builder.FromOptions(opts)
+	if err != nil {
+		return nil, err
 	}
-
-	links, err := scanTmapLinks[T](get_links_query)
+	links, err := scanTmapLinks[T](get_links_query.Build())
 	if err != nil {
 		return nil, err
 	}
@@ -450,9 +462,8 @@ func scanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](q *query.Query) (*
 // (if LINKS_PAGE_LIMIT is 10, individual sections contain <= 10 links)
 func getCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOptions) *[]model.CatCount {
 	var omitted_cats []string
-	// Use raw_cats_params to determine omitted_cats because CatsFilter
+	// Use raw_cats_params to determine omitted_cats because CatFilters
 	// (from BuildTmapFromOpts) is modified to escape reserved chars
-
 	if opts != nil && opts.RawCatsParams != "" {
 		omitted_cats = strings.Split(strings.ToLower(opts.RawCatsParams), ",")
 	}

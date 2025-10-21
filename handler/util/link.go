@@ -18,17 +18,82 @@ import (
 	"fmt"
 
 	"net/http"
+	"net/url"
 )
 
-// capitalized so it can be exported and used in GetPreviewImg handler
 var Preview_img_dir string
-
 func init() {
 	backend_root_path := os.Getenv("MODEEP_BACKEND_ROOT")
 	if backend_root_path == "" {
 		log.Panic("$MODEEP_BACKEND_ROOT not set")
 	}
 	Preview_img_dir = backend_root_path + "/db/img/preview"
+}
+
+func GetTopLinksOptionsFromRequestParams(params url.Values) (*model.TopLinksOptions, error) {
+	opts := &model.TopLinksOptions{}
+	
+	// For cats that the links must have
+	cats_params := params.Get("cats")
+	if cats_params != "" {
+		opts.CatFiltersWithSpellingVariants = query.GetCatsOptionalPluralOrSingularForms(
+			strings.Split(cats_params, ","),
+		)
+	}
+	// For cats that the links must NOT have
+	neutered_params := params.Get("neutered")
+	if neutered_params != "" {
+		// Since we use IN, not FTS MATCH, spelling variants are not
+		// needed (and casing matters)
+		opts.NeuteredCatFilters = strings.Split(neutered_params, ",")
+	}
+	summary_contains_params := params.Get("summary_contains")
+	if summary_contains_params != "" {
+		opts.GlobalSummaryContains = summary_contains_params
+	}
+	url_contains_params := params.Get("url_contains")
+	if url_contains_params != "" {
+		opts.URLContains = url_contains_params
+	}
+	url_lacks_params := params.Get("url_lacks")
+	if url_lacks_params != "" {
+		opts.URLLacks = url_lacks_params
+	}
+	var nsfw_params string
+	if params.Get("include_nsfw") != "" {
+		nsfw_params = params.Get("include_nsfw")
+	}
+	if nsfw_params == "true" {
+		opts.IncludeNSFW = true
+	} else if nsfw_params != "false" && nsfw_params != "" {
+		return nil, e.ErrInvalidNSFWParams
+	}
+	var sort_by model.SortBy = model.SortByTimesStarred
+	sort_params := params.Get("sort_by")
+	if sort_params != "" {
+		sort_by = model.SortBy(sort_params)
+		found := false
+		for _, sb := range model.ValidSortBys {
+			if sb == sort_by {
+				opts.SortBy = sort_by
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, e.ErrInvalidSortByParams
+		}
+	}
+	period_params := params.Get("period")
+	if period_params != "" {
+		period := model.Period(period_params)
+		if _, ok := model.ValidPeriodsInDays[period]; !ok {
+			return nil, e.ErrInvalidPeriod
+		}
+		opts.Period = period
+	}
+	// AsSignedInUser and Page are added to opts directly in GetTopLinks() handler after middleware processing
+	return opts, nil
 }
 
 func UserHasSubmittedMaxDailyLinks(login_name string) (bool, error) {
@@ -62,8 +127,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 		)
 	}
 	
-	nsfw_params := options.IncludeNSFW
-	hidden_links, err := getNSFWLinksCount[T](links_sql, nsfw_params)
+	hidden_links, err := getNSFWLinksCount[T](links_sql)
 	if err != nil {
 		return nil, err
 	}
@@ -252,8 +316,8 @@ func getMergedCatSpellingVariantsInLinksFromCatFilters[T model.HasCats](links *[
 	return merged_cats
 }
 
-func getNSFWLinksCount[T model.HasCats](links_sql *query.TopLinks, nsfw_params bool) (int, error) {
-	hidden_links_count_sql := links_sql.CountNSFWLinks(nsfw_params)
+func getNSFWLinksCount[T model.HasCats](links_sql *query.TopLinks) (int, error) {
+	hidden_links_count_sql := links_sql.CountNSFWLinks()
 	row, err := hidden_links_count_sql.ValidateAndExecuteRow()
 	if err != nil {
 		return 0, err

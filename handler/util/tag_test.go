@@ -2,8 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"fmt"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -78,141 +76,10 @@ func TestScanTagRankings(t *testing.T) {
 	}
 }
 
-// Get top global cats
 func TestScanGlobalCatCounts(t *testing.T) {
 	global_cats_sql := query.NewTopGlobalCatCounts()
-	counts, err := ScanGlobalCatCounts(global_cats_sql)
-	if err != nil {
+	if _, err := ScanGlobalCatCounts(global_cats_sql); err != nil {
 		t.Fatal(err)
-	}
-
-	if len(*counts) == 0 {
-		t.Fatal("no counts returned for top global cats")
-	} else if len(*counts) > query.GLOBAL_CATS_PAGE_LIMIT {
-		t.Fatalf(
-			"too many counts returned for top global cats (limit %d)",
-			query.GLOBAL_CATS_PAGE_LIMIT,
-		)
-	}
-
-	// Verify count for top few cats
-	if len(*counts) > 3 {
-		*counts = (*counts)[0:3]
-	}
-
-	var result_count int32
-	for _, c := range *counts {
-		if c.Count == 0 {
-			t.Fatalf("cat %s returned count 0", c.Category)
-		}
-
-		err = TestClient.QueryRow(`SELECT count(global_cats)
-				FROM Links
-				WHERE ','||global_cats||',' LIKE '%,' || ? || ',%'`,
-			c.Category).Scan(&result_count)
-
-		if err != nil {
-			t.Fatal(err)
-		} else if c.Count != result_count {
-			t.Fatalf(
-				"expected count for cat %s to be %d, got %d",
-				c.Category,
-				c.Count,
-				result_count,
-			)
-		}
-	}
-
-	// DURING PERIOD
-	var test_periods = []struct {
-		Period string
-		Valid  bool
-	}{
-		{"day", true},
-		{"week", true},
-		{"month", true},
-		{"year", true},
-		{"all", true},
-		{"invalid_period", false},
-	}
-
-	for _, tp := range test_periods {
-		global_cats_sql = query.NewTopGlobalCatCounts().FromRequestParams(
-			url.Values{
-				"period": []string{tp.Period},
-			},
-		)
-		counts, err := ScanGlobalCatCounts(global_cats_sql)
-
-		if tp.Valid && err != nil && err != sql.ErrNoRows {
-			t.Fatalf(
-				"unexpected error for period %s: %s",
-				tp.Period,
-				err,
-			)
-		} else if !tp.Valid && err == nil {
-			t.Fatalf("expected error for period %s", tp.Period)
-		}
-
-		// Verify counts if valid sql
-		if !tp.Valid {
-			continue
-		}
-
-		if len(*counts) > query.GLOBAL_CATS_PAGE_LIMIT {
-			t.Fatalf(
-				"too many counts returned for top global cats (limit %d)",
-				query.GLOBAL_CATS_PAGE_LIMIT,
-			)
-
-		// Only top few cats
-		} else if len(*counts) > 3 {
-			*counts = (*counts)[0:3]
-		}
-
-		for _, c := range *counts {
-			if c.Count == 0 {
-				t.Fatalf("cat %s returned count 0", c.Category)
-			}
-
-			counts_sql := `SELECT count(global_cats)
-			FROM Links
-			WHERE ',' || global_cats || ',' LIKE '%,' || ? || ',%'`
-
-			if tp.Period != "all" {
-				var days int
-				switch tp.Period {
-				case "day":
-					days = 1
-				case "week":
-					days = 7
-				case "month":
-					days = 30
-				case "year":
-					days = 365
-				default:
-					t.Fatalf("invalid period: %s", tp.Period)
-				}
-
-				period_clause := fmt.Sprintf("AND submit_date >= date('now', '-%d days')", days)
-
-
-				counts_sql += "\n" + period_clause + ";"
-			}
-
-			err = TestClient.QueryRow(counts_sql, c.Category).Scan(&result_count)
-			if err != nil {
-				t.Fatal(err)
-			} else if c.Count != result_count {
-				t.Fatalf(
-					"expected count for cat %s to be %d, got %d (period %s)",
-					c.Category,
-					c.Count,
-					result_count,
-					tp.Period,
-				)
-			}
-		}
 	}
 }
 
@@ -246,6 +113,25 @@ func TestCatsResembleEachOther(t *testing.T) {
 	}
 }
 
+func TestTidyCats(t *testing.T) {
+	var test_cats = []struct {
+		Cats string
+		ExpectedResult string
+	}{
+		{"", ""},
+		{"test,abc", "abc,test"},
+		{"  test,abc  ", "abc,test"},
+		{"abc,test,ACB", "abc,ACB,test"},
+	}
+
+	for _, c := range test_cats {
+		got := TidyCats(c.Cats)
+		if c.ExpectedResult != got {
+			t.Fatalf("expected %s, got %s", c.ExpectedResult, got)
+		}
+	}
+}
+
 func TestUserHasTaggedLink(t *testing.T) {
 	var test_links = []struct {
 		ID               string
@@ -268,26 +154,6 @@ func TestUserHasTaggedLink(t *testing.T) {
 	}
 }
 
-func TestTidyCats(t *testing.T) {
-	var test_cats = []struct {
-		Cats string
-		ExpectedResult string
-	}{
-		{"", ""},
-		{"test,abc", "abc,test"},
-		{"  test,abc  ", "abc,test"},
-		{"abc,test,ACB", "abc,ACB,test"},
-	}
-
-	for _, c := range test_cats {
-		got := TidyCats(c.Cats)
-		if c.ExpectedResult != got {
-			t.Fatalf("expected %s, got %s", c.ExpectedResult, got)
-		}
-	}
-}
-
-// Edit tag
 func TestUserSubmittedTagWithID(t *testing.T) {
 	var test_tags = []struct {
 		ID                  string
@@ -310,7 +176,6 @@ func TestUserSubmittedTagWithID(t *testing.T) {
 	}
 }
 
-// Delete tag
 func TestTagExists(t *testing.T) {
 	// TODO
 }
@@ -368,9 +233,6 @@ func TestCalculateAndSetGlobalCats(t *testing.T) {
 	}{
 		{"0", "flowers"},
 		{"11", "test"},
-		// test that calculated global cats are limited to top {CATS_PER_LINK_LIMIT} (currently 20)
-		// link 1234567890 has 1 tag with cats "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22" - last 2 should be cut
-		// (all same scores so sort alphabetically)
 		{"1234567890", "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"},
 	}
 

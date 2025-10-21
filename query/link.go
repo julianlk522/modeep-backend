@@ -2,15 +2,18 @@ package query
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 
 	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
 	mutil "github.com/julianlk522/modeep/model/util"
 )
 
 type TopLinks struct {
 	Query
+	selectedSortBy model.SortBy
+	// for consistent strings replaces
+	hasAndAfterJoins bool
 }
 
 func NewTopLinks() *TopLinks {
@@ -22,60 +25,64 @@ func NewTopLinks() *TopLinks {
 				LINKS_PAGE_LIMIT,
 			},
 		},
+		// default
+		selectedSortBy: model.SortByTimesStarred,
 	})
 }
 
-func (tl *TopLinks) FromRequestParams(params url.Values) *TopLinks {
+func (tl *TopLinks) FromOptions(opts *model.TopLinksOptions) (*TopLinks, error) {
+	if opts.SortBy != "" {
+		tl = tl.sortBy(opts.SortBy)
+	}
+	if opts.CatFiltersWithSpellingVariants != nil {
+		tl = tl.fromCatFilters(opts.CatFiltersWithSpellingVariants)
+	}
+	if opts.NeuteredCatFilters != nil {
+		tl = tl.fromNeuteredCatFilters(opts.NeuteredCatFilters)
+	}
+	if opts.GlobalSummaryContains != "" {
+		tl = tl.whereGlobalSummaryContains(opts.GlobalSummaryContains)
+	}
+	if opts.URLContains != "" {
+		tl = tl.whereURLContains(opts.URLContains)
+	}
+	if opts.URLLacks != "" {
+		tl = tl.whereURLLacks(opts.URLLacks)
+	}
+	if opts.Period != "" {
+		tl = tl.duringPeriod(opts.Period)
+	}
+	if opts.AsSignedInUser != "" {
+		tl = tl.asSignedInUser(opts.AsSignedInUser)
+	}
+	if opts.IncludeNSFW {
+		tl = tl.includeNSFW()
+	}
+	if opts.Page != 1 {
+		tl = tl.page(opts.Page)
+	}
+	if tl.Error != nil {
+		return nil, tl.Error
+	}
+	return tl, nil
+}
 
-	// sort_params first because using sort_params value helps with
-	// later text replaces (hence the methods below using a sort_params arg)
-	// ORDER BY goes at the end so it's convenient to prepend new clauses before it
-	// and the sort_params value indicates exactly which ORDER BY clause to replace
-	// not the prettiest solution but it works...
-	sort_params := params.Get("sort_by")
-	if sort_params != "" {
-		tl = tl.sortBy(sort_params)
-	}
-	// For cats that the links must have
-	cats_params := params.Get("cats")
-	if cats_params != "" {
-		cat_filters := GetCatsOptionalPluralOrSingularForms(strings.Split(cats_params, ","))
-		tl = tl.fromCatFilters(cat_filters)
-	}
-	// For cats that the links must NOT have
-	neutered_params := params.Get("neutered")
-	if neutered_params != "" {
-		neutered_cat_filters := GetCatsOptionalPluralOrSingularForms(strings.Split(neutered_params, ","))
-		tl = tl.fromNeuteredCatFilters(neutered_cat_filters)
-	}
-	summary_contains_params := params.Get("summary_contains")
-	if summary_contains_params != "" {
-		tl = tl.withGlobalSummaryContaining(summary_contains_params, sort_params)
-	}
-	url_contains_params := params.Get("url_contains")
-	if url_contains_params != "" {
-		tl = tl.withURLContaining(url_contains_params, sort_params)
-	}
-	url_lacks_params := params.Get("url_lacks")
-	if url_lacks_params != "" {
-		tl = tl.withURLLacking(url_lacks_params, sort_params)
-	}
-	period_params := params.Get("period")
-	if period_params != "" {
-		tl = tl.duringPeriod(period_params, sort_params)
-	}
-	var nsfw_params string
-	if params.Get("nsfw") != "" {
-		nsfw_params = params.Get("nsfw")
-	} else if params.Get("NSFW") != "" {
-		nsfw_params = params.Get("NSFW")
-	}
-	if nsfw_params == "true" {
-		tl = tl.nsfw()
-	} else if nsfw_params != "false" && nsfw_params != "" {
-		tl.Error = e.ErrInvalidNSFWParams
+func (tl *TopLinks) sortBy(metric model.SortBy) *TopLinks {
+	if metric != "" && metric != model.SortByTimesStarred {
+		order_by_clause, ok := links_order_by_clauses[metric]
+		if !ok {
+			tl.Error = e.ErrInvalidSortByParams
+		} else {
+			tl.Text = strings.Replace(
+				tl.Text,
+				LINKS_ORDER_BY_TIMES_STARRED,
+				order_by_clause,
+				1,
+			)
+		}
 	}
 
+	tl.selectedSortBy = metric
 	return tl
 }
 
@@ -89,21 +96,21 @@ func (tl *TopLinks) fromCatFilters(cat_filters []string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_BASE_FIELDS,
-		",\n" + LINKS_CATS_FILTER_CTE + LINKS_BASE_FIELDS,
+		",\n" + LINKS_CAT_FILTERS_CTE + LINKS_BASE_FIELDS,
 		1,
 	)
 
-	// Add join
+	// Add JOIN
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_FROM,
-		LINKS_FROM + "\n" + LINKS_CATS_FILTER_JOIN,
+		LINKS_FROM + "\n" + LINKS_CAT_FILTERS_JOIN,
 		1,
 	)
 
-	// Build and add match arg
-	// Cats have their singular/plural variant forms added first
-	// in TopLinks.FromRequestParams()
+	// Build and add MATCH arg
+	// (cats have their singular/plural variant forms added first
+	// in FromRequestParams())
 	var match_arg = cat_filters[0]
 	for i := 1; i < len(cat_filters); i++ {
 		match_arg += " AND " + cat_filters[i]
@@ -115,12 +122,12 @@ func (tl *TopLinks) fromCatFilters(cat_filters []string) *TopLinks {
 	return tl
 }
 
-const LINKS_CATS_FILTER_CTE = `CatsFilter AS (
+const LINKS_CAT_FILTERS_CTE = `CatFilters AS (
 	SELECT link_id
 	FROM global_cats_fts
 	WHERE global_cats MATCH ?
 )`
-const LINKS_CATS_FILTER_JOIN = `INNER JOIN CatsFilter cf ON l.id = cf.link_id`
+const LINKS_CAT_FILTERS_JOIN = `INNER JOIN CatFilters cf ON l.id = cf.link_id`
 
 func (tl *TopLinks) fromNeuteredCatFilters(neutered_cat_filters []string) *TopLinks {
 	if len(neutered_cat_filters) == 0 || neutered_cat_filters[0] == "" {
@@ -137,7 +144,7 @@ func (tl *TopLinks) fromNeuteredCatFilters(neutered_cat_filters []string) *TopLi
 
 	// Build CTEs
 	neutered_cat_filters_ctes := strings.Replace(
-		LINKS_NEUTERED_CATS_FILTER_CTES,
+		LINKS_NEUTERED_CAT_FILTERS_CTES,
 		"WHERE LOWER(global_cat) IN (?)",
 		in_clause,
 		1,
@@ -152,15 +159,15 @@ func (tl *TopLinks) fromNeuteredCatFilters(neutered_cat_filters []string) *TopLi
 	)
 
 	// Add AND
-	// all except the correct ORDER BY will no-op
-	for _, clause := range links_order_by_clauses {
-		tl.Text = strings.Replace(
+	selected_order_by_clause := links_order_by_clauses[tl.selectedSortBy]
+	tl.Text = strings.Replace(
 			tl.Text,
-			clause,
-			"\n" + LINKS_NEUTERED_CATS_AND + clause,
+			selected_order_by_clause,
+			"\n" + LINKS_NEUTERED_CATS_AND + selected_order_by_clause,
 			1,
 		)
-	}
+	// let later methods know
+	tl.hasAndAfterJoins = true
 
 	
 	// Add args: {neutered_cat_filters...}
@@ -186,7 +193,7 @@ func (tl *TopLinks) fromNeuteredCatFilters(neutered_cat_filters []string) *TopLi
 	return tl
 }
 
-const LINKS_NEUTERED_CATS_FILTER_CTES = `GlobalCatsSplit(link_id, global_cat, str) AS (
+const LINKS_NEUTERED_CAT_FILTERS_CTES = `GlobalCatsSplit(link_id, global_cat, str) AS (
     SELECT id, '', global_cats||','
     FROM Links
     UNION ALL SELECT
@@ -203,31 +210,18 @@ ExcludedLinksDueToNeutering AS (
 )`
 const LINKS_NEUTERED_CATS_AND = "AND l.id NOT IN ExcludedLinksDueToNeutering"
 
-func (tl *TopLinks) withGlobalSummaryContaining(snippet string, sort_by string) *TopLinks {
-	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
-	if sort_by != "" {
-		clause, ok := links_order_by_clauses[sort_by]
-		if ok {
-			order_by_clause = clause
-		} else {
-			tl.Error = e.ErrInvalidSortByParams
-			return tl
-		}
-	}
-
-	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") >= num_wheres_in_links_base_query {
-		clause_keyword = "AND"
-	} else {
-		clause_keyword = "WHERE"
-	}
-
+func (tl *TopLinks) whereGlobalSummaryContains(snippet string) *TopLinks {
+	selected_order_by_clause := links_order_by_clauses[tl.selectedSortBy]
 	tl.Text = strings.Replace(
 		tl.Text,
-		order_by_clause,
-		"\n" + clause_keyword + " global_summary LIKE ?" + order_by_clause,
+		selected_order_by_clause,
+		// As long as this is called before .includeNSFW() and the 
+		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an 
+		// AND.
+		"\n" + "AND global_summary LIKE ?" + selected_order_by_clause,
 		1,
 	)
+	tl.hasAndAfterJoins = true
 
 	// insert into args in 2nd-to-last position
 	last_arg := tl.Args[len(tl.Args) - 1]
@@ -238,31 +232,18 @@ func (tl *TopLinks) withGlobalSummaryContaining(snippet string, sort_by string) 
 	return tl
 }
 
-func (tl *TopLinks) withURLContaining(snippet string, sort_by string) *TopLinks {
-	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
-	if sort_by != "" {
-		clause, ok := links_order_by_clauses[sort_by]
-		if ok {
-			order_by_clause = clause
-		} else {
-			tl.Error = e.ErrInvalidSortByParams
-			return tl
-		}
-	}
-
-	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") >= num_wheres_in_links_base_query {
-		clause_keyword = "AND"
-	} else {
-		clause_keyword = "WHERE"
-	}
-
+func (tl *TopLinks) whereURLContains(snippet string) *TopLinks { 
+	selected_order_by_clause := links_order_by_clauses[tl.selectedSortBy]
 	tl.Text = strings.Replace(
 		tl.Text,
-		order_by_clause,
-		"\n" + clause_keyword + " url LIKE ?" + order_by_clause,
+		selected_order_by_clause,
+		// As long as this is called before .includeNSFW() and the 
+		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an 
+		// AND.
+		"\n" + "AND url LIKE ?" + selected_order_by_clause,
 		1,
 	)
+	tl.hasAndAfterJoins = true
 
 	// insert into args in 2nd-to-last position
 	last_arg := tl.Args[len(tl.Args) - 1]
@@ -273,31 +254,18 @@ func (tl *TopLinks) withURLContaining(snippet string, sort_by string) *TopLinks 
 	return tl
 }
 
-func (tl *TopLinks) withURLLacking(snippet string, sort_by string) *TopLinks {
-	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
-	if sort_by != "" {
-		clause, ok := links_order_by_clauses[sort_by]
-		if ok {
-			order_by_clause = clause
-		} else {
-			tl.Error = e.ErrInvalidSortByParams
-			return tl
-		}
-	}
-
-	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") >= num_wheres_in_links_base_query {
-		clause_keyword = "AND"
-	} else {
-		clause_keyword = "WHERE"
-	}
-
+func (tl *TopLinks) whereURLLacks(snippet string) *TopLinks {
+	selected_order_by_clause := links_order_by_clauses[tl.selectedSortBy]
 	tl.Text = strings.Replace(
 		tl.Text,
-		order_by_clause,
-		"\n" + clause_keyword + " url NOT LIKE ?" + order_by_clause,
+		selected_order_by_clause,
+		// As long as this is called before .includeNSFW() and the 
+		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an 
+		// AND.
+		"\n" + "AND url NOT LIKE ?" + selected_order_by_clause,
 		1,
 	)
+	tl.hasAndAfterJoins = true
 
 	// insert into args in 2nd-to-last position
 	last_arg := tl.Args[len(tl.Args) - 1]
@@ -308,66 +276,32 @@ func (tl *TopLinks) withURLLacking(snippet string, sort_by string) *TopLinks {
 	return tl
 }
 
-func (tl *TopLinks) duringPeriod(period string, sort_by string) *TopLinks {
+func (tl *TopLinks) duringPeriod(period model.Period) *TopLinks {
 	if (period == "all") {
 		return tl
 	}
-	
 	period_clause, err := getPeriodClause(period)
 	if err != nil {
 		tl.Error = err
 		return tl
 	}
 
-	order_by_clause := LINKS_ORDER_BY_TIMES_STARRED
-	if sort_by != "" {
-		clause, ok := links_order_by_clauses[sort_by]
-		if ok {
-			order_by_clause = clause
-		} else {
-			tl.Error = e.ErrInvalidSortByParams
-			return tl
-		}
-	}
-	
-	var clause_keyword string
-	if strings.Count(tl.Text, "WHERE") >= num_wheres_in_links_base_query {
-		clause_keyword = "AND"
-	} else {
-		clause_keyword = "WHERE"
-	}
-
+	selected_order_by_clause := links_order_by_clauses[tl.selectedSortBy]
 	tl.Text = strings.Replace(
 		tl.Text,
-		order_by_clause,
-		"\n" + clause_keyword + " " + period_clause + order_by_clause,
+		selected_order_by_clause,
+		// As long as this is called before .includeNSFW() and the 
+		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an 
+		// AND.
+		"\n" + "AND " + period_clause + selected_order_by_clause,
 		1,
 	)
+	tl.hasAndAfterJoins = true
 
 	return tl
 }
 
-var num_wheres_in_links_base_query = strings.Count(links_base_query, "WHERE")
-
-func (tl *TopLinks) sortBy(metric string) *TopLinks {
-	if metric != "" && metric != "times_starred" {
-		order_by_clause, ok := links_order_by_clauses[metric]
-		if !ok {
-			tl.Error = e.ErrInvalidSortByParams
-		} else {
-			tl.Text = strings.Replace(
-				tl.Text,
-				LINKS_ORDER_BY_TIMES_STARRED,
-				order_by_clause,
-				1,
-			)
-		}
-	}
-
-	return tl
-}
-
-func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
+func (tl *TopLinks) asSignedInUser(req_user_id string) *TopLinks {
 	auth_replacer := strings.NewReplacer(
 		LINKS_BASE_CTES, LINKS_BASE_CTES + LINKS_AUTH_CTE,
 		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS + LINKS_AUTH_FIELD,
@@ -378,7 +312,7 @@ func (tl *TopLinks) AsSignedInUser(req_user_id string) *TopLinks {
 	first_arg := tl.Args[0]
 	trailing_args := tl.Args[1:]
 
-	new_args := make([]any, 0, len(tl.Args)+2)
+	new_args := make([]any, 0, len(tl.Args) + 2)
 	new_args = append(new_args, first_arg)
 	new_args = append(new_args, req_user_id)
 	new_args = append(new_args, trailing_args...)
@@ -402,18 +336,21 @@ const LINKS_AUTH_FIELD = `,
 const LINKS_AUTH_JOIN = `
 	LEFT JOIN StarsAssigned sa ON l.id = sa.link_id`
 
-func (tl *TopLinks) nsfw() *TopLinks {
-	has_subsequent_clause := strings.Contains(
-		tl.Text, 
-		LINKS_NO_NSFW_CATS_WHERE + "\nAND",
-	)
-	if has_subsequent_clause {
+func (tl *TopLinks) includeNSFW() *TopLinks {
+	// e.g.,
+	// INNER JOIN ...
+	// WHERE l.id NOT IN ( ... )
+	// AND ...
+	if tl.hasAndAfterJoins {
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_NO_NSFW_CATS_WHERE + "\nAND",
 			"\nWHERE",
 			1,
 		)
+	// e.g.,
+	// INNER JOIN ...
+	// WHERE l.id NOT IN ( ... )
 	} else {
 		tl.Text = strings.Replace(
 			tl.Text,
@@ -422,11 +359,11 @@ func (tl *TopLinks) nsfw() *TopLinks {
 			1,
 		)
 	}
-	
+
 	return tl
 }
 
-func (tl *TopLinks) Page(page int) *TopLinks {
+func (tl *TopLinks) page(page uint) *TopLinks {
 	if page < 1 {
 		return tl
 	}
@@ -443,26 +380,25 @@ func (tl *TopLinks) Page(page int) *TopLinks {
 			"LIMIT ? OFFSET ?",
 			1)
 
-			tl.Args = append(tl.Args, (page-1)*LINKS_PAGE_LIMIT)
+			tl.Args = append(tl.Args, (page - 1) * LINKS_PAGE_LIMIT)
 
 	}
 
 	return tl
 }
 
-func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
+func (tl *TopLinks) CountNSFWLinks() *TopLinks {
 	count_select := `
 	SELECT count(l.id)`
 
-	// replace either base or auth-enabled fields
-	// one will work, other will no-op
+	// Replace either base or base + auth fields
+	// (if first works second will be no-op)
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_BASE_FIELDS + LINKS_AUTH_FIELD,
 		count_select,
 		1,
 	)
-
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_BASE_FIELDS,
@@ -470,57 +406,62 @@ func (tl *TopLinks) CountNSFWLinks(nsfw_params bool) *TopLinks {
 		1,
 	)
 
-	// invert NSFW clause
+	// Remove the ORDER BY since this is just a count, after using for
+	// string replacement
+	selected_order_by_clause := links_order_by_clauses[tl.selectedSortBy]
+
+	// Invert NSFW clause
 	var nsfw_clause = `
 	WHERE l.id IN (
 		SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
 	)`
 
-	// Edit WHERE => AND if other methods called first
-	// there's probably a better way to do this... TODO
+	// If the normal NOT IN nsfw clause is present that can simply be overwritten
 	if strings.Contains(
-		tl.Text, 
-		"WHERE url",
-	) || strings.Contains(
-		tl.Text, 
-		"WHERE global_summmary",
-	) || strings.Contains(
-		tl.Text, 
-		"WHERE submit_date",
+		tl.Text,
+		LINKS_NO_NSFW_CATS_WHERE,
 	) {
-		nsfw_clause = strings.Replace(
-			nsfw_clause,
-			"WHERE",
-			"AND",
-			1,
-		)
-	}
-
-	// calling .NSFW() removes the NO_NSFW_CATS_WHERE
-	// so we can't depend on it for a universal replace condition here
-	if nsfw_params {
-		// (all LINKS_ORDER_BY variants should be no-op except one)
-		for _, order_by_clause := range links_order_by_clauses {
-			tl.Text = strings.Replace(
-				tl.Text,
-				order_by_clause,
-				nsfw_clause,
-				1,
-			)
-		}
-	// otherwise NO_NSFW_CATS_WHERE will be there
-	} else {
 		tl.Text = strings.Replace(
 			tl.Text,
 			LINKS_NO_NSFW_CATS_WHERE,
 			nsfw_clause,
 			1,
 		)
+	// Otherwise confirm whether to say WHERE or AND
+	} else {
+		// It is possible for there actually not to be an AND after the joins
+		// even while this flag is set (if some method sets it and then
+		// .includeNSFW() removes the NOT IN nsfw clause and swaps the following
+		// AND to WHERE) however in that case we still want to use AND for the
+		// nsfw_clause.
+		// TODO more intuitive name / approach to this
+		if tl.hasAndAfterJoins {
+			tl.Text = strings.Replace(
+				tl.Text,
+				selected_order_by_clause,
+				strings.Replace(nsfw_clause, "WHERE", "AND", 1) + selected_order_by_clause,
+				1,
+			)
+		} else {
+			tl.Text = strings.Replace(
+				tl.Text,
+				selected_order_by_clause,
+				nsfw_clause + selected_order_by_clause,
+				1,
+			)
+		}
 	}
 
-	// remove LIMIT and OFFET clause since there will be no links
-	// ranked, just a count
-	// and pop their respective args from the end
+	// Remove ORDER BY
+	tl.Text = strings.Replace(
+			tl.Text,
+			selected_order_by_clause,
+			"",
+			1,
+		)
+
+	// Remove LIMIT and OFFET clause
+	// and pop their respective args
 	if strings.Contains(
 		tl.Text,
 		"LIMIT ? OFFSET ?",
@@ -623,12 +564,12 @@ WHERE l.id NOT IN (
 	SELECT link_id FROM global_cats_fts WHERE global_cats MATCH 'NSFW'
 )`
 
-var links_order_by_clauses = map[string]string{
-	"times_starred": LINKS_ORDER_BY_TIMES_STARRED,
-	"avg_stars": LINKS_ORDER_BY_AVG_STARS,
-	"newest": LINKS_ORDER_BY_NEWEST,
-	"oldest": LINKS_ORDER_BY_OLDEST,
-	"clicks": LINKS_ORDER_BY_CLICKS,
+var links_order_by_clauses = map[model.SortBy]string{
+	model.SortByTimesStarred: LINKS_ORDER_BY_TIMES_STARRED,
+	model.SortByAverageStars: LINKS_ORDER_BY_AVG_STARS,
+	model.SortByNewest:       LINKS_ORDER_BY_NEWEST,
+	model.SortByOldest:       LINKS_ORDER_BY_OLDEST,
+	model.SortByClicks:       LINKS_ORDER_BY_CLICKS,
 }
 
 const LINKS_ORDER_BY_TIMES_STARRED = ` 

@@ -2,14 +2,49 @@ package handler
 
 import (
 	"net/url"
-	"strings"
 	"testing"
 
+	"github.com/julianlk522/modeep/model"
 	"github.com/julianlk522/modeep/query"
 )
 
-func TestScanContributors(t *testing.T) {
-	// no cats
+func TestGetContributorsOptionsFromRequestParams(t *testing.T) {
+	var test_params = []model.TopContributorsOptions{
+		{
+			CatFiltersWithSpellingVariants: []string{"umvc3"},
+		},
+		{
+			NeuteredCatFilters: []string{"test"},
+		},
+		{
+			SummaryContains: "test",
+		},
+		{
+			URLContains: "test",
+		},
+		{
+			URLLacks: "test",
+		},
+		{
+			Period: "day",
+		},
+	}
+
+	for _, tp := range test_params {
+		if _, err := GetTopContributorsOptionsFromRequestParams(url.Values{
+			"cats": tp.CatFiltersWithSpellingVariants,
+			"neutered": tp.NeuteredCatFilters,
+			"url_contains": []string{tp.URLContains},
+			"url_lacks": []string{tp.URLLacks},
+			"period": []string{string(tp.Period)},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+	
+
+func TestNewTopContributors(t *testing.T) {
 	contributors_sql := query.NewTopContributors()
 	if contributors_sql.Error != nil {
 		t.Fatal(contributors_sql.Error)
@@ -17,22 +52,26 @@ func TestScanContributors(t *testing.T) {
 
 	contributors := ScanContributors(contributors_sql)
 	if len(*contributors) == 0 {
-		t.Fatal("no contributors")
+		t.Fatal("no rows")
 	}
+}
 
+func TestTopContributorsFromOptions(t *testing.T) {
 	// single cat
-	contributors_sql = query.NewTopContributors().FromRequestParams(url.Values{"cats": []string{test_single_cat[0]}})
-	if contributors_sql.Error != nil {
-		t.Fatal(contributors_sql.Error)
-	}
-
 	test_cats_str := test_single_cat[0]
-	contributors = ScanContributors(contributors_sql)
+	opts := &model.TopContributorsOptions{
+		CatFiltersWithSpellingVariants: []string{test_cats_str},
+	}
+	contributors_sql, err := query.NewTopContributors().FromOptions(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contributors := ScanContributors(contributors_sql)
 	if len(*contributors) == 0 {
-		t.Fatal("no contributors")
+		t.Fatal("no rows")
 	}
 
-	// verify each contributor submitted correct number of links
+	// Verify number of submitted links for each contributor
 	var ls int
 	for _, contributor := range *contributors {
 		err := TestClient.QueryRow(`SELECT count(*)
@@ -54,19 +93,19 @@ func TestScanContributors(t *testing.T) {
 	}
 
 	// multiple cats
-	multiple_cats_params := url.Values{"cats": []string{strings.Join(test_multiple_cats, ",")}}
-	contributors_sql = query.NewTopContributors().FromRequestParams(multiple_cats_params)
-	if contributors_sql.Error != nil {
-		t.Fatal(contributors_sql.Error)
+	opts = &model.TopContributorsOptions{
+		CatFiltersWithSpellingVariants: test_multiple_cats,
 	}
-
+	contributors_sql, err = query.NewTopContributors().FromOptions(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	contributors = ScanContributors(contributors_sql)
-
 	if len(*contributors) == 0 {
-		t.Fatal("no contributors")
+		t.Fatal("no rows")
 	}
 
-	// verify each contributor submitted correct number of links
+	// Verify number of submitted links for each contributor
 	for _, contributor := range *contributors {
 		err := TestClient.QueryRow(`SELECT count(*)
 				FROM Links

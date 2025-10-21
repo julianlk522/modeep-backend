@@ -1,8 +1,9 @@
 package query
 
 import (
-	"net/url"
 	"strings"
+
+	"github.com/julianlk522/modeep/model"
 )
 
 type Contributors struct {
@@ -28,36 +29,29 @@ GROUP BY l.submitted_by
 ORDER BY count DESC, l.submitted_by ASC
 LIMIT ?;`
 
-func (c *Contributors) FromRequestParams(params url.Values) *Contributors {
-	cats_filter_params := params.Get("cats")
-	if cats_filter_params != "" {
-		cat_filters := GetCatsOptionalPluralOrSingularForms(strings.Split(cats_filter_params, ","))
-		c = c.fromCatFilters(cat_filters)
+func (c *Contributors) FromOptions(opts *model.TopContributorsOptions) (*Contributors, error) {
+	if opts.CatFiltersWithSpellingVariants != nil {
+		c = c.fromCatFilters(opts.CatFiltersWithSpellingVariants)
 	}
-	neutered_params := params.Get("neutered")
-	if neutered_params != "" {
-		// Since we use IN, not FTS MATCH, spelling variants are not
-		// needed and casing matters
-		neutered_cat_filters := strings.Split(neutered_params, ",")
-		c = c.fromNeuteredCatFilters(neutered_cat_filters)
+	if opts.NeuteredCatFilters != nil {
+		c = c.fromNeuteredCatFilters(opts.NeuteredCatFilters)
 	}
-	summary_contains_params := params.Get("summary_contains")
-	if summary_contains_params != "" {
-		c = c.withGlobalSummaryContaining(summary_contains_params)
+	if opts.SummaryContains != "" {
+		c = c.whereGlobalSummaryContains(opts.SummaryContains)
 	}
-	url_contains_params := params.Get("url_contains")
-	if url_contains_params != "" {
-		c = c.withURLContaining(url_contains_params)
+	if opts.URLContains != "" {
+		c = c.whereURLContains(opts.URLContains)
 	}
-	url_lacks_params := params.Get("url_lacks")
-	if url_lacks_params != "" {
-		c = c.withURLLacking(url_lacks_params)
+	if opts.URLLacks != "" {
+		c = c.whereURLLacks(opts.URLLacks)
 	}
-	period_params := params.Get("period")
-	if period_params != "" {
-		c = c.duringPeriod(period_params)
+	if opts.Period != "" {
+		c = c.duringPeriod(opts.Period)
 	}
-	return c
+	if c.Error != nil {
+		return nil, c.Error
+	}
+	return c, nil
 }
 
 func (c *Contributors) fromCatFilters(cat_filters []string) *Contributors {
@@ -77,7 +71,7 @@ func (c *Contributors) fromCatFilters(cat_filters []string) *Contributors {
 	)
 
 	// Build MATCH arg
-	// (spelling variations added in .FromRequestParams())
+	// (spelling variations already added in .FromRequestParams())
 	match_arg := cat_filters[0]
 	for i := 1; i < len(cat_filters); i++ {
 		match_arg += " AND " + cat_filters[i]
@@ -90,8 +84,8 @@ func (c *Contributors) fromCatFilters(cat_filters []string) *Contributors {
 	return c
 }
 
-const CONTRIBUTORS_CAT_FILTERS_CTES = LINKS_CATS_FILTER_CTE
-const CONTRIBUTORS_CAT_FILTERS_JOIN = LINKS_CATS_FILTER_JOIN
+const CONTRIBUTORS_CAT_FILTERS_CTES = LINKS_CAT_FILTERS_CTE
+const CONTRIBUTORS_CAT_FILTERS_JOIN = LINKS_CAT_FILTERS_JOIN
 
 func (c *Contributors) fromNeuteredCatFilters(neutered_cat_filters []string) *Contributors {
 	if len(neutered_cat_filters) == 0 {
@@ -161,7 +155,7 @@ func (c *Contributors) fromNeuteredCatFilters(neutered_cat_filters []string) *Co
 	return c
 }
 
-const CONTRIBUTORS_NEUTERED_CAT_FILTERS_CTES = LINKS_NEUTERED_CATS_FILTER_CTES
+const CONTRIBUTORS_NEUTERED_CAT_FILTERS_CTES = LINKS_NEUTERED_CAT_FILTERS_CTES
 var CONTRIBUTORS_NEUTERED_CATS_WHERE = strings.Replace(
 	LINKS_NEUTERED_CATS_AND,
 	"AND",
@@ -169,7 +163,7 @@ var CONTRIBUTORS_NEUTERED_CATS_WHERE = strings.Replace(
 	1,
 )
 
-func (c *Contributors) withGlobalSummaryContaining(snippet string) *Contributors {
+func (c *Contributors) whereGlobalSummaryContains(snippet string) *Contributors {
 	clause_keyword := "WHERE"
 	if c.hasWhereAfterFrom {
 		clause_keyword = "AND"
@@ -190,7 +184,7 @@ func (c *Contributors) withGlobalSummaryContaining(snippet string) *Contributors
 	return c
 }
 
-func (c *Contributors) withURLContaining(snippet string) *Contributors {
+func (c *Contributors) whereURLContains(snippet string) *Contributors {
 	clause_keyword := "WHERE"
 	if c.hasWhereAfterFrom {
 		clause_keyword = "AND"
@@ -213,7 +207,7 @@ func (c *Contributors) withURLContaining(snippet string) *Contributors {
 	return c
 }
 
-func (c *Contributors) withURLLacking(snippet string) *Contributors {
+func (c *Contributors) whereURLLacks(snippet string) *Contributors {
 	clause_keyword := "WHERE"
 	if c.hasWhereAfterFrom {
 		clause_keyword = "AND"
@@ -236,7 +230,7 @@ func (c *Contributors) withURLLacking(snippet string) *Contributors {
 	return c
 }
 
-func (c *Contributors) duringPeriod(period string) *Contributors {
+func (c *Contributors) duringPeriod(period model.Period) *Contributors {
 	if (period == "all") {
 		return c
 	}

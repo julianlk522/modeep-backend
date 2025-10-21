@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// TAGS
 type Tag struct {
 	ID          string
 	LinkID      string
@@ -18,9 +19,33 @@ type Tag struct {
 	LastUpdated string
 }
 
+type TagPage[T Link | LinkSignedIn] struct {
+	Link        *T
+	UserTag     *Tag
+	TagRankings *[]TagRanking
+}
+
+type TagRanking struct {
+	LifeSpanOverlap float32
+	Cats            string
+	SubmittedBy     string
+	LastUpdated     string
+}
+
+// INDIVIDUAL CATS
 type CatCount struct {
 	Category string
 	Count    int32
+}
+
+type TopCatCountsOptions struct {
+	RawCatFilters                  []string
+	NeuteredCatFilters             []string
+	SummaryContains                string
+	URLContains                    string
+	URLLacks                       string
+	Period                         Period
+	More                           bool
 }
 
 func SortCats(i, j CatCount) int {
@@ -32,13 +57,14 @@ func SortCats(i, j CatCount) int {
 	return 1
 }
 
-type TagRanking struct {
-	LifeSpanOverlap float32
-	Cats            string
-	SubmittedBy string
-	LastUpdated string
+// SPELLFIX
+type SpellfixMatchesOptions struct {
+	Tmap          string // if the recommendations are generated on a Treasure Map
+	IsNewLinkPage bool
+	CatFilters    []string
 }
 
+// for CalculateAndSetGlobalCats()
 type CatRanking struct {
 	Cat   string
 	Score float32
@@ -49,12 +75,7 @@ type GlobalCatsDiff struct {
 	Removed []string
 }
 
-type TagPage[T Link | LinkSignedIn] struct {
-	Link        *T
-	UserTag     *Tag
-	TagRankings *[]TagRanking
-}
-
+// REQUESTS
 type NewTag struct {
 	LinkID string `json:"link_id"`
 	Cats   string `json:"cats"`

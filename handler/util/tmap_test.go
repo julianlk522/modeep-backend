@@ -31,31 +31,172 @@ func TestUserExists(t *testing.T) {
 
 func TestBuildTmapFromOpts(t *testing.T) {
 	var test_opts = []struct {
-		LoginName        string
-		RequestingUserID string
-		CatsParams       string
-		SortBy           string
-		IncludeNSFW      bool
-		SectionParams    string
-		PageParams       int
-		Valid            bool
+		LoginName          string
+		RequestingUserID   string
+		CatsParams         string
+		NeuteredCatsParams string
+		SortBy             model.SortBy
+		IncludeNSFW        bool
+		SectionParams      model.TmapIndividualSectionName
+		PageParams         int
+		Valid              bool
 	}{
-		{TEST_LOGIN_NAME, TEST_USER_ID, "", "times_starred", false, "", 1, true},
-		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "times_starred", true, "", 1, true},
-		{TEST_LOGIN_NAME, "", "", "newest", true, "", 1, true},
-		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3", "newest", true, "", 1, true},
-		{TEST_LOGIN_NAME, TEST_REQ_USER_ID, "", "oldest", false, "", 0, true},
-		{TEST_LOGIN_NAME, "", "", "times_starred", false, "", 10, true},
-		{TEST_LOGIN_NAME, TEST_USER_ID, "umvc3,flowers", "oldest", true, "", 1, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "times_starred", false, "", 2, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "", 1, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "", true, "submitted", 4, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "starred", 0, true},
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "clicks", true, "starred", 1, true},
+		{
+			TEST_LOGIN_NAME,
+			TEST_USER_ID,
+			"",
+			"",
+			"times_starred",
+			false,
+			"",
+			1,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			TEST_REQ_USER_ID,
+			"",
+			"",
+			"times_starred",
+			true,
+			"",
+			1,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"",
+			"",
+			"newest",
+			true,
+			"",
+			1,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			TEST_USER_ID,
+			"umvc3",
+			"",
+			"newest",
+			true,
+			"",
+			1,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			TEST_REQ_USER_ID,
+			"",
+			"test",
+			"oldest",
+			false,
+			"",
+			0,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"",
+			"",
+			"times_starred",
+			false,
+			"",
+			10,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			TEST_USER_ID,
+			"umvc3,flowers",
+			"",
+			"oldest",
+			true,
+			"",
+			1,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"umvc3,flowers",
+			"",
+			"times_starred",
+			false,
+			"",
+			2,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"umvc3,flowers",
+			"",
+			"",
+			true,
+			"",
+			1,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"umvc3,flowers",
+			"",
+			"",
+			true,
+			"submitted",
+			4,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"umvc3,flowers",
+			"",
+			"oldest",
+			true,
+			"starred",
+			0,
+			true,
+		},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"umvc3,flowers",
+			"",
+			"clicks",
+			true,
+			"starred",
+			1,
+			true,
+		},
 		// "notasection" is invalid
-		{TEST_LOGIN_NAME, "", "umvc3,flowers", "oldest", true, "notasection", 1, false},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"umvc3,flowers",
+			"",
+			"oldest",
+			true,
+			"notasection",
+			1,
+			false,
+		},
 		// negative page is invalid
-		{TEST_LOGIN_NAME, "", "", "newest", true, "submitted", -1, false},
+		{
+			TEST_LOGIN_NAME,
+			"",
+			"",
+			"",
+			"newest",
+			true,
+			"submitted",
+			-1,
+			false,
+		},
 	}
 
 	for _, td := range test_opts {
@@ -80,12 +221,12 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		var err error
 
 		if td.RequestingUserID != "" {
-			tmap, err = BuildTmapFromOpts[model.TmapLinkSignedIn](opts)
+			tmap, err = BuildTmapFromOptions[model.TmapLinkSignedIn](opts)
 		} else {
-			tmap, err = BuildTmapFromOpts[model.TmapLink](opts)
+			tmap, err = BuildTmapFromOptions[model.TmapLink](opts)
 		}
 
-		if (err == nil) != td.Valid {
+		if td.Valid != (err == nil) {
 			t.Fatalf("expected %t, got error %s", td.Valid, err)
 		}
 
@@ -96,8 +237,8 @@ func TestBuildTmapFromOpts(t *testing.T) {
 		// verify type and filtered
 		var is_filtered bool
 		switch tmap.(type) {
-		case 
-			model.TmapWithProfilePage[model.TmapLink], 
+		case
+			model.TmapWithProfilePage[model.TmapLink],
 			model.TmapWithProfilePage[model.TmapLinkSignedIn]:
 				is_filtered = false
 		case
@@ -207,11 +348,24 @@ func TestScanTmapLinks(t *testing.T) {
 	}
 
 	for _, to := range test_options {
-		submitted_sql := query.NewTmapSubmitted(to.OwnerLoginName).FromOptions(&to).Build()
-		starred_sql := query.NewTmapStarred(to.OwnerLoginName).FromOptions(&to).Build()
-		tagged_sql := query.NewTmapTagged(to.OwnerLoginName).FromOptions(&to).Build()
+		submitted_sql, err := query.NewTmapSubmitted(to.OwnerLoginName).FromOptions(&to)
+		if err != nil {
+			t.Fatal(err)
+		}
+		starred_sql, err := query.NewTmapStarred(to.OwnerLoginName).FromOptions(&to)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tagged_sql, err := query.NewTmapTagged(to.OwnerLoginName).FromOptions(&to)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		for _, sql := range []*query.Query{submitted_sql, starred_sql, tagged_sql} {
+		for _, sql := range []*query.Query{
+			submitted_sql.Build(), 
+			starred_sql.Build(), 
+			tagged_sql.Build(),
+		} {
 			var err error
 			if to.AsSignedInUser != "" {
 				_, err = scanTmapLinks[model.TmapLinkSignedIn](sql)
@@ -227,7 +381,7 @@ func TestScanTmapLinks(t *testing.T) {
 }
 
 func TestGetCatCountsFromTmapLinks(t *testing.T) {
-	tmap, err := BuildTmapFromOpts[model.TmapLink](&model.TmapOptions{
+	tmap, err := BuildTmapFromOptions[model.TmapLink](&model.TmapOptions{
 		OwnerLoginName: "xyz",
 	})
 	if err != nil {

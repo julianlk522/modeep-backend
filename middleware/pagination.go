@@ -8,19 +8,19 @@ import (
 
 func Pagination(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var page_int int
-		var err error
+		var page uint
 
-		page := r.URL.Query().Get("page")
-		if page == "" {
-			page_int = 1
+		page_params := r.URL.Query().Get("page")
+		if page_params == "" {
+			page = 1
 		} else {
-			page_int, err = strconv.Atoi(page)
-			if err != nil || page_int < 1 {
-				page_int = 1
+			if page_int, err := strconv.Atoi(page_params); err == nil {
+				if page_int > 1 {
+					page = uint(page_int)
+				}
 			}
 		}
-		ctx := context.WithValue(r.Context(), PageKey, page_int)
+		ctx := context.WithValue(r.Context(), PageKey, page)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

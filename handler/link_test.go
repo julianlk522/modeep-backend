@@ -14,10 +14,10 @@ import (
 	m "github.com/julianlk522/modeep/middleware"
 )
 
-func TestGetLinks(t *testing.T) {
+func TestGetTopLinks(t *testing.T) {
 	test_get_links_requests := []struct {
 		Params map[string]string
-		Page   int
+		Page   uint
 		Valid  bool
 	}{
 		{
@@ -93,12 +93,6 @@ func TestGetLinks(t *testing.T) {
 			Page:  1,
 			Valid: true,
 		},
-		// passes because middlware corrects negative pages to 1
-		{
-			Params: map[string]string{},
-			Page:   -1,
-			Valid:  true,
-		},
 		// invalid sort_by
 		{
 			Params: map[string]string{"sort_by": "invalid"},
@@ -107,25 +101,19 @@ func TestGetLinks(t *testing.T) {
 		},
 		// nsfw params may be "true", "false", or absent but not anything else
 		{
-			Params: map[string]string{"nsfw": "true"},
+			Params: map[string]string{"include_nsfw": "true"},
 			Page:   1,
 			Valid:  true,
 		},
 		{
-			Params: map[string]string{"nsfw": "false"},
+			Params: map[string]string{"include_nsfw": "false"},
 			Page:   1,
 			Valid:  true,
 		},
 		{
-			Params: map[string]string{"nsfw": "invalid"},
+			Params: map[string]string{"include_nsfw": "invalid"},
 			Page:   1,
 			Valid:  false,
-		},
-		// NSFW in caps also valid
-		{
-			Params: map[string]string{"NSFW": "true"},
-			Page:   1,
-			Valid:  true,
 		},
 	}
 
@@ -152,7 +140,7 @@ func TestGetLinks(t *testing.T) {
 		r.URL.RawQuery = q.Encode()
 
 		rr := httptest.NewRecorder()
-		GetLinks(rr, r)
+		GetTopLinks(rr, r)
 		res := rr.Result()
 		defer res.Body.Close()
 

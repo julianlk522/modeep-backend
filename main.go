@@ -102,7 +102,7 @@ func main() {
 
 		r.
 			With(m.Pagination).
-			Get("/links", h.GetLinks)
+			Get("/links", h.GetTopLinks)
 
 		r.
 			With(httprate.Limit(

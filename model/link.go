@@ -11,6 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// OPTIONS
+type TopLinksOptions struct {
+	CatFiltersWithSpellingVariants []string
+	NeuteredCatFilters             []string
+	GlobalSummaryContains          string
+	URLContains                    string
+	URLLacks                       string
+	IncludeNSFW                    bool
+	SortBy                         SortBy
+	Period                         Period
+	AsSignedInUser                 string
+	Page                           uint
+}
+
+// LINKS
 type HasCats interface {
 	Link | LinkSignedIn
 
@@ -47,8 +62,7 @@ func (lsi LinkSignedIn) GetCats() string {
 }
 
 type LinksPageOptions struct {
-	CatFilters  []string
-	IncludeNSFW bool
+	CatFilters []string
 }
 
 type LinksPage[T Link | LinkSignedIn] struct {
@@ -58,11 +72,7 @@ type LinksPage[T Link | LinkSignedIn] struct {
 	Pages          int
 }
 
-type Contributor struct {
-	LoginName      string
-	LinksSubmitted int
-}
-
+// REQUESTS
 type NewLink struct {
 	*NewLinkRequest
 	LinkExtraMetadata

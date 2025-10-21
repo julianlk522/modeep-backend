@@ -8,8 +8,10 @@ import (
 
 	"github.com/julianlk522/modeep/db"
 	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
 )
 
+// QUERY
 type Query struct {
 	Text  string
 	Args  []any
@@ -47,24 +49,8 @@ func (q *Query) validateArgCount() {
 	}
 }
 
-func getPeriodClause(period string) (clause string, err error) {
-	var days int
-	switch period {
-	case "day":
-		days = 1
-	case "week":
-		days = 7
-	case "month":
-		days = 30
-	case "year":
-		days = 365
-	default:
-		return "", e.ErrInvalidPeriod
-	}
-
-	return fmt.Sprintf("submit_date >= date('now', '-%d days')", days), nil
-}
-
+// CATS SPELLING VARIATIONS
+// for FTS5 MATCH clause
 func GetCatsOptionalPluralOrSingularForms(cats []string) []string {
 	modified_cats := make([]string, len(cats))
 	for i := range cats {
@@ -102,4 +88,13 @@ func withOptionalPluralOrSingularForm(cat string) string {
 
 func getCatSurroundedInDoubleQuotes(cat string) string {
 	return fmt.Sprintf(`"%s"`, cat)
+}
+
+// PERIOD
+func getPeriodClause(period model.Period) (clause string, err error) {
+	days, ok := model.ValidPeriodsInDays[period]
+	if !ok {
+		return "", e.ErrInvalidPeriod
+	}
+	return fmt.Sprintf("submit_date >= date('now', '-%d days')", days), nil
 }

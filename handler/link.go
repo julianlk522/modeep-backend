@@ -20,48 +20,43 @@ import (
 	"github.com/julianlk522/modeep/query"
 )
 
-func GetLinks(w http.ResponseWriter, r *http.Request) {
+func GetTopLinks(w http.ResponseWriter, r *http.Request) {
 	url_params := r.URL.Query()
-	links_sql := query.NewTopLinks().FromRequestParams(url_params)
-
+	opts, err := util.GetTopLinksOptionsFromRequestParams(url_params)
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
 	// Context for values that need to be screened by middleware first
-	// as opposed to just passed through URL straight into the SQL query
-	// like those above.
 	ctx := r.Context()
-	// User ID is verified first by JWT middleware
+	// User ID is verified by JWT middleware
 	req_user_id := ctx.Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 	if req_user_id != "" {
-		links_sql = links_sql.AsSignedInUser(req_user_id)
+		opts.AsSignedInUser = req_user_id
 	}
-	// Page is checked first by **drumroll** ... Pagination middleware
-	page := ctx.Value(m.PageKey).(int)
-	links_sql = links_sql.Page(page)
+	// Page is verified by **drumroll** ... Pagination middleware
+	page := ctx.Value(m.PageKey).(uint)
+	if page != 1 {
+		opts.Page = page
+	}
+	links_sql, err := query.NewTopLinks().FromOptions(opts)
+	if err != nil {
+		render.Render(w, r, e.ErrInternalServerError(err))
+		return
+	}
 
-	// Cat filters and the include-NSFW flag also must travel separately from
-	// just the query itself since PrepareLinksPage() needs to know which
-	// cats to determine if there were any merged results from close-spellings
-	// of them, and the include-NSFW params are passed separately to perform
-	// a janky conditional string replace in TopLinks.CountNSFWLinks()...
-	// TODO fix that
+	// Cat filters also go directly to PrepareLinksPage() so it can determine if any
+	// results were merged due to close-spellings of them.
 	cat_filters_params := url_params.Get("cats")
 	cat_filters := strings.Split(cat_filters_params, ",")
-
-	include_nsfw_params := url_params.Get("nsfw")
-	include_nsfw := include_nsfw_params == "true"
-	page_opts := &model.LinksPageOptions{
-		CatFilters: cat_filters,
-		IncludeNSFW: include_nsfw,
-	}
+	page_opts := &model.LinksPageOptions{CatFilters: cat_filters}
 
 	var resp any
-	var err error
-
 	if req_user_id != "" {
 		resp, err = util.PrepareLinksPage[model.LinkSignedIn](links_sql, page_opts)
 	} else {
 		resp, err = util.PrepareLinksPage[model.Link](links_sql, page_opts)
 	}
-
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 	}

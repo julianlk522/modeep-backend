@@ -200,8 +200,8 @@ func TestTopGlobalCatCountsFromNeuteredCatFilters(t *testing.T) {
 	}
 }
 
-func TestTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
-	counts_sql := NewTopGlobalCatCounts().withGlobalSummaryContaining("test")
+func TestTopGlobalCatCountsWhereSummaryContains(t *testing.T) {
+	counts_sql := NewTopGlobalCatCounts().whereGlobalSummaryContains("test")
 	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
@@ -245,9 +245,9 @@ func TestTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
 	// verify does not conflict w/ other methods
 	counts_sql = NewTopGlobalCatCounts().
 		fromCatFilters([]string{"flowers"}).
-		withGlobalSummaryContaining("test").
-		withURLContaining("www").
-		withURLLacking("donut").
+		whereGlobalSummaryContains("test").
+		whereURLContains("www").
+		whereURLLacks("donut").
 		more()
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
@@ -296,10 +296,10 @@ func TestTopGlobalCatCountsWithSummaryContaining(t *testing.T) {
 	}
 }
 
-func TestTopGlobalCatCountsWithURLContaining(t *testing.T) {
+func TestTopGlobalCatCountsWhereURLContains(t *testing.T) {
 	test_url_snippet := "gOoGlE"
 	counts_sql := NewTopGlobalCatCounts().
-		withURLContaining(test_url_snippet).
+		whereURLContains(test_url_snippet).
 		more()
 	rows, err := counts_sql.ValidateAndExecuteRows()
 	if err != nil {
@@ -348,10 +348,10 @@ func TestTopGlobalCatCountsWithURLContaining(t *testing.T) {
 	}
 }
 
-func TestTopGlobalCatCountsWithURLLacking(t *testing.T) {
+func TestTopGlobalCatCountsWhereURLLacks(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts().
 		fromCatFilters(test_cats).
-		withURLLacking("GooGlE")
+		whereURLLacks("GooGlE")
 	
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
@@ -402,7 +402,7 @@ func TestTopGlobalCatCountsWithURLLacking(t *testing.T) {
 
 func TestTopGlobalCatCountsDuringPeriod(t *testing.T) {
 	var test_periods = []struct {
-		Period string
+		Period model.Period
 		Valid  bool
 	}{
 		{"day", true},
@@ -419,6 +419,10 @@ func TestTopGlobalCatCountsDuringPeriod(t *testing.T) {
 			t.Fatalf("unexpected error for period %s", tp.Period)
 		} else if !tp.Valid && tags_sql.Error == nil {
 			t.Fatalf("expected error for period %s", tp.Period)
+		}
+
+		if !tp.Valid {
+			continue
 		}
 
 		_, err := tags_sql.ValidateAndExecuteRows()

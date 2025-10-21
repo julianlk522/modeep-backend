@@ -93,16 +93,14 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
-	query_params := r.URL.Query()
-
-	global_cats_sql := query.
-		NewTopGlobalCatCounts().
-		FromRequestParams(
-			query_params,
-		)
-
-	if global_cats_sql.Error != nil {
-		render.Render(w, r, e.ErrInternalServerError(global_cats_sql.Error))
+	opts, err := util.GetTopGlobalCatsOptionsFromRequestParams(r.URL.Query())
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
+	global_cats_sql, err := query.NewTopGlobalCatCounts().FromOptions(opts)
+	if err != nil {
+		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}
 
@@ -112,27 +110,30 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if "more" params passed: need to run through the results to check
-	// if any cat plural/singular spelling variations were merged
+	// If "more" params passed: check cat counts for possible merged
+	// plural/singular spelling variations.
 
-	// (on pages with links it's more accurate to search the links, but
-	// there are none on the /more page so not possible)
+	// On other pages with links we can search link-by-link for merged cats,
+	// which is more reliable, but on the /more page there are only cat counts.
 
-	// it's more accurate to check links because you know for sure
-	// whether a seemingly merged cat was truly merged (not part of the tag
-	// but close enough to be counted) or actually a subcat (part of the tag)
+	// (It's more accurate to check links because they are bundled with their
+	// tag; you can verify whether the cats in search results were included
+	// only because 1+ from the same tag was a close approximation for a cat
+	// filter (AKA merged) OR if it's tag also included a cat filter exactly
+	// and required no merged spelling variants to cause it to be included.
 
-	// this approach isn't 100% reliable but good enough for now
+	// So this approach isn't 100% reliable but meh close enough for now.)
+	query_params := r.URL.Query()
 	more_params := query_params.Get("more")
 	cats_params := query_params.Get("cats")
 
 	if more_params == "true" && cats_params != "" {
-		split_cats_params := strings.Split(cats_params, ",")
+		cat_filters := strings.Split(cats_params, ",")
 		merged_cats := []string{}
 
 		for _, count := range *counts {
-			for _, cat_param := range split_cats_params {
-				if util.CatsResembleEachOther(count.Category, cat_param) {
+			for _, cf := range cat_filters {
+				if util.CatsResembleEachOther(count.Category, cf) {
 					merged_cats = append(merged_cats, count.Category)
 				}
 			}
@@ -158,13 +159,19 @@ func GetTopGlobalCats(w http.ResponseWriter, r *http.Request) {
 func GetSpellfixMatchesForSnippet(w http.ResponseWriter, r *http.Request) {
 	snippet := chi.URLParam(r, "*")
 	if snippet == "" {
-		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoGlobalCatsSnippet))
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrNoCatsSnippet))
 		return
 	}
-
-	spfx_sql := query.NewSpellfixMatchesForSnippet(snippet).FromRequestParams(
-		r.URL.Query(),
-	)
+	opts, err := util.GetSpellfixOptionsFromRequestParams(r.URL.Query())
+	if err != nil {
+		render.Render(w, r, e.ErrInvalidRequest(err))
+		return
+	}
+	spfx_sql, err := query.NewSpellfixMatchesForSnippet(snippet).FromOptions(opts)
+	if err != nil {
+		render.Render(w, r, e.ErrInternalServerError(err))
+		return
+	}
 	rows, err := spfx_sql.ValidateAndExecuteRows()
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))

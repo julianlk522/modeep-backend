@@ -2,10 +2,10 @@ package query
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 
 	e "github.com/julianlk522/modeep/error"
+	"github.com/julianlk522/modeep/model"
 	mutil "github.com/julianlk522/modeep/model/util"
 )
 
@@ -20,6 +20,17 @@ type TopGlobalCatCounts struct {
 }
 type SpellfixMatches struct {
 	*Query
+
+	// The key difference while submitting a link is that we don't use counts 
+	// of subcats. When searching, it's useful to see only the cats that are 
+	// included in the subset of links that you are potentially searching, so 
+	// you can know how many results to expect. But when submitting a link you
+	// should choose whatever cats you want whether or not there are existing
+	// links with similar classifications. So for those, spellfix recommendations
+	// just show the number of links that have them in their global cats 
+	// ignoring already-applied filters but still excluding already-selected 
+	// cats.)
+	isNewLinkPage bool
 }
 
 // TAG RANKINGS FOR LINK
@@ -189,59 +200,47 @@ FROM IdealSpellingVariants
 ORDER BY count_across_spelling_variations DESC
 LIMIT ?;`
 
-func (gcc *TopGlobalCatCounts) FromRequestParams(params url.Values) *TopGlobalCatCounts {
-	cat_filters_params := params.Get("cats")
-	if cat_filters_params != "" {
-		cat_filters := GetCatsOptionalPluralOrSingularForms(
-			strings.Split(cat_filters_params, ","),
-		)
-		gcc = gcc.fromCatFilters(cat_filters)
+func (gcc *TopGlobalCatCounts) FromOptions(opts *model.TopCatCountsOptions) (*TopGlobalCatCounts, error) {
+	if opts.RawCatFilters != nil {
+		gcc = gcc.fromCatFilters(opts.RawCatFilters)
 	}
-	neutered_params := params.Get("neutered")
-	if neutered_params != "" {
-		neutered_cat_filters := GetCatsOptionalPluralOrSingularForms(
-			strings.Split(neutered_params, ","),
-		)
-		gcc = gcc.fromNeuteredCatFilters(neutered_cat_filters)
+	if opts.NeuteredCatFilters != nil {
+		gcc = gcc.fromNeuteredCatFilters(opts.NeuteredCatFilters)
 	}
-	summary_contains_params := params.Get("summary_contains")
-	if summary_contains_params != "" {
-		gcc = gcc.withGlobalSummaryContaining(summary_contains_params)
+	if opts.SummaryContains != "" {
+		gcc = gcc.whereGlobalSummaryContains(opts.SummaryContains)
 	}
-	url_contains_params := params.Get("url_contains")
+	url_contains_params := opts.URLContains
 	if url_contains_params != "" {
-		gcc = gcc.withURLContaining(url_contains_params)
+		gcc = gcc.whereURLContains(url_contains_params)
 	}
-	url_lacks_params := params.Get("url_lacks")
+	url_lacks_params := opts.URLLacks
 	if url_lacks_params != "" {
-		gcc = gcc.withURLLacking(url_lacks_params)
+		gcc = gcc.whereURLLacks(url_lacks_params)
 	}
-	period_params := params.Get("period")
+	period_params := opts.Period
 	if period_params != "" {
-		gcc = gcc.duringPeriod(period_params)
+		period := model.Period(period_params)
+		if _, ok := model.ValidPeriodsInDays[period]; !ok {
+			return nil, e.ErrInvalidPeriod
+		} else {
+			gcc = gcc.duringPeriod(period)
+		}
 	}
-	more_params := params.Get("more")
-	if more_params == "true" {
+	more_params := opts.More
+	if more_params {
 		gcc = gcc.more()
-	} else if more_params != "" {
-		gcc.Error = e.ErrInvalidMoreFlag
 	}
-
-	return gcc
+	if gcc.Error != nil {
+		return nil, gcc.Error
+	}
+	return gcc, nil
 }
 
-func (gcc *TopGlobalCatCounts) fromCatFilters(cat_filters []string) *TopGlobalCatCounts {
-	if len(cat_filters) == 0 {
+func (gcc *TopGlobalCatCounts) fromCatFilters(raw_cat_filters []string) *TopGlobalCatCounts {
+	if len(raw_cat_filters) == 0 {
 		return gcc
 	}
-
-	// Build NOT IN clause
-	not_in_clause := `
-	AND LOWER(global_cat) NOT IN (?`
-	for i := 1; i < len(cat_filters); i++ {
-		not_in_clause += ", ?"
-	}
-	not_in_clause += ")"
 
 	// Build MATCH clause
 	match_clause := `
@@ -251,32 +250,46 @@ func (gcc *TopGlobalCatCounts) fromCatFilters(cat_filters []string) *TopGlobalCa
 		WHERE global_cats MATCH ?
 		)`
 
+	// Build NOT IN clause
+	not_in_clause := `
+	AND LOWER(global_cat) NOT IN (?`
+	for i := 1; i < len(raw_cat_filters); i++ {
+		not_in_clause += ", ?"
+	}
+	not_in_clause += ")"
+
 	// Add clauses
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"WHERE global_cat != ''",
 		"WHERE global_cat != ''" +
-			not_in_clause +
-			match_clause,
+			match_clause +
+			not_in_clause,
 		1,
 	)
 
 	// Build NOT IN args
-	not_in_args := []any{strings.ToLower(cat_filters[0])}
-	for i := 1; i < len(cat_filters); i++ {
-		not_in_args = append(not_in_args, strings.ToLower(cat_filters[i]))
+	not_in_args := []any{strings.ToLower(raw_cat_filters[0])}
+	for i := 1; i < len(raw_cat_filters); i++ {
+		not_in_args = append(not_in_args, strings.ToLower(raw_cat_filters[i]))
 	}
 
 	// Build MATCH arg
-	match_arg := cat_filters[0]
-	for i := 1; i < len(cat_filters); i++ {
-		match_arg += " AND " + cat_filters[i]
-	}
+	// cat_filters_With_spelling_variants := GetCatsOptionalPluralOrSingularForms(raw_cat_filters)
+	// match_arg := cat_filters_With_spelling_variants[0]
+	// for i := 1; i < len(cat_filters_With_spelling_variants); i++ {
+	// 	match_arg += " AND " + cat_filters_With_spelling_variants[i]
+	// }
+	match_arg := strings.Join(
+		GetCatsOptionalPluralOrSingularForms(raw_cat_filters),
+		" AND ",
+	)
 
 	// Add args: {not_in_args...}, match_arg
 	// old: [GLOBAL_CATS_PAGE_LIMIT]
-	// new: [not_in_args..., match_arg, GLOBAL_CATS_PAGE_LIMIT]
-	gcc.Args = append(not_in_args, match_arg, GLOBAL_CATS_PAGE_LIMIT)
+	// new: [match_arg, not_in_args..., GLOBAL_CATS_PAGE_LIMIT]
+	gcc.Args = append([]any{match_arg}, not_in_args...)
+	gcc.Args = append(gcc.Args, GLOBAL_CATS_PAGE_LIMIT)
 	return gcc
 }
 
@@ -285,43 +298,57 @@ func (gcc *TopGlobalCatCounts) fromNeuteredCatFilters(neutered_cat_filters []str
 		return gcc
 	}
 
-	// Build NOT IN clause
-	not_in_clause := "AND LOWER(global_cat) NOT IN (?"
-	for i := 1; i < len(neutered_cat_filters); i++ {
-		not_in_clause += ", ?"
-	}
-	not_in_clause += ")"
-
-	// Add clause
+	// Add CTEs
 	gcc.Text = strings.Replace(
 		gcc.Text,
-		"WHERE global_cat != ''",
-		"WHERE global_cat != ''" + "\n" + not_in_clause,
+		"WITH RECURSIVE ",
+		"WITH\n" + GLOBAL_CAT_COUNTS_NEUTERED_CATS_CTES + ",\n",
 		1,
 	)
 
-	// Build NOT IN args
-	not_in_args := []any{strings.ToLower(neutered_cat_filters[0])}
-	for i := 1; i < len(neutered_cat_filters); i++ {
-		not_in_args = append(not_in_args, strings.ToLower(neutered_cat_filters[i]))
-	}
+	// SELECT from new CTEs
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"FROM Links",
+		"FROM LinksWithNonNeuteredCats",
+		1,
+	)
+
+	// Build MATCH arg
+	// e.g., '("test" OR "tests") OR ("coding" OR "codings")'
+	match_arg := strings.Join(
+		GetCatsOptionalPluralOrSingularForms(neutered_cat_filters),
+		" OR ",
+	)
 
 	// Add args
 	// old: [GLOBAL_CATS_PAGE_LIMIT]
-	// new: [cat_filters..., GLOBAL_CATS_PAGE_LIMIT]
+	// new: [match_arg, GLOBAL_CATS_PAGE_LIMIT]
 
 	// OR if .fromCatFilters() called first:
 
-	// old: [cat_filters..., cat_filters_match_arg, GLOBAL_CATS_PAGE_LIMIT]
-	// new: [not_in_args..., cat_filters..., cat_filters_match_arg, 
+	// old: [cat_filters_match_arg, cat_filters_not_in_args..., 
+	// GLOBAL_CATS_PAGE_LIMIT]
+	// new: [match_arg, cat_filters_match_arg, cat_filters_not_in_args...,
 	// GLOBAL_CATS_PAGE_LIMIT]
 	// so can insert at the beginning
-	gcc.Args = append(not_in_args, gcc.Args...)
+	gcc.Args = append([]any{match_arg}, gcc.Args...)
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) withGlobalSummaryContaining(snippet string) *TopGlobalCatCounts {
-	// in case either .WithURLContaining or .WithURLLacking was run first
+const GLOBAL_CAT_COUNTS_NEUTERED_CATS_CTES = `LinksWithNeuteredCats AS (
+	SELECT link_id
+	FROM global_cats_fts
+	WHERE global_cats MATCH ?
+),
+LinksWithNonNeuteredCats AS (
+	SELECT link_id as id, global_cats
+	FROM global_cats_fts
+	WHERE link_id NOT IN LinksWithNeuteredCats
+)`
+
+func (gcc *TopGlobalCatCounts) whereGlobalSummaryContains(snippet string) *TopGlobalCatCounts {
+	// in case either .WhereURLContains or .WhereURLLacks was run first
 	if strings.Contains(
 		gcc.Text, 
 		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
@@ -382,7 +409,7 @@ func (gcc *TopGlobalCatCounts) withGlobalSummaryContaining(snippet string) *TopG
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) withURLContaining(snippet string) *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) whereURLContains(snippet string) *TopGlobalCatCounts {
 	// in case .WithGlobalSummaryContaining was run first
 	if strings.Contains(
 		gcc.Text, 
@@ -447,7 +474,7 @@ func (gcc *TopGlobalCatCounts) withURLContaining(snippet string) *TopGlobalCatCo
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) withURLLacking(snippet string) *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) whereURLLacks(snippet string) *TopGlobalCatCounts {
 	// in case .WithGlobalSummaryContaining was run first
 	if strings.Contains(
 		gcc.Text, 
@@ -512,7 +539,7 @@ func (gcc *TopGlobalCatCounts) withURLLacking(snippet string) *TopGlobalCatCount
 	return gcc
 }
 
-func (gcc *TopGlobalCatCounts) duringPeriod(period string) *TopGlobalCatCounts {
+func (gcc *TopGlobalCatCounts) duringPeriod(period model.Period) *TopGlobalCatCounts {
 	if period == "all" {
 		return gcc
 	}
@@ -551,15 +578,6 @@ func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
 				COMBINED_RANKS_CTE + "\n" +
 				SPELLFIX_SELECT,
 			Args: []any{
-				// NOTE: snippets sent to spellfix work better when not
-				// expanded to include variations e.g., ("test" OR "tests").
-				// Levenshtein distance (or just "distance") used by spellfix1
-				// (https://www.sqlite.org/spellfix1.html#:~:text=statement.-,distance)
-				// is not ideal for this use case: it approximates number of character
-				// edits required to transform one string into another, meaning it
-				// interprets the above as a literal 19-character string, many edits away
-				// from "test." But, it's fine to forego normal variation matching here - 
-				// spellfix helps with that anyway.
 				snippet,
 				snippet + "*",
 				SPELLFIX_MATCHES_LIMIT,
@@ -613,7 +631,7 @@ const COMBINED_RANKS_CTE = `CombinedRanks AS (
 )`
 
 // Sometimes computed distance comes out extremely low for unexpected results
-// e.g., "co" => "computation" = 0, where "co" => coding = 100.
+// e.g., "co" => "computation" = 0, where "co" => coding = 100. wat
 // Distance alone can't be trusted as a goodness-of-fit metric.
 // To allow weighting tags through a combination of rank and distance,
 // without having near-0 distances totally distort rankings, this lower bound
@@ -626,22 +644,24 @@ FROM CombinedRanks
 ORDER BY (MAX(min_distance, %d) / combined_rank), combined_rank DESC
 LIMIT ?;`, DISTANCE_LOWER_BOUND)
 
-func (sm *SpellfixMatches) FromRequestParams(params url.Values) *SpellfixMatches {
-	tmap_params := params.Get("from_tmap")
-	if tmap_params != "" {
-		sm = sm.fromTmap(tmap_params)
+func (sm *SpellfixMatches) FromOptions(opts *model.SpellfixMatchesOptions) (*SpellfixMatches, error) {
+	if opts.Tmap != "" {
+		sm = sm.fromTmap(opts.Tmap)
 	}
-	cat_filter_params := params.Get("omitted")
-	if cat_filter_params != "" {
-		cat_filters := strings.Split(cat_filter_params, ",")
-		sm = sm.fromCatFilters(cat_filters)
+	if opts.IsNewLinkPage {
+		sm.isNewLinkPage = true
 	}
-	new_link_page_cat_filter_params := params.Get("new_link_omitted")
-	if new_link_page_cat_filter_params != "" {
-		cat_filters := strings.Split(new_link_page_cat_filter_params, ",")
-		sm = sm.fromCatFiltersWhileSubmittingLink(cat_filters)
+	if len(opts.CatFilters) > 0 {
+		if sm.isNewLinkPage {
+			sm = sm.fromCatFiltersWhileSubmittingLink(opts.CatFilters)
+		} else {
+			sm = sm.fromCatFilters(opts.CatFilters)
+		}
 	}
-	return sm
+	if sm.Error != nil {
+		return nil, sm.Error
+	}
+	return sm, nil
 }
 
 func (sm *SpellfixMatches) fromTmap(tmap_owner_login_name string) *SpellfixMatches {
@@ -951,14 +971,6 @@ var FILTERED_NORMALIZED_MATCHES_CTE = `NormalizedMatches AS (
 	FROM FilteredSpellfixMatches
 )`
 
-// They key difference while submitting a link is that we don't use counts of subcats.
-// When searching, it's useful to see only the cats that are included in the subset
-// of links that you are potentially searching, so you can know how many results
-// to expect. But when submitting a link you should choose whatever cats you want,
-// whether or not there are existing links with similar classifications. So for those
-// spellfix recommendations, we show the number of links that have them in their
-// global cats regardless of already-applied filters, excluding already-selected
-// cats.)
 func (sm *SpellfixMatches) fromCatFiltersWhileSubmittingLink(cat_filters []string) *SpellfixMatches {
 	new_spellfix_matches_cte := SPELLFIX_MATCHES_FROM_CATS_WHILE_SUBMITTING_LINK_CTE
 	if len(cat_filters) == 0 {
