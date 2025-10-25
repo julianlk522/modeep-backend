@@ -12,9 +12,10 @@ require (
 	github.com/lestrrat-go/jwx/v2 v2.1.6
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	golang.org/x/crypto v0.42.0
-	golang.org/x/image v0.31.0
-	golang.org/x/net v0.44.0
+	golang.org/x/crypto v0.43.0
+	golang.org/x/image v0.32.0
+	golang.org/x/net v0.46.0
+	golang.org/x/sync v0.17.0
 	gopkg.in/mail.v2 v2.3.1
 )
 
@@ -31,7 +32,6 @@ require (
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )
