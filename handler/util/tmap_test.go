@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"net/url"
 	"slices"
 	"strings"
 	"testing"
@@ -9,27 +10,74 @@ import (
 	"github.com/julianlk522/modeep/query"
 )
 
-func TestUserExists(t *testing.T) {
-	var test_login_names = []struct {
-		login_name string
-		Exists     bool
+func TestGetTmapOptionsFromRequestParams(t *testing.T) {
+	var test_params = []struct {
+		Params url.Values
+		Valid  bool
 	}{
-		{"johndoe", false},
-		{"janedoe", false},
-		{TEST_LOGIN_NAME, true},
+		{
+			Params: url.Values{
+				"cats": []string{"umvc3"},
+				"neutered": []string{"test"},
+				"period": []string{"year"},
+				"summary_contains": []string{"test"},
+				"url_contains": []string{"test"},
+				"url_lacks": []string{"test"},
+				"include_nsfw": []string{"true"},
+				"sort_by": []string{"newest"},
+				"section": []string{"starred"},
+				"page": []string{"1"},
+			},
+			Valid: true,
+		},
+		{
+			Params: url.Values{
+				// this shall not pass
+				"period": []string{"chicken"},
+			},
+			Valid: false,
+		},
+				{
+			Params: url.Values{
+				// nor this
+				"include_nsfw": []string{"fish"},
+			},
+			Valid: false,
+		},
+		{
+			Params: url.Values{
+				// nor this
+				"section": []string{"turtle"},
+			},
+			Valid: false,
+		},
+		{
+			Params: url.Values{
+				// nor this
+				"sort_by": []string{"spiciness"},
+			},
+			Valid: false,
+		},
+		{
+			Params: url.Values{
+				// nor this
+				"page": []string{"moose"},
+			},
+			Valid: false,
+		},
 	}
 
-	for _, l := range test_login_names {
-		got, err := UserExists(l.login_name)
-		if err != nil {
-			t.Fatalf("failed with error: %s", err)
-		} else if l.Exists != got {
-			t.Fatalf("expected %t, got %t", l.Exists, got)
+	for _, tp := range test_params {
+		opts, err := GetTmapOptionsFromRequestParams(tp.Params)
+		if tp.Valid && err != nil {
+			t.Fatalf("expected valid options, got error %s", err)
+		} else if !tp.Valid && err == nil {
+			t.Fatalf("expected error, got valid options: %+v", opts)
 		}
 	}
 }
 
-func TestBuildTmapFromOpts(t *testing.T) {
+func TestBuildTmapFromOptions(t *testing.T) {
 	var test_opts = []struct {
 		LoginName          string
 		RequestingUserID   string
@@ -263,7 +311,40 @@ func TestBuildTmapFromOpts(t *testing.T) {
 	}
 }
 
-func TestBuildTmapLinksQueryAndScan(t *testing.T) {
+func TestPaginateIndividualTmapSection(t *testing.T) {
+	links, err := buildAndScanTmapSectionQuery[model.TmapLink](
+		query.NewTmapSubmitted(TEST_LOGIN_NAME),
+		nil,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	links, pages, err := paginateIndividualTmapSection(1, links)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if pages < 1 {
+		t.Fatalf("expected 1+ pages, got %d", pages)
+	}
+
+	if len(*links) != query.LINKS_PAGE_LIMIT {
+		t.Fatalf("expected max %d links per page", query.LINKS_PAGE_LIMIT)
+	}
+}
+
+func TestGetAllTmapSectionsForOwnerFromOpts(t *testing.T) {
+	if _, err := getAllTmapSectionsForOwnerFromOpts[model.TmapLink](
+		TEST_LOGIN_NAME, 
+		nil,
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBuildAndScanTmapLinksQuery(t *testing.T) {
 	var test_options = []model.TmapOptions{
 		{
 			OwnerLoginName: TEST_LOGIN_NAME,
@@ -287,42 +368,42 @@ func TestBuildTmapLinksQueryAndScan(t *testing.T) {
 
 	for _, to := range test_options {
 		if to.AsSignedInUser != "" {
-			if _, err := buildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+			if _, err := buildAndScanTmapSectionQuery[model.TmapLinkSignedIn](
 				query.NewTmapSubmitted(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := buildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+			if _, err := buildAndScanTmapSectionQuery[model.TmapLinkSignedIn](
 				query.NewTmapStarred(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := buildTmapLinksQueryAndScan[model.TmapLinkSignedIn](
+			if _, err := buildAndScanTmapSectionQuery[model.TmapLinkSignedIn](
 				query.NewTmapTagged(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 		} else {
-			if _, err := buildTmapLinksQueryAndScan[model.TmapLink](
+			if _, err := buildAndScanTmapSectionQuery[model.TmapLink](
 				query.NewTmapSubmitted(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := buildTmapLinksQueryAndScan[model.TmapLink](
+			if _, err := buildAndScanTmapSectionQuery[model.TmapLink](
 				query.NewTmapStarred(to.OwnerLoginName),
 				&to,
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := buildTmapLinksQueryAndScan[model.TmapLink](
+			if _, err := buildAndScanTmapSectionQuery[model.TmapLink](
 				query.NewTmapTagged(to.OwnerLoginName),
 				&to,
 			); err != nil {
@@ -521,6 +602,63 @@ func TestMergeCountsOfCatSpellingVariants(t *testing.T) {
 			3,
 			len(counts),
 			counts,
+		)
+	}
+}
+
+func TestLimitTmapSectionsAndGetLimitedOnes(t *testing.T) {
+	sections_struct, err := getAllTmapSectionsForOwnerFromOpts[model.TmapLink](
+		TEST_LOGIN_NAME, 
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sections := &model.TmapSections[model.TmapLink]{
+		Submitted: sections_struct.Submitted,
+		Starred:   sections_struct.Starred,
+		Tagged:    sections_struct.Tagged,
+	}
+
+	var expected_limited_sections []string
+	if len(*sections.Submitted) > query.LINKS_PAGE_LIMIT {
+		expected_limited_sections = append(expected_limited_sections, "submitted")
+	}
+	if len(*sections.Starred) > query.LINKS_PAGE_LIMIT {
+		expected_limited_sections = append(expected_limited_sections, "starred")
+	}
+	if len(*sections.Tagged) > query.LINKS_PAGE_LIMIT {
+		expected_limited_sections = append(expected_limited_sections, "tagged")
+	}	
+	
+	limited_sections := limitTmapSectionsAndGetLimitedOnes(sections)
+	if len(limited_sections.SectionsWithMore) != len(expected_limited_sections) {
+		t.Fatalf(
+			"expected limited sections %+v, got %+v",
+			expected_limited_sections,
+			limited_sections.SectionsWithMore,
+		)
+	}
+
+	if len(*limited_sections.Submitted) > query.LINKS_PAGE_LIMIT {
+		t.Fatalf(
+			"expected limited sections %+v, got %+v",
+			expected_limited_sections,
+			limited_sections.SectionsWithMore,
+		)
+	}
+	if len(*limited_sections.Starred) > query.LINKS_PAGE_LIMIT {
+		t.Fatalf(
+			"expected limited sections %+v, got %+v",
+			expected_limited_sections,
+			limited_sections.SectionsWithMore,
+		)
+	}
+	if len(*limited_sections.Tagged) > query.LINKS_PAGE_LIMIT {
+		t.Fatalf(
+			"expected limited sections %+v, got %+v",
+			expected_limited_sections,
+			limited_sections.SectionsWithMore,
 		)
 	}
 }

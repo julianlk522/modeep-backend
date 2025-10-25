@@ -11,6 +11,26 @@ import (
 	e "github.com/julianlk522/modeep/error"
 )
 
+func TestUserExists(t *testing.T) {
+	var test_login_names = []struct {
+		login_name string
+		Exists     bool
+	}{
+		{"johndoe", false},
+		{"janedoe", false},
+		{TEST_LOGIN_NAME, true},
+	}
+
+	for _, l := range test_login_names {
+		got, err := UserExists(l.login_name)
+		if err != nil {
+			t.Fatalf("failed with error: %s", err)
+		} else if l.Exists != got {
+			t.Fatalf("expected %t, got %t", l.Exists, got)
+		}
+	}
+}
+
 func TestLoginNameTaken(t *testing.T) {
 	var test_login_names = []struct {
 		login_name string

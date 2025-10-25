@@ -74,6 +74,9 @@ const SUBMITTED_AND = `
 AND l.submitted_by = ?`
 
 func (ts *TmapSubmitted) FromOptions(opts *model.TmapOptions) (TmapLinksQueryBuilder, error) {
+	if opts == nil {
+		return ts, nil
+	}
 	if len(opts.CatFiltersWithSpellingVariants) > 0 {
 		ts.fromCatFilters(opts.CatFiltersWithSpellingVariants)
 	}
@@ -411,6 +414,9 @@ const STARRED_AND = `
 AND l.submitted_by != ?`
 
 func (ts *TmapStarred) FromOptions(opts *model.TmapOptions) (TmapLinksQueryBuilder, error) {
+	if opts == nil {
+		return ts, nil
+	}
 	if len(opts.CatFiltersWithSpellingVariants) > 0 {
 		ts.fromCatFilters(opts.CatFiltersWithSpellingVariants)
 	}
@@ -786,6 +792,9 @@ var TAGGED_NO_NSFW_CATS_WHERE = strings.ReplaceAll(
 )
 
 func (tt *TmapTagged) FromOptions(opts *model.TmapOptions) (TmapLinksQueryBuilder, error) {
+	if opts == nil {
+		return tt, nil
+	}
 	if len(opts.CatFiltersWithSpellingVariants) > 0 {
 		tt.fromCatFilters(opts.CatFiltersWithSpellingVariants)
 	}

@@ -155,11 +155,11 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 
 	// Individual section
 	if opts.Section != "" {
-		section_query_builder := getTmapLinksQueryBuilderForSectionForOwner(
+		section_query_builder := getTmapQueryBuilderForSectionForOwner(
 			opts.Section,
 			tmap_owner,
 		)
-		links, err := buildTmapLinksQueryAndScan[T](section_query_builder, opts)
+		links, err := buildAndScanTmapSectionQuery[T](section_query_builder, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -176,7 +176,7 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 		cat_counts := getCatCountsFromTmapLinks(links, cat_counts_opts)
 
 		// Pagination
-		links, pages, err := getPageOfIndividualTmapSectionLinks(opts.Page, links)
+		links, pages, err := paginateIndividualTmapSection(opts.Page, links)
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +203,7 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 		}
 	// All sections
 	} else {
-		all_tmap_links, err := getAllTmapLinksForOwnerFromOpts[T](tmap_owner, opts)
+		all_tmap_links, err := getAllTmapSectionsForOwnerFromOpts[T](tmap_owner, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +266,7 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 	}
 }
 
-func getTmapLinksQueryBuilderForSectionForOwner(
+func getTmapQueryBuilderForSectionForOwner(
 	section model.TmapIndividualSectionName, 
 	tmap_owner string,
 ) query.TmapLinksQueryBuilder {
@@ -282,7 +282,7 @@ func getTmapLinksQueryBuilderForSectionForOwner(
 	return nil
 }
 
-func getPageOfIndividualTmapSectionLinks[T model.TmapLink | model.TmapLinkSignedIn](page int, links *[]T) (*[]T, int, error) {
+func paginateIndividualTmapSection[T model.TmapLink | model.TmapLinkSignedIn](page int, links *[]T) (*[]T, int, error) {
 	if page < 0 {
 		return nil, 0, e.ErrInvalidPageParams
 	} else if page == 0 {
@@ -301,7 +301,7 @@ func getPageOfIndividualTmapSectionLinks[T model.TmapLink | model.TmapLinkSigned
 	return links, pages, nil
 }
 
-func getAllTmapLinksForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedIn](tmap_owner_login_name string, opts *model.TmapOptions) (*struct {
+func getAllTmapSectionsForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedIn](tmap_owner_login_name string, opts *model.TmapOptions) (*struct {
 	Submitted *[]T
 	Starred   *[]T
 	Tagged    *[]T
@@ -342,36 +342,7 @@ func getAllTmapLinksForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedIn](
 	}, nil
 }
 
-// sections > LINKS_PAGE_LIMIT links: limit and indicate in response so frontend
-// knows to offer pagination
-func limitTmapSectionsAndGetLimitedOnes[T model.TmapLink | model.TmapLinkSignedIn](sections *model.TmapSections[T]) *model.TmapSections[T] {
-	submitted := sections.Submitted
-	starred := sections.Starred
-	tagged := sections.Tagged
-	var sections_with_more []string
-
-	if len(*submitted) > query.LINKS_PAGE_LIMIT {
-		sections_with_more = append(sections_with_more, "submitted")
-		*submitted = (*submitted)[0:query.LINKS_PAGE_LIMIT]
-	}
-	if len(*starred) > query.LINKS_PAGE_LIMIT {
-		sections_with_more = append(sections_with_more, "starred")
-		*starred = (*starred)[0:query.LINKS_PAGE_LIMIT]
-	}
-	if len(*tagged) > query.LINKS_PAGE_LIMIT {
-		sections_with_more = append(sections_with_more, "tagged")
-		*tagged = (*tagged)[0:query.LINKS_PAGE_LIMIT]
-	}
-
-	sections.Submitted = submitted
-	sections.Starred = starred
-	sections.Tagged = tagged
-	sections.SectionsWithMore = sections_with_more
-
-	return sections
-}
-
-func buildTmapLinksQueryAndScan[T model.TmapLink | model.TmapLinkSignedIn](builder query.TmapLinksQueryBuilder, opts *model.TmapOptions) (*[]T, error) {
+func buildAndScanTmapSectionQuery[T model.TmapLink | model.TmapLinkSignedIn](builder query.TmapLinksQueryBuilder, opts *model.TmapOptions) (*[]T, error) {
 	get_links_query, err := builder.FromOptions(opts)
 	if err != nil {
 		return nil, err
@@ -556,6 +527,35 @@ func mergeCountsOfCatSpellingVariants(counts *[]model.CatCount) {
 			}
 		}
 	}
+}
+
+// Sections with more than LINKS_PAGE_LIMIT links: limit and indicate in
+// response so frontend knows to offer pagination
+func limitTmapSectionsAndGetLimitedOnes[T model.TmapLink | model.TmapLinkSignedIn](sections *model.TmapSections[T]) *model.TmapSections[T] {
+	submitted := sections.Submitted
+	starred := sections.Starred
+	tagged := sections.Tagged
+	var sections_with_more []string
+
+	if len(*submitted) > query.LINKS_PAGE_LIMIT {
+		sections_with_more = append(sections_with_more, "submitted")
+		*submitted = (*submitted)[0:query.LINKS_PAGE_LIMIT]
+	}
+	if len(*starred) > query.LINKS_PAGE_LIMIT {
+		sections_with_more = append(sections_with_more, "starred")
+		*starred = (*starred)[0:query.LINKS_PAGE_LIMIT]
+	}
+	if len(*tagged) > query.LINKS_PAGE_LIMIT {
+		sections_with_more = append(sections_with_more, "tagged")
+		*tagged = (*tagged)[0:query.LINKS_PAGE_LIMIT]
+	}
+
+	sections.Submitted = submitted
+	sections.Starred = starred
+	sections.Tagged = tagged
+	sections.SectionsWithMore = sections_with_more
+
+	return sections
 }
 
 func getTmapMergedCatsSpellingVariantsInLinksFromCatFilters[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, cat_filters []string) []string {
