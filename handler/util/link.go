@@ -364,10 +364,11 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 		req.Header.Set("Sec-Fetch-Dest", "document")
 		req.Header.Set("Sec-Fetch-Mode", "navigate")
 		req.Header.Set("Sec-Fetch-Site", "none")
+
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
+			// disable TLS check, try again
 			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
-				// disable TLS check, try again
 				tr := &http.Transport{
 					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 				}
@@ -376,20 +377,18 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 				if err != nil {
 					return nil, invalidURLError(url)
 				}
-				return resp, nil
+			} else {
+				continue
 			}
-			continue
 		}
 
 		if resp == nil {
 			continue
 		}
 
-		if resp.StatusCode == http.StatusNotFound {
-			resp.Body.Close()
+		if resp.StatusCode >= http.StatusBadRequest {
 			continue
 		} else if isRedirect(resp.StatusCode) {
-			resp.Body.Close()
 			return nil, e.ErrRedirect
 		}
 
