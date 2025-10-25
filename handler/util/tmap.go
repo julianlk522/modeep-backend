@@ -11,6 +11,7 @@ import (
 	_ "image/png"
 
 	_ "golang.org/x/image/webp"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/julianlk522/modeep/db"
 
@@ -306,28 +307,39 @@ func getAllTmapSectionsForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedI
 	Starred   *[]T
 	Tagged    *[]T
 }, error) {
-
-	submitted, err := buildTmapLinksQueryAndScan[T](
-		query.NewTmapSubmitted(tmap_owner_login_name),
-		opts,
+	var (
+		submitted *[]T
+		starred   *[]T
+		tagged    *[]T
+		err_group errgroup.Group
 	)
-	if err != nil {
-		return nil, err
+
+	for _, section := range []model.TmapIndividualSectionName{"submitted", "starred", "tagged"} {
+		err_group.Go(func() error {
+			result, err := buildAndScanTmapSectionQuery[T](
+				getTmapQueryBuilderForSectionForOwner(
+					section, 
+					tmap_owner_login_name,
+			),
+				opts,
+			)
+			if err != nil {
+				return err
+			} 
+
+			switch section {
+				case "submitted":
+					submitted = result
+				case "starred":
+					starred = result
+				case "tagged":
+					tagged = result
+				}
+			return err
+		})
 	}
 
-	starred, err := buildTmapLinksQueryAndScan[T](
-		query.NewTmapStarred(tmap_owner_login_name),
-		opts,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	tagged, err := buildTmapLinksQueryAndScan[T](
-		query.NewTmapTagged(tmap_owner_login_name),
-		opts,
-	)
-	if err != nil {
+	if err := err_group.Wait(); err != nil {
 		return nil, err
 	}
 
