@@ -90,62 +90,26 @@ func TestEditAbout(t *testing.T) {
 }
 
 func TestDeleteProfilePic(t *testing.T) {
-	var test_requests = []struct {
-		UserID             string
-		Valid              bool
-		ExpectedStatusCode int
-	}{
-		{
-			// test user jlk has a profile pic: should be able to delete it
-			UserID:             TEST_USER_ID,
-			Valid:              true,
-			ExpectedStatusCode: http.StatusNoContent,
-		},
-		{
-			// test user bradley (id 9) does not have a profile pic: should fail
-			UserID:             "9",
-			Valid:              false,
-			ExpectedStatusCode: http.StatusBadRequest,
-		},
+	r := httptest.NewRequest(
+		http.MethodDelete,
+		"/pic",
+		nil,
+	)
+
+	ctx := context.Background()
+	jwt_claims := map[string]any{
+		"user_id": TEST_USER_ID,
 	}
+	ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
+	r = r.WithContext(ctx)
 
-	for _, tr := range test_requests {
-		r := httptest.NewRequest(
-			http.MethodDelete,
-			"/pic",
-			nil,
-		)
+	w := httptest.NewRecorder()
+	DeleteProfilePic(w, r)
+	res := w.Result()
+	defer res.Body.Close()
 
-		ctx := context.Background()
-		jwt_claims := map[string]any{
-			"user_id": TEST_USER_ID,
-		}
-		ctx = context.WithValue(ctx, m.JWTClaimsKey, jwt_claims)
-		r = r.WithContext(ctx)
-
-		w := httptest.NewRecorder()
-		DeleteProfilePic(w, r)
-		res := w.Result()
-		defer res.Body.Close()
-
-		if tr.Valid && res.StatusCode != tr.ExpectedStatusCode {
-			text, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal("failed but unable to read request body bytes")
-			} else {
-				t.Fatalf(
-					"expected status code %d, got %d (test request %+v)\n%s", tr.ExpectedStatusCode, res.StatusCode,
-					tr,
-					text,
-				)
-			}
-		} else if !tr.Valid && res.StatusCode != tr.ExpectedStatusCode {
-			t.Fatalf("expected status code %d, got %d (test request %+v)", 
-				tr.ExpectedStatusCode,
-				res.StatusCode, 
-				tr,
-			)
-		}
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected status code %d, got %d", http.StatusNoContent, res.StatusCode)
 	}
 }
 

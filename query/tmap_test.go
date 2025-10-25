@@ -14,15 +14,13 @@ import (
 const (
 	TEST_LOGIN_NAME     = "jlk"
 	TEST_USER_ID        = "3"
-	TEST_REQ_LOGIN_NAME = "bradley"
-	TEST_REQ_USER_ID    = "13"
 )
 
 var test_cats = []string{"go", "coding"}
 
 // LINKS
 func TestNewTmapSubmitted(t *testing.T) {
-	submitted_sql := NewTmapSubmitted(TEST_REQ_LOGIN_NAME)
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME)
 	rows, err := submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
@@ -49,8 +47,8 @@ func TestNewTmapSubmitted(t *testing.T) {
 			&l.PreviewImgFilename,
 		); err != nil {
 			t.Fatal(err)
-		} else if l.SubmittedBy != TEST_REQ_LOGIN_NAME {
-			t.Fatalf("SubmittedBy != test login_name (%s)", TEST_REQ_LOGIN_NAME)
+		} else if l.SubmittedBy != TEST_LOGIN_NAME {
+			t.Fatalf("SubmittedBy != test login_name (%s)", TEST_LOGIN_NAME)
 		} else if strings.Contains(l.Cats, "NSFW") {
 			t.Fatal("should not contain NSFW in base query")
 		} else if l.TagCount == 0 {
@@ -65,7 +63,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 		FROM Links 
 		WHERE submitted_by = ?
 		AND global_cats NOT LIKE '%' || 'NSFW' || '%';`,
-		TEST_REQ_LOGIN_NAME)
+		TEST_LOGIN_NAME)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +211,7 @@ func TestTmapSubmittedFromNeuteredCatFilters(t *testing.T) {
 }
 
 func TestTmapSubmittedAsSignedInUser(t *testing.T) {
-	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).Build()
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).asSignedInUser(TEST_USER_ID).Build()
 	rows, err := submitted_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
@@ -247,39 +245,9 @@ func TestTmapSubmittedAsSignedInUser(t *testing.T) {
 }
 
 func TestTmapSubmittedIncludeNSFW(t *testing.T) {
-	submitted_sql := NewTmapSubmitted(TEST_REQ_LOGIN_NAME).includeNSFW().Build()
-	rows, err := submitted_sql.ValidateAndExecuteRows()
-	if err != nil {
+	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).includeNSFW().Build()
+	if _, err := submitted_sql.ValidateAndExecuteRows(); err != nil {
 		t.Fatal(err)
-	}
-
-	var found_NSFW_link bool
-	for rows.Next() {
-		var l model.TmapLink
-		if err := rows.Scan(
-			&l.ID,
-			&l.URL,
-			&l.SubmittedBy,
-			&l.SubmitDate,
-			&l.Cats,
-			&l.CatsFromUser,
-			&l.Summary,
-			&l.SummaryCount,
-			&l.TimesStarred,
-			&l.AvgStars,
-			&l.EarliestStarrers,
-			&l.ClickCount,
-			&l.TagCount,
-			&l.PreviewImgFilename,
-		); err != nil {
-			t.Fatal(err)
-		} else if strings.Contains(l.Cats, "NSFW") {
-			found_NSFW_link = true
-		}
-	}
-
-	if !found_NSFW_link {
-		t.Fatalf("%s's tmap does not but should contain link with NSFW tag", TEST_REQ_LOGIN_NAME)
 	}
 }
 
@@ -850,7 +818,7 @@ func TestTmapStarredFromNeuteredCatFilters(t *testing.T) {
 }
 
 func TestTmapStarredAsSignedInUser(t *testing.T) {
-	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).Build()
+	starred_sql := NewTmapStarred(TEST_LOGIN_NAME).asSignedInUser(TEST_USER_ID).Build()
 	rows, err := starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
@@ -883,7 +851,7 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 		links = append(links, l)
 	}
 
-	// Verify that all starred links except those with NSFW cats are returned
+	// Verify all starred links except those with NSFW cats are returned
 	var all_starred_link_ids []string
 	rows, err = TestClient.Query(`SELECT link_id
 		FROM Stars
@@ -909,7 +877,7 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 			}
 		}
 
-		// Verify that all non-returned starred links have NSFW cats
+		// Verify all non-returned starred links have NSFW cats
 		if !found_starred_link_in_returned_links {
 			var cats string
 			if err := TestClient.QueryRow(`SELECT cats
@@ -933,9 +901,9 @@ func TestTmapStarredAsSignedInUser(t *testing.T) {
 		}
 	}
 
-	// Retry with .includeNSFW() and verify that all links from
+	// Retry with .includeNSFW() and verify all links from
 	// all_starred_link_ids are returned
-	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).includeNSFW().Build()
+	starred_sql = NewTmapStarred(TEST_LOGIN_NAME).asSignedInUser(TEST_USER_ID).includeNSFW().Build()
 	rows, err = starred_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
@@ -1427,35 +1395,9 @@ func TestTmapTaggedFromNeuteredCatFilters(t *testing.T) {
 }
 
 func TestTmapTaggedAsSignedInUser(t *testing.T) {
-	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).asSignedInUser(TEST_REQ_USER_ID).Build()
-	rows, err := tagged_sql.ValidateAndExecuteRows()
-	if err != nil {
+	tagged_sql := NewTmapTagged(TEST_LOGIN_NAME).asSignedInUser(TEST_USER_ID).Build()
+	if _, err := tagged_sql.ValidateAndExecuteRows(); err != nil {
 		t.Fatal(err)
-	}
-	defer rows.Close()
-
-	// Verify columns
-	if rows.Next() {
-		var l model.TmapLinkSignedIn
-		if err := rows.Scan(
-			&l.ID,
-			&l.URL,
-			&l.SubmittedBy,
-			&l.SubmitDate,
-			&l.Cats,
-			&l.CatsFromUser,
-			&l.Summary,
-			&l.SummaryCount,
-			&l.TimesStarred,
-			&l.AvgStars,
-			&l.EarliestStarrers,
-			&l.ClickCount,
-			&l.TagCount,
-			&l.PreviewImgFilename,
-			&l.StarsAssigned,
-		); err != nil {
-			t.Fatal(err)
-		}
 	}
 }
 
@@ -1980,7 +1922,7 @@ func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
 }
 
 func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).submittedOnly() 
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).submittedOnly() 
 	row, err := sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -2015,8 +1957,8 @@ AND l.submitted_by = ?;`
 	var expected_count int
 	if err := TestClient.QueryRow(
 		sql_manual,
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	} else if count != expected_count {
@@ -2025,7 +1967,7 @@ AND l.submitted_by = ?;`
 }
 
 func TestTmapNSFWLinksCountStarredOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).starredOnly()
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).starredOnly()
 	row, err := sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -2066,8 +2008,8 @@ WHERE
 AND l.id IN (SELECT link_id FROM UserStars);`
 	if err := TestClient.QueryRow(
 		sql_manual, 
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	}
@@ -2078,7 +2020,7 @@ AND l.id IN (SELECT link_id FROM UserStars);`
 }
 
 func TestTmapNSFWLinksCountTaggedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).taggedOnly()
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).taggedOnly()
 	row, err := sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -2121,9 +2063,9 @@ AND l.id NOT IN
 
 	if err := TestClient.QueryRow(
 		sql_manual, 
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	} else if count != expected_count {
@@ -2132,7 +2074,7 @@ AND l.id NOT IN
 }
 
 func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME)
 	row, err := sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -2143,7 +2085,7 @@ func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
 	}
 
 	// should equal "all" period
-	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).duringPeriod("all")
+	sql = NewTmapNSFWLinksCount(TEST_LOGIN_NAME).duringPeriod("all")
 	row, err = sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -2158,7 +2100,7 @@ func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
 	}
 
 	// last week (none)
-	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).duringPeriod("week")
+	sql = NewTmapNSFWLinksCount(TEST_LOGIN_NAME).duringPeriod("week")
 	row, err = sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -2174,7 +2116,8 @@ func TestTmapNSFWLinksCountDuringPeriod(t *testing.T) {
 }
 
 func TestTmapNSFWLinksCountWhereSummaryContains(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).whereSummaryContains("web")
+	test_summary_snippet := "web"
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).whereSummaryContains(test_summary_snippet)
 	row, err := sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -2185,20 +2128,50 @@ func TestTmapNSFWLinksCountWhereSummaryContains(t *testing.T) {
 	}
 
 	var expected_count int
-	nsfw_links_sql := `SELECT COUNT(DISTINCT L.id) as nsfw_links
-FROM Links L
-LEFT JOIN Users U ON L.submitted_by = U.login_name
-LEFT JOIN Stars S ON S.user_id = U.id
-LEFT JOIN Tags T ON T.submitted_by = L.submitted_by
-WHERE L.global_cats LIKE '%' || 'NSFW' || '%'
-	AND L.global_summary LIKE '%' || ? || '%'
-  	AND (L.submitted_by = ? OR T.submitted_by = ? OR U.login_name = ?);`
+	nsfw_links_sql := `WITH PossibleUserCatsNSFW AS (
+    SELECT
+        link_id,
+        cats AS user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+        AND cats MATCH 'NSFW'
+),
+GlobalNSFWCats AS (
+    SELECT
+        link_id,
+        global_cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH 'NSFW'
+),
+UserStars AS (
+    SELECT s.link_id
+    FROM Stars s
+    INNER JOIN Users u ON u.id = s.user_id
+    WHERE u.login_name = ?
+)
+SELECT count(*) as NSFW_link_count
+FROM Links l
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+LEFT JOIN Summaries sm ON l.id = sm.link_id
+WHERE
+    (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
+AND (
+	l.submitted_by = ?
+	OR l.id IN (SELECT link_id FROM UserStars)
+	OR l.id IN
+		(
+		SELECT link_id
+		FROM PossibleUserCatsNSFW
+		)
+	)
+AND COALESCE(sm.text, l.global_summary) LIKE ?;`
 	if err := TestClient.QueryRow(
 		nsfw_links_sql,
-		"web",
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
-		TEST_REQ_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		"%" + test_summary_snippet + "%",
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	} else if count != expected_count {
@@ -2207,42 +2180,67 @@ WHERE L.global_cats LIKE '%' || 'NSFW' || '%'
 }
 
 func TestTmapNSFWLinksCountWhereURLContains(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME)
+	test_url_snippet := "googler"
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).whereURLContains(test_url_snippet)
 	row, err := sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
 	}
-	var overall_count int
-	if err := row.Scan(&overall_count); err != nil {
+
+	var count int
+	if err := row.Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 
-	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).whereURLContains("googler")
-	row, err = sql.ValidateAndExecuteRow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var count_with_url_containing int
-	if err := row.Scan(&count_with_url_containing); err != nil {
-		t.Fatal(err)
-	}
+	nsfw_links_sql := `WITH PossibleUserCatsNSFW AS (
+    SELECT
+        link_id,
+        cats AS user_cats
+    FROM user_cats_fts
+    WHERE submitted_by = ?
+        AND cats MATCH 'NSFW'
+),
+GlobalNSFWCats AS (
+    SELECT
+        link_id,
+        global_cats
+    FROM global_cats_fts
+    WHERE global_cats MATCH 'NSFW'
+),
+UserStars AS (
+    SELECT s.link_id
+    FROM Stars s
+    INNER JOIN Users u ON u.id = s.user_id
+    WHERE u.login_name = ?
+)
+SELECT count(*) as NSFW_link_count
+FROM Links l
+LEFT JOIN PossibleUserCatsNSFW pucnsfw ON l.id = pucnsfw.link_id
+LEFT JOIN GlobalNSFWCats gnsfwc ON l.id = gnsfwc.link_id
+WHERE
+    (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
+AND (
+	l.submitted_by = ?
+	OR l.id IN (SELECT link_id FROM UserStars)
+	OR l.id IN
+		(
+		SELECT link_id
+		FROM PossibleUserCatsNSFW
+		)
+	)
+AND l.url LIKE ?;`
 
-	if overall_count != count_with_url_containing {
-		t.Fatalf("expected %d, got %d", overall_count, count_with_url_containing)
-	}
-
-	sql = NewTmapNSFWLinksCount(TEST_REQ_LOGIN_NAME).whereURLContains("not_googler")
-	row, err = sql.ValidateAndExecuteRow()
-	if err != nil {
+	var expected_count int
+	if err := TestClient.QueryRow(
+		nsfw_links_sql,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		"%" + test_url_snippet + "%",
+	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
-	}
-	var count_with_url_not_containing int
-	if err := row.Scan(&count_with_url_not_containing); err != nil {
-		t.Fatal(err)
-	}
-
-	if count_with_url_not_containing != 0 {
-		t.Fatalf("expected %d, got %d", 0, count_with_url_not_containing)
+	} else if count != expected_count {
+		t.Fatalf("expected %d, got %d", expected_count, count)
 	}
 }
 

@@ -273,13 +273,13 @@ func TestGetResolvedURLResponse(t *testing.T) {
 		Valid bool
 	}{
 		// not having protocol or www subdomain should still work
-		{"julianlk.com", true},
-		{"www.julianlk.com", true},
-		{"https://www.julianlk.com", true},
+		{"modeep.org", true},
+		{"www.modeep.org", true},
+		{"https://www.modeep.org", true},
 		// sudomains should work too
 		{"about.google.com", true},
 		{"gobblety gook", false},
-		{"julianlk.com/notreal", false},
+		{"modeep.org/notreal", false},
 	}
 
 	for _, u := range test_urls {
