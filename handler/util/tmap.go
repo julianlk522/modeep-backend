@@ -184,7 +184,10 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 
 		if has_cat_filter {
 			// Indicate any merged cats
-			merged_cats := getTmapMergedCatsSpellingVariantsInLinksFromCatFilters(links, cat_filters)
+			merged_cats := getTmapMergedCatsSpellingVariantsInLinksFromCatFilters(
+				links, 
+				cat_filters,
+			)
 			return model.TmapIndividualSectionWithCatFiltersPage[T]{
 				TmapIndividualSectionPage: &model.TmapIndividualSectionPage[T]{
 					Links:          links,
@@ -212,9 +215,12 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 		starred := all_tmap_links.Starred
 		tagged := all_tmap_links.Tagged
 
-		if len(*submitted)+len(*starred)+len(*tagged) == 0 {
+		if len(*submitted) + len(*starred) + len(*tagged) == 0 {
 			return model.TmapPage[T]{
 				TmapSections:   &model.TmapSections[T]{},
+
+				// There are not necessarily 0 NSFW links if the sections
+				// are all empty: the NSFW links may be hidden
 				NSFWLinksCount: nsfw_links_count,
 			}, nil
 		}
@@ -440,8 +446,8 @@ func scanTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](q *query.Query) (*
 }
 
 // Counting cats and pagination are currently done in Go because merging
-// all the links SQL queries together is a headache and doesn't improve
-// perf thattt much since tmap contains <= 30 links at a time
+// all the links SQL queries together is a headache and probably doesn't
+// improve perf thattt much since tmap contains <= 30 links at a time
 // (if LINKS_PAGE_LIMIT is 10, individual sections contain <= 10 links)
 func getCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links *[]T, opts *model.TmapCatCountsOptions) *[]model.CatCount {
 	var omitted_cats []string

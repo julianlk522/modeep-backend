@@ -159,11 +159,11 @@ func GetSpellfixOptionsFromRequestParams(params url.Values) (*model.SpellfixMatc
 }
 
 func CatsResembleEachOther(a string, b string) bool {
-	// Capitalization variants
 	a, b = strings.ToLower(a), strings.ToLower(b)
-
+	// Capitalization variants
+	if a == b || 
 	// Or singular/plural variants
-	if a == b || a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
+	a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
 		return true
 	} 
 
