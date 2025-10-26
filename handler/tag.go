@@ -45,7 +45,7 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
-	user_tag, err := util.GetUserTagForLink(req_login_name, link_id)
+	req_user_tag, err := util.GetUserTagForLink(req_login_name, link_id)
 	if err != nil {
 		render.Render(w, r, e.ErrInvalidRequest(err))
 		return
@@ -72,7 +72,7 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 
 		render.JSON(w, r, model.TagPage[model.LinkSignedIn]{
 			Link:        link,
-			UserTag:     user_tag,
+			YourTag:     req_user_tag,
 			TagRankings: tag_rankings,
 		})
 
@@ -85,7 +85,7 @@ func GetTagPage(w http.ResponseWriter, r *http.Request) {
 
 		render.JSON(w, r, model.TagPage[model.Link]{
 			Link:        link,
-			UserTag:     user_tag,
+			YourTag:     req_user_tag,
 			TagRankings: tag_rankings,
 		})
 	}

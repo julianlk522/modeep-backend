@@ -21,7 +21,7 @@ type Tag struct {
 
 type TagPage[T Link | LinkSignedIn] struct {
 	Link        *T
-	UserTag     *Tag
+	YourTag     *Tag
 	TagRankings *[]TagRanking
 }
 
