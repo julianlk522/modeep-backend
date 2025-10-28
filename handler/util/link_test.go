@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/julianlk522/modeep/db"
@@ -423,7 +424,7 @@ func TestGetLinkExtraMetadataFromHTML(t *testing.T) {
 	}
 
 	for i, meta := range mock_metas {
-		x_md := getLinkExtraMetadataFromHTML(meta)
+		x_md := getLinkExtraMetadataFromHTML(&url.URL{}, meta)
 
 		switch i {
 			case 0:

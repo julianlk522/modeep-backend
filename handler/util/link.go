@@ -337,10 +337,53 @@ func GetLinkExtraMetadataFromResponse(resp *http.Response) *model.LinkExtraMetad
 		return nil
 	} else if resp.StatusCode != http.StatusForbidden {
 		html_md := extractHTMLMetadata(resp.Body)
-		return getLinkExtraMetadataFromHTML(html_md)
+		return getLinkExtraMetadataFromHTML(resp.Request.URL, html_md)
 	}
 
 	return nil
+}
+
+func getLinkExtraMetadataFromHTML(url *url.URL, html_md HTMLMetadata) *model.LinkExtraMetadata {
+	x_md := &model.LinkExtraMetadata{}
+
+	switch {
+		case html_md.OGDesc != "":
+			x_md.AutoSummary = html_md.OGDesc
+		case html_md.Desc != "":
+			x_md.AutoSummary = html_md.Desc
+		case html_md.OGTitle != "":
+			x_md.AutoSummary = html_md.OGTitle
+		case html_md.Title != "":
+			x_md.AutoSummary = html_md.Title
+		case html_md.OGSiteName != "":
+			x_md.AutoSummary = html_md.OGSiteName
+		case html_md.TwitterDesc != "":
+			x_md.AutoSummary = html_md.TwitterDesc
+		case html_md.TwitterTitle != "":
+			x_md.AutoSummary = html_md.TwitterTitle
+	}
+
+	// Test preview image URL to confirm it can be accessed 
+	// TODO cleanup
+	if html_md.OGImage != "" {
+		if !strings.HasPrefix(html_md.OGImage, "http") {
+			html_md.OGImage = url.Scheme + "://" + url.Host + "/" + html_md.OGImage
+			log.Printf("updated preview img URL: %v\n", html_md.OGImage)
+		}
+		if _, err := GetResolvedURLResponse(html_md.OGImage); err == nil {
+			x_md.PreviewImgURL = html_md.OGImage
+		}
+	} else if html_md.TwitterImage != "" {
+		if !strings.HasPrefix(html_md.TwitterImage, "http") {
+			html_md.TwitterImage = url.Scheme + "://" + url.Host + "/" + html_md.TwitterImage
+			log.Printf("updated preview img URL: %v\n", html_md.OGImage)
+		}
+		if _, err := GetResolvedURLResponse(html_md.TwitterImage); err == nil {
+			x_md.PreviewImgURL = html_md.TwitterImage
+		}
+	}
+
+	return x_md
 }
 
 func GetResolvedURLResponse(url string) (*http.Response, error) {
@@ -400,40 +443,6 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 
 func invalidURLError(url string) error {
 	return fmt.Errorf("invalid URL: %s", url)
-}
-
-func getLinkExtraMetadataFromHTML(html_md HTMLMetadata) *model.LinkExtraMetadata {
-	x_md := &model.LinkExtraMetadata{}
-
-	switch {
-		case html_md.OGDesc != "":
-			x_md.AutoSummary = html_md.OGDesc
-		case html_md.Desc != "":
-			x_md.AutoSummary = html_md.Desc
-		case html_md.OGTitle != "":
-			x_md.AutoSummary = html_md.OGTitle
-		case html_md.Title != "":
-			x_md.AutoSummary = html_md.Title
-		case html_md.OGSiteName != "":
-			x_md.AutoSummary = html_md.OGSiteName
-		case html_md.TwitterDesc != "":
-			x_md.AutoSummary = html_md.TwitterDesc
-		case html_md.TwitterTitle != "":
-			x_md.AutoSummary = html_md.TwitterTitle
-	}
-
-	// Don't just set any preview image URL - test that boi to make sure the image is there and can be accessed 
-	if html_md.OGImage != "" {
-		if _, err := GetResolvedURLResponse(html_md.OGImage); err == nil {
-			x_md.PreviewImgURL = html_md.OGImage
-		}
-	} else if html_md.TwitterImage != "" {
-		if _, err := GetResolvedURLResponse(html_md.TwitterImage); err == nil {
-			x_md.PreviewImgURL = html_md.TwitterImage
-		}
-	}
-
-	return x_md
 }
 
 func isRedirect(status_code int) bool {
