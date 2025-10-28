@@ -53,21 +53,8 @@ func extractHTMLMetadata(resp io.Reader) (html_md HTMLMetadata) {
 	}
 }
 
-var meta_properties = []string{
-	"description",
-	"og:title",
-	"og:description",
-	"og:image",
-	"og:author",
-	"og:publisher",
-	"og:site_name",
-	"twitter:title",
-	"twitter:description",
-	"twitter:image",
-}
-
 func assignTokenPropertyToHTMLMeta(token html.Token, html_md *HTMLMetadata) {
-	for _, mp := range meta_properties {
+	for _, mp := range META_PROPERTIES {
 		prop, ok := extractMetaPropertyFromToken(mp, token)
 		if ok {
 			switch mp {
@@ -96,16 +83,32 @@ func assignTokenPropertyToHTMLMeta(token html.Token, html_md *HTMLMetadata) {
 	}
 }
 
+var META_PROPERTIES = []string{
+	"description",
+	"og:title",
+	"og:description",
+	"og:image",
+	"og:author",
+	"og:publisher",
+	"og:site_name",
+	"twitter:title",
+	"twitter:description",
+	"twitter:image",
+}
+
 func extractMetaPropertyFromToken(mp string, token html.Token) (content string, ok bool) {
+	has_property_attr, has_content_attr := false, false
+	
 	for _, attr := range token.Attr {
 		if (attr.Key == "property" || attr.Key == "name") && attr.Val == mp {
-			ok = true
+			has_property_attr = true
 		}
-
 		if attr.Key == "content" {
 			content = attr.Val
+			has_content_attr = true
 		}
 	}
-
+	
+	ok = has_property_attr && has_content_attr
 	return
 }

@@ -93,17 +93,16 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// test URL response
+	// Test URL response
 	var resp *http.Response
 	resp, err := util.GetResolvedURLResponse(request.URL)
 	if err != nil {
 		render.Render(w, r, e.ErrUnprocessable(err))
 		return
 	}
-	log.Printf("resp.StatusCode: %d", resp.StatusCode)
 	defer resp.Body.Close()
 
-	// save adjusted URL (after any redirects e.g., to wwww.)
+	// Save adjusted URL (after any redirects e.g., to wwww.)
 	// unless modified due to 302/401/403/429 etc. redirect
 	url_after_redirects := resp.Request.URL.String()
 	var final_url string
@@ -114,7 +113,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	is_302_redirect := resp.StatusCode == http.StatusFound
 	is_google_sorry_page := strings.Contains(url_after_redirects, "google.com/sorry")
 
-	// trim extra characters
+	// Trim extra characters
 	if (is_unauthorized || is_forbidden || is_too_many_requests || is_302_redirect || is_google_sorry_page) {
 		final_url = strings.TrimSuffix(request.URL, "/")
 	} else {
@@ -150,7 +149,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 			if x_md.AutoSummary != "" {
 				new_link.AutoSummary = x_md.AutoSummary
 			}
-
 			if x_md.PreviewImgURL != "" {
 				new_link.PreviewImgURL = x_md.PreviewImgURL
 			}
