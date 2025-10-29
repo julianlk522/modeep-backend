@@ -160,6 +160,30 @@ func TestTopGlobalCatCountsFromCatFilters(t *testing.T) {
 			)
 		}
 	}
+
+	// None of the counts should be capitalization/pluralization variants of
+	// cat filters
+	var lc_cat_filters []string 
+	for _, cf := range test_cats {
+		lc_cat_filters = append(lc_cat_filters, strings.ToLower(cf))
+	}
+	
+	for _, c := range counts {
+		c.Category = strings.ToLower(c.Category)
+
+		for _, lc_cf := range lc_cat_filters {
+			if c.Category + "s" == lc_cf ||
+			lc_cf + "s" == c.Category ||
+			c.Category + "es" == lc_cf ||
+			lc_cf + "es" == c.Category {
+				t.Fatalf(
+					"found cat %s and %s resemble each other",
+					lc_cf,
+					c.Category,
+				)
+			} 
+		}
+	}
 }
 
 func TestTopGlobalCatCountsFromNeuteredCatFilters(t *testing.T) {

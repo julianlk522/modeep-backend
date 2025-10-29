@@ -250,13 +250,18 @@ func (gcc *TopGlobalCatCounts) fromCatFilters(raw_cat_filters []string) *TopGlob
 		WHERE global_cats MATCH ?
 		)`
 
-	// Build NOT IN clause
-	not_in_clause := `
+	// Build NOT IN clauses
+	individual_cat_counts_not_in_clause := `
 	AND LOWER(global_cat) NOT IN (?`
+	normalized_cat_counts_not_in_clause := `
+	WHERE normalized_global_cat NOT IN (?`
+
 	for i := 1; i < len(raw_cat_filters); i++ {
-		not_in_clause += ", ?"
+		individual_cat_counts_not_in_clause += ", ?"
+		normalized_cat_counts_not_in_clause += ", ?"
 	}
-	not_in_clause += ")"
+	individual_cat_counts_not_in_clause += ")"
+	normalized_cat_counts_not_in_clause += ")"
 
 	// Add clauses
 	gcc.Text = strings.Replace(
@@ -264,7 +269,14 @@ func (gcc *TopGlobalCatCounts) fromCatFilters(raw_cat_filters []string) *TopGlob
 		"WHERE global_cat != ''",
 		"WHERE global_cat != ''" +
 			match_clause +
-			not_in_clause,
+			individual_cat_counts_not_in_clause,
+		1,
+	)
+	gcc.Text = strings.Replace(
+		gcc.Text,
+		"FROM IndividualCatCounts",
+		"FROM IndividualCatCounts" +
+			normalized_cat_counts_not_in_clause,
 		1,
 	)
 
@@ -287,9 +299,11 @@ func (gcc *TopGlobalCatCounts) fromCatFilters(raw_cat_filters []string) *TopGlob
 
 	// Add args: {not_in_args...}, match_arg
 	// old: [GLOBAL_CATS_PAGE_LIMIT]
-	// new: [match_arg, not_in_args..., GLOBAL_CATS_PAGE_LIMIT]
+	// new: [match_arg, not_in_args... x2, GLOBAL_CATS_PAGE_LIMIT]
 	gcc.Args = append([]any{match_arg}, not_in_args...)
+	gcc.Args = append(gcc.Args, not_in_args...)
 	gcc.Args = append(gcc.Args, GLOBAL_CATS_PAGE_LIMIT)
+
 	return gcc
 }
 
@@ -327,9 +341,9 @@ func (gcc *TopGlobalCatCounts) fromNeuteredCatFilters(neutered_cat_filters []str
 
 	// OR if .fromCatFilters() called first:
 
-	// old: [cat_filters_match_arg, cat_filters_not_in_args..., 
+	// old: [cat_filters_match_arg, cat_filters_not_in_args... x2,
 	// GLOBAL_CATS_PAGE_LIMIT]
-	// new: [match_arg, cat_filters_match_arg, cat_filters_not_in_args...,
+	// new: [match_arg, cat_filters_match_arg, cat_filters_not_in_args... x2,
 	// GLOBAL_CATS_PAGE_LIMIT]
 	// so can insert at the beginning
 	gcc.Args = append([]any{match_arg}, gcc.Args...)
