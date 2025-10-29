@@ -388,10 +388,14 @@ func getLinkExtraMetadataFromHTML(url *url.URL, html_md HTMLMetadata) *model.Lin
 }
 
 func GetResolvedURLResponse(url string) (*http.Response, error) {
-	protocols := []string{"", "https://", "http://"}
-
-	for _, p := range protocols {
-		full_url := p + url
+	var urls_to_try []string
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		urls_to_try = []string{url}
+	} else {
+		urls_to_try = []string{"https://" + url, "http://" + url}
+	}
+	
+	for _, full_url := range urls_to_try {
 		req, err := http.NewRequest("GET", full_url, nil)
 		if err != nil {
 			continue
