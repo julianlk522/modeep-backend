@@ -581,8 +581,8 @@ func TestSpellfixMatchesFromCatFilters(t *testing.T) {
 	// TODO confirm pattern matching of top global cats
 }
 
-func TestSpellfixMatchesWhileSubmittingLink(t *testing.T) {
-	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromCatFiltersWhileSubmittingLink([]string{"flower"})
+func TestSpellfixMatchesWhileAddingCats(t *testing.T) {
+	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromCatFiltersWhileAddingCats([]string{"flower"})
 	matches_sql.ValidateAndExecuteRows()
 	if matches_sql.Error != nil {
 		t.Fatal(matches_sql.Error)

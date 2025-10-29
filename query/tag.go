@@ -21,16 +21,15 @@ type TopGlobalCatCounts struct {
 type SpellfixMatches struct {
 	*Query
 
-	// The key difference while submitting a link is that we don't use counts 
-	// of subcats. When searching, it's useful to see only the cats that are 
-	// included in the subset of links that you are potentially searching, so 
-	// you can know how many results to expect. But when submitting a link you
-	// should choose whatever cats you want whether or not there are existing
-	// links with similar classifications. So for those, spellfix recommendations
-	// just show the number of links that have them in their global cats 
-	// ignoring already-applied filters but still excluding already-selected 
-	// cats.)
-	isNewLinkPage bool
+	// The key difference while adding cats (vs. searching) is that we don't use
+	// counts of subcats. When searching, it's useful to see only the cats that
+	// are included in the subset of links that you are targeting, so you can
+	// know how many results to expect. When submitting a link, you should
+	// choose whatever cats you want whether or not there are links with similar
+	// classifications. So for those, spellfix recommendations just show the
+	// number of links that have them in their global cats, ignoring
+	// already-applied filters but still excluding already-selected cats.)
+	youAreAddingCats bool
 }
 
 // TAG RANKINGS FOR LINK
@@ -659,15 +658,15 @@ ORDER BY (MAX(min_distance, %d) / combined_rank), combined_rank DESC
 LIMIT ?;`, DISTANCE_LOWER_BOUND)
 
 func (sm *SpellfixMatches) FromOptions(opts *model.SpellfixMatchesOptions) (*SpellfixMatches, error) {
-	if opts.Tmap != "" {
-		sm = sm.fromTmap(opts.Tmap)
+	if opts.IsTmapAndOwnerIs != "" {
+		sm = sm.fromTmap(opts.IsTmapAndOwnerIs)
 	}
-	if opts.IsNewLinkPage {
-		sm.isNewLinkPage = true
+	if opts.YouAreAddingCats {
+		sm.youAreAddingCats = true
 	}
 	if len(opts.CatFilters) > 0 {
-		if sm.isNewLinkPage {
-			sm = sm.fromCatFiltersWhileSubmittingLink(opts.CatFilters)
+		if sm.youAreAddingCats {
+			sm = sm.fromCatFiltersWhileAddingCats(opts.CatFilters)
 		} else {
 			sm = sm.fromCatFilters(opts.CatFilters)
 		}
@@ -985,7 +984,7 @@ var FILTERED_NORMALIZED_MATCHES_CTE = `NormalizedMatches AS (
 	FROM FilteredSpellfixMatches
 )`
 
-func (sm *SpellfixMatches) fromCatFiltersWhileSubmittingLink(cat_filters []string) *SpellfixMatches {
+func (sm *SpellfixMatches) fromCatFiltersWhileAddingCats(cat_filters []string) *SpellfixMatches {
 	new_spellfix_matches_cte := SPELLFIX_MATCHES_FROM_CATS_WHILE_SUBMITTING_LINK_CTE
 	if len(cat_filters) == 0 {
 		return sm

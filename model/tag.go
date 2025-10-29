@@ -59,9 +59,9 @@ func SortCats(i, j CatCount) int {
 
 // SPELLFIX
 type SpellfixMatchesOptions struct {
-	Tmap          string // if the recommendations are generated on a Treasure Map
-	IsNewLinkPage bool
-	CatFilters    []string
+	IsTmapAndOwnerIs string
+	CatFilters       []string
+	YouAreAddingCats bool
 }
 
 // for CalculateAndSetGlobalCats()

@@ -135,11 +135,11 @@ func GetSpellfixOptionsFromRequestParams(params url.Values) (*model.SpellfixMatc
 	
 	tmap_params := params.Get("tmap")
 	if tmap_params != "" {
-		opts.Tmap = tmap_params
+		opts.IsTmapAndOwnerIs = tmap_params
 	}
-	new_link_page_cat_filter_params := params.Get("is_new_link_page")
-	if new_link_page_cat_filter_params == "true" {
-		opts.IsNewLinkPage = true
+	you_are_adding_cats_params := params.Get("adding_cats")
+	if you_are_adding_cats_params == "true" {
+		opts.YouAreAddingCats = true
 	}
 	cat_filters_params := params.Get("cats")
 	if cat_filters_params != "" {
