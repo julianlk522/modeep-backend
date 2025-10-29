@@ -130,7 +130,7 @@ SELECT GROUP_CONCAT(ideal_cat_spelling, ',') as new_global_cats
 FROM IdealSpellingVariants, MaxScore
 WHERE cat_score >= high_score / 100 * ?;`,
 			Args: []any{
-				link_id, 
+				link_id,
 				TAGS_TO_SEARCH_FOR_TOP_GLOBAL_CATS,
 				mutil.CATS_PER_LINK_LIMIT,
 				PERCENT_OF_MAX_CAT_SCORE_NEEDED_FOR_GLOBAL_CATS_ASSIGNMENT,
@@ -266,15 +266,15 @@ func (gcc *TopGlobalCatCounts) fromCatFilters(raw_cat_filters []string) *TopGlob
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"WHERE global_cat != ''",
-		"WHERE global_cat != ''" +
-			match_clause +
+		"WHERE global_cat != ''"+
+			match_clause+
 			individual_cat_counts_not_in_clause,
 		1,
 	)
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"FROM IndividualCatCounts",
-		"FROM IndividualCatCounts" +
+		"FROM IndividualCatCounts"+
 			normalized_cat_counts_not_in_clause,
 		1,
 	)
@@ -315,7 +315,7 @@ func (gcc *TopGlobalCatCounts) fromNeuteredCatFilters(neutered_cat_filters []str
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"WITH RECURSIVE ",
-		"WITH\n" + GLOBAL_CAT_COUNTS_NEUTERED_CATS_CTES + ",\n",
+		"WITH\n"+GLOBAL_CAT_COUNTS_NEUTERED_CATS_CTES+",\n",
 		1,
 	)
 
@@ -363,7 +363,7 @@ LinksWithNonNeuteredCats AS (
 func (gcc *TopGlobalCatCounts) whereGlobalSummaryContains(snippet string) *TopGlobalCatCounts {
 	// in case either .WhereURLContains or .WhereURLLacks was run first
 	if strings.Contains(
-		gcc.Text, 
+		gcc.Text,
 		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, url)",
 	) {
 		gcc.Text = strings.Replace(
@@ -425,7 +425,7 @@ func (gcc *TopGlobalCatCounts) whereGlobalSummaryContains(snippet string) *TopGl
 func (gcc *TopGlobalCatCounts) whereURLContains(snippet string) *TopGlobalCatCounts {
 	// in case .WithGlobalSummaryContaining was run first
 	if strings.Contains(
-		gcc.Text, 
+		gcc.Text,
 		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, global_summary)",
 	) {
 		gcc.Text = strings.Replace(
@@ -473,7 +473,7 @@ func (gcc *TopGlobalCatCounts) whereURLContains(snippet string) *TopGlobalCatCou
 			1,
 		)
 	}
-	
+
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"WHERE str != ''",
@@ -490,7 +490,7 @@ func (gcc *TopGlobalCatCounts) whereURLContains(snippet string) *TopGlobalCatCou
 func (gcc *TopGlobalCatCounts) whereURLLacks(snippet string) *TopGlobalCatCounts {
 	// in case .WithGlobalSummaryContaining was run first
 	if strings.Contains(
-		gcc.Text, 
+		gcc.Text,
 		"WITH RECURSIVE GlobalCatsSplit(id, global_cat, str, global_summary)",
 	) {
 		gcc.Text = strings.Replace(
@@ -538,7 +538,7 @@ func (gcc *TopGlobalCatCounts) whereURLLacks(snippet string) *TopGlobalCatCounts
 			1,
 		)
 	}
-	
+
 	gcc.Text = strings.Replace(
 		gcc.Text,
 		"WHERE str != ''",
@@ -556,7 +556,7 @@ func (gcc *TopGlobalCatCounts) duringPeriod(period model.Period) *TopGlobalCatCo
 	if period == "all" {
 		return gcc
 	}
-	
+
 	clause, err := getPeriodClause(period)
 	if err != nil {
 		gcc.Error = err
@@ -598,7 +598,6 @@ func NewSpellfixMatchesForSnippet(snippet string) *SpellfixMatches {
 		},
 	})
 }
-
 
 // Rank represents total occurences across all global cats
 // *including* potentially multiple times in the same link's global tag
@@ -650,6 +649,7 @@ const COMBINED_RANKS_CTE = `CombinedRanks AS (
 // without having near-0 distances totally distort rankings, this lower bound
 // is used.
 const DISTANCE_LOWER_BOUND = 50
+
 var SPELLFIX_SELECT = fmt.Sprintf(`SELECT 
 	ideal_cat_spelling,
 	combined_rank as rank
@@ -679,7 +679,7 @@ func (sm *SpellfixMatches) FromOptions(opts *model.SpellfixMatchesOptions) (*Spe
 
 func (sm *SpellfixMatches) fromTmap(tmap_owner_login_name string) *SpellfixMatches {
 	sm.Text = TMAP_SPELLFIX_BASE
-		
+
 	// Old: snippet, snippet*, LIMIT
 	// New: tmap_owner_login_name, ("snippet" OR "snippets" OR "snippet"*) x2, tmap_owner_login_name x3, %snippet%, snippet, snippet*, LIMIT
 	raw_snippet := sm.Args[0]
@@ -687,13 +687,13 @@ func (sm *SpellfixMatches) fromTmap(tmap_owner_login_name string) *SpellfixMatch
 	snippet_with_spelling_variants_and_wildcard := strings.Replace(
 		snippet_with_spelling_variants,
 		")",
-		" OR " + getCatSurroundedInDoubleQuotes(raw_snippet.(string)) + "*)",
+		" OR "+getCatSurroundedInDoubleQuotes(raw_snippet.(string))+"*)",
 		1,
 	)
 
 	sm.Args = []any{
 		tmap_owner_login_name,
-		snippet_with_spelling_variants_and_wildcard ,
+		snippet_with_spelling_variants_and_wildcard,
 		snippet_with_spelling_variants_and_wildcard,
 		tmap_owner_login_name,
 		tmap_owner_login_name,
@@ -831,7 +831,7 @@ func (sm *SpellfixMatches) fromCatFilters(cat_filters []string) *SpellfixMatches
 		return sm
 	}
 
-	// Add placeholders to MatchingGlobalCats / MatchingCats CTEs NOT IN clause 
+	// Add placeholders to MatchingGlobalCats / MatchingCats CTEs NOT IN clause
 	// if more than 1 cat filter applied.
 	// (MatchingGlobalCats or MatchingCats depending on if .FromTmap() called first)
 	not_in_clause := "AND cat NOT IN (?"
@@ -845,14 +845,18 @@ func (sm *SpellfixMatches) fromCatFilters(cat_filters []string) *SpellfixMatches
 	not_in_clause += ")"
 
 	// WHERE global_cats MATCH '("dog" OR "dogs") AND ("cat" OR "cats")', etc.
-	fts_match_subcats_arg := strings.Join(GetCatsOptionalPluralOrSingularForms(cat_filters), " AND ")
+	fts_match_subcats_arg := strings.Join(
+		GetCatsOptionalPluralOrSingularForms(cat_filters),
+		" AND ",
+	)
 
 	// Determine if .FromTmap() was called first
 	// (likely a better way...)
 
 	// .FromTmap() not called
 	if len(sm.Args) == 3 {
-		// Update CTES
+		// .FromTmap() not called
+		// Update CTEs
 		cat_filters_global_cats_ctes := CAT_FILTERS_GLOBAL_CATS_CTES
 		if len(not_in_args) > 1 {
 			cat_filters_global_cats_ctes = strings.Replace(
@@ -865,7 +869,7 @@ func (sm *SpellfixMatches) fromCatFilters(cat_filters []string) *SpellfixMatches
 		sm.Text = strings.Replace(
 			sm.Text,
 			SPELLFIX_MATCHES_CTE,
-			cat_filters_global_cats_ctes + ",\n" + SPELLFIX_MATCHES_CTE + ",\n" + FILTERED_SPELLFIX_MATCHES_CTE,
+			cat_filters_global_cats_ctes+",\n"+SPELLFIX_MATCHES_CTE+",\n"+FILTERED_SPELLFIX_MATCHES_CTE,
 			1,
 		)
 		sm.Text = strings.Replace(
@@ -874,18 +878,18 @@ func (sm *SpellfixMatches) fromCatFilters(cat_filters []string) *SpellfixMatches
 			FILTERED_NORMALIZED_MATCHES_CTE,
 			1,
 		)
-		
+
 		// Prepend args
 		// Old: snippet, snippet*, LIMIT
 		// New: fts_match_subcats_arg, not_in_args..., snippet, snippet*, LIMIT
-		new_args := make([]any, 0, 1 + len(not_in_args) + len(sm.Args))
+		new_args := make([]any, 0, 1+len(not_in_args)+len(sm.Args))
 		new_args = append(new_args, fts_match_subcats_arg)
 		new_args = append(new_args, not_in_args...)
 		new_args = append(new_args, sm.Args...)
 		sm.Args = new_args
 
-	// .FromTmap() called first
 	} else {
+		// .FromTmap() called first
 		// Update CTE
 		new_matching_cats_cte := fmt.Sprintf(`MatchingCats AS (
 			SELECT cat as word, link_id
@@ -904,7 +908,7 @@ func (sm *SpellfixMatches) fromCatFilters(cat_filters []string) *SpellfixMatches
     GROUP BY LOWER(cat), link_id
 )`,
 			new_matching_cats_cte,
-1,
+			1,
 		)
 
 		// Insert args
@@ -921,10 +925,10 @@ func (sm *SpellfixMatches) fromCatFilters(cat_filters []string) *SpellfixMatches
 		sm.Args[2] = new_match_arg
 
 		// not_in_args... can be inserted 3 from the end
-		up_to_last_3_args := sm.Args[:len(sm.Args) - 3]
-		last_3_args := sm.Args[len(sm.Args) - 3:]
-		
-		new_args := make([]any, 0, len(sm.Args) + len(not_in_args))
+		up_to_last_3_args := sm.Args[:len(sm.Args)-3]
+		last_3_args := sm.Args[len(sm.Args)-3:]
+
+		new_args := make([]any, 0, len(sm.Args)+len(not_in_args))
 		new_args = append(new_args, up_to_last_3_args...)
 		new_args = append(new_args, not_in_args...)
 		new_args = append(new_args, last_3_args...)
@@ -992,7 +996,7 @@ func (sm *SpellfixMatches) fromCatFiltersWhileAddingCats(cat_filters []string) *
 	var not_in_args = []any{cat_filters[0]}
 	if len(cat_filters) > 1 {
 		not_in_clause := "AND gcs.word NOT IN (?"
-		for c:= 1; c < len(cat_filters); c++ {
+		for c := 1; c < len(cat_filters); c++ {
 			not_in_clause += ", ?"
 			not_in_args = append(not_in_args, cat_filters[c])
 		}
@@ -1015,7 +1019,7 @@ func (sm *SpellfixMatches) fromCatFiltersWhileAddingCats(cat_filters []string) *
 	// Insert args
 	// Old: snippet, snippet*, LIMIT
 	// New: snippet, snippet*, not_in_args..., LIMIT
-	sm.Args = sm.Args[:len(sm.Args) - 1]
+	sm.Args = sm.Args[:len(sm.Args)-1]
 	sm.Args = append(sm.Args, not_in_args...)
 	sm.Args = append(sm.Args, SPELLFIX_MATCHES_LIMIT)
 
@@ -1030,4 +1034,3 @@ const SPELLFIX_MATCHES_FROM_CATS_WHILE_SUBMITTING_LINK_CTE = `SpellfixMatches AS
     AND gcs.word NOT IN (?)
     ORDER BY distance, rank DESC
 )`
-

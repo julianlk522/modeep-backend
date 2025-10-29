@@ -60,7 +60,7 @@ func GetTopLinks(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 	}
-	
+
 	render.JSON(w, r, resp)
 }
 
@@ -106,7 +106,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	// unless modified due to 302/401/403/429 etc. redirect
 	url_after_redirects := resp.Request.URL.String()
 	var final_url string
-	
+
 	is_unauthorized := resp.StatusCode == http.StatusUnauthorized
 	is_forbidden := resp.StatusCode == http.StatusForbidden
 	is_too_many_requests := resp.StatusCode == http.StatusTooManyRequests
@@ -114,7 +114,7 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	is_google_sorry_page := strings.Contains(url_after_redirects, "google.com/sorry")
 
 	// Trim extra characters
-	if (is_unauthorized || is_forbidden || is_too_many_requests || is_302_redirect || is_google_sorry_page) {
+	if is_unauthorized || is_forbidden || is_too_many_requests || is_302_redirect || is_google_sorry_page {
 		final_url = strings.TrimSuffix(request.URL, "/")
 	} else {
 		final_url = strings.TrimSuffix(url_after_redirects, "/")
@@ -290,10 +290,10 @@ func DeleteLink(w http.ResponseWriter, r *http.Request) {
 	// so spellfix ranks can be updated and preview image can be deleted
 	var gc, pi string
 	if err = db.Client.QueryRow(
-		"SELECT global_cats, COALESCE(img_file, '') FROM Links WHERE id = ?;", 
+		"SELECT global_cats, COALESCE(img_file, '') FROM Links WHERE id = ?;",
 		request.LinkID,
 	).Scan(
-		&gc, 
+		&gc,
 		&pi,
 	); err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
@@ -370,48 +370,47 @@ func StarLink(w http.ResponseWriter, r *http.Request) {
 	req_user_id := r.Context().Value(m.JWTClaimsKey).(map[string]any)["user_id"].(string)
 
 	switch request.Stars {
-		case 0:
-			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidStars))
-			return
+	case 0:
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidStars))
+		return
 
-		case 1, 2, 3:
-			// Add star
-			// (if thus unstarred, add a new row
-			// if already starred, update in place)
-			if !util.UserHasStarredLink(req_user_id, link_id) {
-				star_id := uuid.New().String()
-				if _, err := db.Client.Exec(
-					`INSERT INTO "Stars" VALUES(?,?,?,?,?);`,
-					star_id,
-					link_id,
-					req_user_id,
-					request.Stars,
-					mutil.NEW_LONG_TIMESTAMP(),
-					
-				); err != nil {
-					render.Render(w, r, e.ErrInternalServerError(err))
-				}
-			} else {
-				if current_stars := util.GetUsersStarsForLink(req_user_id, link_id);current_stars == request.Stars {
-					render.Render(w, r, e.ErrUnprocessable(e.ErrSameNumberOfStars))
-					return
-				}
-
-				if _, err := db.Client.Exec(
-					`UPDATE "Stars" SET num_stars = ?, timestamp = ? WHERE link_id = ? AND user_id = ?;`,
-					request.Stars,
-					mutil.NEW_LONG_TIMESTAMP(),
-					link_id,
-					req_user_id,
-				); err != nil {
-					render.Render(w, r, e.ErrInternalServerError(err))
-				}
+	case 1, 2, 3:
+		// Add star
+		// (if thus unstarred, add a new row
+		// if already starred, update in place)
+		if !util.UserHasStarredLink(req_user_id, link_id) {
+			star_id := uuid.New().String()
+			if _, err := db.Client.Exec(
+				`INSERT INTO "Stars" VALUES(?,?,?,?,?);`,
+				star_id,
+				link_id,
+				req_user_id,
+				request.Stars,
+				mutil.NEW_LONG_TIMESTAMP(),
+			); err != nil {
+				render.Render(w, r, e.ErrInternalServerError(err))
 			}
-		
-			w.WriteHeader(http.StatusNoContent)
+		} else {
+			if current_stars := util.GetUsersStarsForLink(req_user_id, link_id); current_stars == request.Stars {
+				render.Render(w, r, e.ErrUnprocessable(e.ErrSameNumberOfStars))
+				return
+			}
 
-		default:
-			render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidStars))
+			if _, err := db.Client.Exec(
+				`UPDATE "Stars" SET num_stars = ?, timestamp = ? WHERE link_id = ? AND user_id = ?;`,
+				request.Stars,
+				mutil.NEW_LONG_TIMESTAMP(),
+				link_id,
+				req_user_id,
+			); err != nil {
+				render.Render(w, r, e.ErrInternalServerError(err))
+			}
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		render.Render(w, r, e.ErrInvalidRequest(e.ErrInvalidStars))
 	}
 }
 

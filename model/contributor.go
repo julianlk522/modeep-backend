@@ -14,4 +14,3 @@ type TopContributorsOptions struct {
 	URLLacks                       string
 	Period                         Period
 }
-

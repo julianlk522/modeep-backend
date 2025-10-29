@@ -17,16 +17,16 @@ func TestGetTmapOptionsFromRequestParams(t *testing.T) {
 	}{
 		{
 			Params: url.Values{
-				"cats": []string{"umvc3"},
-				"neutered": []string{"test"},
-				"period": []string{"year"},
+				"cats":             []string{"umvc3"},
+				"neutered":         []string{"test"},
+				"period":           []string{"year"},
 				"summary_contains": []string{"test"},
-				"url_contains": []string{"test"},
-				"url_lacks": []string{"test"},
-				"include_nsfw": []string{"true"},
-				"sort_by": []string{"newest"},
-				"section": []string{"starred"},
-				"page": []string{"1"},
+				"url_contains":     []string{"test"},
+				"url_lacks":        []string{"test"},
+				"include_nsfw":     []string{"true"},
+				"sort_by":          []string{"newest"},
+				"section":          []string{"starred"},
+				"page":             []string{"1"},
 			},
 			Valid: true,
 		},
@@ -37,7 +37,7 @@ func TestGetTmapOptionsFromRequestParams(t *testing.T) {
 			},
 			Valid: false,
 		},
-				{
+		{
 			Params: url.Values{
 				// nor this
 				"include_nsfw": []string{"fish"},
@@ -288,19 +288,19 @@ func TestBuildTmapFromOptions(t *testing.T) {
 		case
 			model.TmapWithProfilePage[model.TmapLink],
 			model.TmapWithProfilePage[model.TmapLinkSignedIn]:
-				is_filtered = false
+			is_filtered = false
 		case
 			model.TmapWithCatFiltersPage[model.TmapLink],
 			model.TmapWithCatFiltersPage[model.TmapLinkSignedIn],
 			model.TmapIndividualSectionWithCatFiltersPage[model.TmapLink],
 			model.TmapIndividualSectionWithCatFiltersPage[model.TmapLinkSignedIn]:
-				is_filtered = true
+			is_filtered = true
 		case
 			model.TmapPage[model.TmapLink],
 			model.TmapPage[model.TmapLinkSignedIn],
 			model.TmapIndividualSectionPage[model.TmapLink],
 			model.TmapIndividualSectionPage[model.TmapLinkSignedIn]:
-				continue
+			continue
 		}
 
 		if is_filtered && td.CatsParams == "" {
@@ -337,7 +337,7 @@ func TestPaginateIndividualTmapSection(t *testing.T) {
 
 func TestGetAllTmapSectionsForOwnerFromOpts(t *testing.T) {
 	if _, err := getAllTmapSectionsForOwnerFromOpts[model.TmapLink](
-		TEST_LOGIN_NAME, 
+		TEST_LOGIN_NAME,
 		nil,
 	); err != nil {
 		t.Fatal(err)
@@ -443,8 +443,8 @@ func TestScanTmapLinks(t *testing.T) {
 		}
 
 		for _, sql := range []*query.Query{
-			submitted_sql.Build(), 
-			starred_sql.Build(), 
+			submitted_sql.Build(),
+			starred_sql.Build(),
 			tagged_sql.Build(),
 		} {
 			var err error
@@ -608,7 +608,7 @@ func TestMergeCountsOfCatSpellingVariants(t *testing.T) {
 
 func TestLimitTmapSectionsAndGetLimitedOnes(t *testing.T) {
 	sections_struct, err := getAllTmapSectionsForOwnerFromOpts[model.TmapLink](
-		TEST_LOGIN_NAME, 
+		TEST_LOGIN_NAME,
 		nil,
 	)
 	if err != nil {
@@ -629,8 +629,8 @@ func TestLimitTmapSectionsAndGetLimitedOnes(t *testing.T) {
 	}
 	if len(*sections.Tagged) > query.LINKS_PAGE_LIMIT {
 		expected_limited_sections = append(expected_limited_sections, "tagged")
-	}	
-	
+	}
+
 	limited_sections := limitTmapSectionsAndGetLimitedOnes(sections)
 	if len(limited_sections.SectionsWithMore) != len(expected_limited_sections) {
 		t.Fatalf(

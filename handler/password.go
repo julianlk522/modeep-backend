@@ -58,15 +58,15 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	payload, err := util.ValidatePasswordResetToken(new_password_data.Token)
 	if err != nil {
 		switch err {
-			case e.ErrInvalidTokenFormat, e.ErrInvalidTokenSignature:
-				render.Render(w, r, e.ErrInvalidRequest(err))
-				return
-			case e.ErrTokenExpired:
-				render.Render(w, r, e.ErrUnauthorized(err))
-				return
-			default:
-				render.Render(w, r, e.ErrInternalServerError(err))
-				return
+		case e.ErrInvalidTokenFormat, e.ErrInvalidTokenSignature:
+			render.Render(w, r, e.ErrInvalidRequest(err))
+			return
+		case e.ErrTokenExpired:
+			render.Render(w, r, e.ErrUnauthorized(err))
+			return
+		default:
+			render.Render(w, r, e.ErrInternalServerError(err))
+			return
 		}
 	}
 

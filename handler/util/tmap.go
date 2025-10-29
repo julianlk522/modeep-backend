@@ -154,8 +154,8 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 		cat_filters = strings.Split(opts.RawCatFiltersParams, ",")
 	}
 
-	// Individual section
 	if opts.Section != "" {
+		// Individual section
 		section_query_builder := getTmapQueryBuilderForSectionForOwner(
 			opts.Section,
 			tmap_owner,
@@ -185,7 +185,7 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 		if has_cat_filter {
 			// Indicate any merged cats
 			merged_cats := getTmapMergedCatsSpellingVariantsInLinksFromCatFilters(
-				links, 
+				links,
 				cat_filters,
 			)
 			return model.TmapIndividualSectionWithCatFiltersPage[T]{
@@ -205,8 +205,8 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 				NSFWLinksCount: nsfw_links_count,
 			}, nil
 		}
-	// All sections
 	} else {
+		// All sections
 		all_tmap_links, err := getAllTmapSectionsForOwnerFromOpts[T](tmap_owner, opts)
 		if err != nil {
 			return nil, err
@@ -215,9 +215,9 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 		starred := all_tmap_links.Starred
 		tagged := all_tmap_links.Tagged
 
-		if len(*submitted) + len(*starred) + len(*tagged) == 0 {
+		if len(*submitted)+len(*starred)+len(*tagged) == 0 {
 			return model.TmapPage[T]{
-				TmapSections:   &model.TmapSections[T]{},
+				TmapSections: &model.TmapSections[T]{},
 
 				// There are not necessarily 0 NSFW links if the sections
 				// are all empty: the NSFW links may be hidden
@@ -274,7 +274,7 @@ func BuildTmapFromOptions[T model.TmapLink | model.TmapLinkSignedIn](opts *model
 }
 
 func getTmapQueryBuilderForSectionForOwner(
-	section model.TmapIndividualSectionName, 
+	section model.TmapIndividualSectionName,
 	tmap_owner string,
 ) query.TmapLinksQueryBuilder {
 	switch section {
@@ -300,9 +300,9 @@ func paginateIndividualTmapSection[T model.TmapLink | model.TmapLinkSignedIn](pa
 	if page > pages {
 		links = &[]T{}
 	} else if page == pages {
-		*links = (*links)[query.LINKS_PAGE_LIMIT*(page - 1):]
+		*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1):]
 	} else {
-		*links = (*links)[query.LINKS_PAGE_LIMIT*(page - 1) : query.LINKS_PAGE_LIMIT * page]
+		*links = (*links)[query.LINKS_PAGE_LIMIT*(page-1) : query.LINKS_PAGE_LIMIT*page]
 	}
 
 	return links, pages, nil
@@ -324,23 +324,23 @@ func getAllTmapSectionsForOwnerFromOpts[T model.TmapLink | model.TmapLinkSignedI
 		err_group.Go(func() error {
 			result, err := buildAndScanTmapSectionQuery[T](
 				getTmapQueryBuilderForSectionForOwner(
-					section, 
+					section,
 					tmap_owner_login_name,
-			),
+				),
 				opts,
 			)
 			if err != nil {
 				return err
-			} 
+			}
 
 			switch section {
-				case "submitted":
-					submitted = result
-				case "starred":
-					starred = result
-				case "tagged":
-					tagged = result
-				}
+			case "submitted":
+				submitted = result
+			case "starred":
+				starred = result
+			case "tagged":
+				tagged = result
+			}
 			return err
 		})
 	}
@@ -490,7 +490,7 @@ func getCatCountsFromTmapLinks[T model.TmapLink | model.TmapLinkSignedIn](links 
 			// The same link does not need to double-count "book" if
 			// it has both "book" and "books."
 			if !skip {
-				for _, other_lc := range link_cats[i + 1:] {
+				for _, other_lc := range link_cats[i+1:] {
 					if CatsResembleEachOther(lc, other_lc) {
 						skip = true
 					}
@@ -622,12 +622,12 @@ func scanTmapProfile(profile_sql *query.TmapProfile) (*model.Profile, error) {
 		return nil, err
 	}
 	if err = row.Scan(
-			&u.LoginName,
-			&u.PFP,
-			&u.About,
-			&u.Email,
-			&u.CreatedAt,
-		); err != nil {
+		&u.LoginName,
+		&u.PFP,
+		&u.About,
+		&u.Email,
+		&u.CreatedAt,
+	); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, e.ErrNoUserWithLoginName
 		} else {

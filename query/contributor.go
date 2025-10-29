@@ -66,7 +66,7 @@ func (c *Contributors) fromCatFilters(cat_filters []string) *Contributors {
 	c.Text = strings.Replace(
 		c.Text,
 		"FROM Links l",
-		"FROM Links l" + "\n" + CONTRIBUTORS_CAT_FILTERS_JOIN,
+		"FROM Links l"+"\n"+CONTRIBUTORS_CAT_FILTERS_JOIN,
 		1,
 	)
 
@@ -76,11 +76,11 @@ func (c *Contributors) fromCatFilters(cat_filters []string) *Contributors {
 	for i := 1; i < len(cat_filters); i++ {
 		match_arg += " AND " + cat_filters[i]
 	}
-	
+
 	// Add before LIMIT arg
 	// old: [CONTRIBUTORS_PAGE_LIMIT]
 	// new: [match_arg, CONTRIBUTORS_PAGE_LIMIT]
-	c.Args = append(c.Args[:len(c.Args) - 1], match_arg, CONTRIBUTORS_PAGE_LIMIT)
+	c.Args = append(c.Args[:len(c.Args)-1], match_arg, CONTRIBUTORS_PAGE_LIMIT)
 	return c
 }
 
@@ -114,14 +114,14 @@ func (c *Contributors) fromNeuteredCatFilters(neutered_cat_filters []string) *Co
 		c.Text = strings.Replace(
 			c.Text,
 			CONTRIBUTORS_CAT_FILTERS_CTES,
-			CONTRIBUTORS_CAT_FILTERS_CTES + ",\n" + neutered_cat_filters_ctes,
+			CONTRIBUTORS_CAT_FILTERS_CTES+",\n"+neutered_cat_filters_ctes,
 			1,
 		)
 	} else {
 		c.Text = strings.Replace(
 			c.Text,
 			CONTRIBUTORS_BASE,
-			"WITH " + neutered_cat_filters_ctes + "\n" + CONTRIBUTORS_BASE,
+			"WITH "+neutered_cat_filters_ctes+"\n"+CONTRIBUTORS_BASE,
 			1,
 		)
 	}
@@ -130,7 +130,7 @@ func (c *Contributors) fromNeuteredCatFilters(neutered_cat_filters []string) *Co
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		CONTRIBUTORS_NEUTERED_CATS_WHERE + "\n" + "GROUP BY l.submitted_by",
+		CONTRIBUTORS_NEUTERED_CATS_WHERE+"\n"+"GROUP BY l.submitted_by",
 		1,
 	)
 
@@ -144,18 +144,19 @@ func (c *Contributors) fromNeuteredCatFilters(neutered_cat_filters []string) *Co
 	// new: [neutered_cat_filters..., CONTRIBUTORS_PAGE_LIMIT]
 
 	// OR if .fromCatFilters() called first:
-	
+
 	// old: [cat_filters, CONTRIBUTORS_PAGE_LIMIT]
 	// new: [cat_filters, neutered_cat_filters..., CONTRIBUTORS_PAGE_LIMIT]
 
 	// Insert in front of LIMIT
-	c.Args = append(c.Args[:len(c.Args) - 1], neutered_cat_filters_args...)
+	c.Args = append(c.Args[:len(c.Args)-1], neutered_cat_filters_args...)
 	c.Args = append(c.Args, CONTRIBUTORS_PAGE_LIMIT)
 
 	return c
 }
 
 const CONTRIBUTORS_NEUTERED_CAT_FILTERS_CTES = LINKS_NEUTERED_CAT_FILTERS_CTES
+
 var CONTRIBUTORS_NEUTERED_CATS_WHERE = strings.Replace(
 	LINKS_NEUTERED_CATS_AND,
 	"AND",
@@ -173,13 +174,13 @@ func (c *Contributors) whereGlobalSummaryContains(snippet string) *Contributors 
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		clause_keyword + " global_summary LIKE ?\nGROUP BY l.submitted_by",
+		clause_keyword+" global_summary LIKE ?\nGROUP BY l.submitted_by",
 		1,
 	)
 
 	// Add arg in 2nd-to-last position before LIMIT
-	last_arg := c.Args[len(c.Args) - 1]
-	c.Args = append(c.Args[:len(c.Args) - 1], "%" + snippet + "%", last_arg)
+	last_arg := c.Args[len(c.Args)-1]
+	c.Args = append(c.Args[:len(c.Args)-1], "%"+snippet+"%", last_arg)
 
 	return c
 }
@@ -194,14 +195,14 @@ func (c *Contributors) whereURLContains(snippet string) *Contributors {
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		clause_keyword + " url LIKE ?\nGROUP BY l.submitted_by",
+		clause_keyword+" url LIKE ?\nGROUP BY l.submitted_by",
 		1,
 	)
 
 	// Add arg in 2nd-to-last position before LIMIT
-	last_arg := c.Args[len(c.Args) - 1]
-	c.Args = c.Args[:len(c.Args) - 1]
-	c.Args = append(c.Args, "%" + snippet + "%")
+	last_arg := c.Args[len(c.Args)-1]
+	c.Args = c.Args[:len(c.Args)-1]
+	c.Args = append(c.Args, "%"+snippet+"%")
 	c.Args = append(c.Args, last_arg)
 
 	return c
@@ -217,24 +218,24 @@ func (c *Contributors) whereURLLacks(snippet string) *Contributors {
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		clause_keyword + " url NOT LIKE ?\nGROUP BY l.submitted_by",
+		clause_keyword+" url NOT LIKE ?\nGROUP BY l.submitted_by",
 		1,
 	)
 
 	// Add arg in 2nd-to-last position before LIMIT
-	last_arg := c.Args[len(c.Args) - 1]
-	c.Args = c.Args[:len(c.Args) - 1]
-	c.Args = append(c.Args, "%" + snippet + "%")
+	last_arg := c.Args[len(c.Args)-1]
+	c.Args = c.Args[:len(c.Args)-1]
+	c.Args = append(c.Args, "%"+snippet+"%")
 	c.Args = append(c.Args, last_arg)
 
 	return c
 }
 
 func (c *Contributors) duringPeriod(period model.Period) *Contributors {
-	if (period == "all") {
+	if period == "all" {
 		return c
 	}
-	
+
 	clause_keyword := "WHERE"
 	if c.hasWhereAfterFrom {
 		clause_keyword = "AND"
@@ -255,7 +256,7 @@ func (c *Contributors) duringPeriod(period model.Period) *Contributors {
 	c.Text = strings.Replace(
 		c.Text,
 		"GROUP BY l.submitted_by",
-		clause_keyword + " " + period_clause + "\n" + "GROUP BY l.submitted_by",
+		clause_keyword+" "+period_clause+"\n"+"GROUP BY l.submitted_by",
 		1)
 
 	return c

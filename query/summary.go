@@ -19,7 +19,7 @@ func NewSummariesForLink(link_id string) *Summaries {
 				SUMMARIES_GROUP_BY_AND_LIMIT,
 			Args: []any{
 				link_id,
-				mutil.EARLIEST_STARRERS_LIMIT, 
+				mutil.EARLIEST_STARRERS_LIMIT,
 				SUMMARIES_PAGE_LIMIT,
 			},
 		},

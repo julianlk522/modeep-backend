@@ -112,9 +112,9 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 
 	// Accepted; save file
 	upload := &model.ImgUpload{
-		Bytes: pic_file_bytes,
+		Bytes:   pic_file_bytes,
 		Purpose: "ProfilePic",
-		UID: uuid.New().String(),
+		UID:     uuid.New().String(),
 	}
 
 	var file_name string
@@ -132,7 +132,7 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, r, e.ErrInternalServerError(err))
 			return
 		}
-		
+
 		pfp_path := util.Profile_pic_dir + "/" + current_file_name
 		if err = os.Remove(pfp_path); err != nil {
 			log.Printf("Could not remove old profile pic: %s", err)
@@ -141,8 +141,8 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 
 	// Update DB
 	if _, err = db.Client.Exec(
-		`UPDATE Users SET pfp = ? WHERE id = ?`, 
-		file_name, 
+		`UPDATE Users SET pfp = ? WHERE id = ?`,
+		file_name,
 		req_user_id,
 	); err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
@@ -150,7 +150,7 @@ func UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	
+
 	file_path := util.Profile_pic_dir + "/" + file_name
 	http.ServeFile(w, r, file_path)
 }

@@ -11,9 +11,9 @@ const (
 	SUMMARIES_PAGE_LIMIT = 20
 
 	// Tag
-	TAGS_PAGE_LIMIT                                            = 20
-	GLOBAL_CATS_PAGE_LIMIT                                     = 50
-	MORE_GLOBAL_CATS_PAGE_LIMIT                                = 200
+	TAGS_PAGE_LIMIT             = 20
+	GLOBAL_CATS_PAGE_LIMIT      = 50
+	MORE_GLOBAL_CATS_PAGE_LIMIT = 200
 
 	SPELLFIX_DISTANCE_LIMIT                                    = 100
 	SPELLFIX_MATCHES_LIMIT                                     = 3

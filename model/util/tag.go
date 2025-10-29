@@ -18,7 +18,7 @@ func HasTooLongCats(cats string) bool {
 }
 
 func HasTooManyCats(cats string) bool {
-	return strings.Count(cats, ",") + 1 > CATS_PER_LINK_LIMIT
+	return strings.Count(cats, ",")+1 > CATS_PER_LINK_LIMIT
 }
 
 func HasDuplicateCats(cats string) bool {

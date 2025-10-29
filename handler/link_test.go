@@ -82,7 +82,7 @@ func TestGetTopLinks(t *testing.T) {
 				"cats":   "umvc3",
 				"period": "poop",
 			},
-			Page: 1,
+			Page:  1,
 			Valid: false,
 		},
 		{
@@ -151,7 +151,7 @@ func TestGetTopLinks(t *testing.T) {
 			}
 
 			t.Fatalf(
-				"expected status code %d, got %d (test request %+v, index %d)\n%s", 
+				"expected status code %d, got %d (test request %+v, index %d)\n%s",
 				res.StatusCode,
 				http.StatusOK,
 				tglr.Params,

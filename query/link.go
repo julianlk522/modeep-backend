@@ -96,7 +96,7 @@ func (tl *TopLinks) fromCatFilters(cat_filters []string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_BASE_FIELDS,
-		",\n" + LINKS_CAT_FILTERS_CTE + LINKS_BASE_FIELDS,
+		",\n"+LINKS_CAT_FILTERS_CTE+LINKS_BASE_FIELDS,
 		1,
 	)
 
@@ -104,7 +104,7 @@ func (tl *TopLinks) fromCatFilters(cat_filters []string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_FROM,
-		LINKS_FROM + "\n" + LINKS_CAT_FILTERS_JOIN,
+		LINKS_FROM+"\n"+LINKS_CAT_FILTERS_JOIN,
 		1,
 	)
 
@@ -117,7 +117,7 @@ func (tl *TopLinks) fromCatFilters(cat_filters []string) *TopLinks {
 	}
 
 	// Insert before last arg (LIMIT)
-	tl.Args = append(tl.Args[:len(tl.Args) - 1], match_arg, LINKS_PAGE_LIMIT)
+	tl.Args = append(tl.Args[:len(tl.Args)-1], match_arg, LINKS_PAGE_LIMIT)
 
 	return tl
 }
@@ -154,22 +154,21 @@ func (tl *TopLinks) fromNeuteredCatFilters(neutered_cat_filters []string) *TopLi
 	tl.Text = strings.Replace(
 		tl.Text,
 		LINKS_BASE_FIELDS,
-		",\n" + neutered_cat_filters_ctes + LINKS_BASE_FIELDS,
+		",\n"+neutered_cat_filters_ctes+LINKS_BASE_FIELDS,
 		1,
 	)
 
 	// Add AND
 	selected_order_by_clause := links_order_by_clauses[tl.selectedSortBy]
 	tl.Text = strings.Replace(
-			tl.Text,
-			selected_order_by_clause,
-			"\n" + LINKS_NEUTERED_CATS_AND + selected_order_by_clause,
-			1,
-		)
+		tl.Text,
+		selected_order_by_clause,
+		"\n"+LINKS_NEUTERED_CATS_AND+selected_order_by_clause,
+		1,
+	)
 	// let later methods know
 	tl.hasAndAfterJoins = true
 
-	
 	// Add args: {neutered_cat_filters...}
 	// Since we use IN, not FTS MATCH, casing matters and spelling variants
 	// are not needed.
@@ -185,9 +184,9 @@ func (tl *TopLinks) fromNeuteredCatFilters(neutered_cat_filters []string) *TopLi
 
 	// old: [EARLIEST_STARRERS_LIMIT, cat_filters, LINKS_PAGE_LIMIT]
 	// new: [EARLIEST_STARRERS_LIMIT, cat_filters, neutered_cat_filters..., LINKS_PAGE_LIMIT]
-	
+
 	// so can insert 2nd-to-last before LINKS_PAGE_LIMIT
-	tl.Args = append(tl.Args[:len(tl.Args) - 1], neutered_cat_filters_args...)
+	tl.Args = append(tl.Args[:len(tl.Args)-1], neutered_cat_filters_args...)
 	tl.Args = append(tl.Args, LINKS_PAGE_LIMIT)
 
 	return tl
@@ -215,40 +214,40 @@ func (tl *TopLinks) whereGlobalSummaryContains(snippet string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		selected_order_by_clause,
-		// As long as this is called before .includeNSFW() and the 
-		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an 
+		// As long as this is called before .includeNSFW() and the
+		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an
 		// AND.
-		"\n" + "AND global_summary LIKE ?" + selected_order_by_clause,
+		"\n"+"AND global_summary LIKE ?"+selected_order_by_clause,
 		1,
 	)
 	tl.hasAndAfterJoins = true
 
 	// insert into args in 2nd-to-last position
-	last_arg := tl.Args[len(tl.Args) - 1]
-	tl.Args = tl.Args[:len(tl.Args) - 1]
-	tl.Args = append(tl.Args, "%" + snippet + "%")
+	last_arg := tl.Args[len(tl.Args)-1]
+	tl.Args = tl.Args[:len(tl.Args)-1]
+	tl.Args = append(tl.Args, "%"+snippet+"%")
 	tl.Args = append(tl.Args, last_arg)
 
 	return tl
 }
 
-func (tl *TopLinks) whereURLContains(snippet string) *TopLinks { 
+func (tl *TopLinks) whereURLContains(snippet string) *TopLinks {
 	selected_order_by_clause := links_order_by_clauses[tl.selectedSortBy]
 	tl.Text = strings.Replace(
 		tl.Text,
 		selected_order_by_clause,
-		// As long as this is called before .includeNSFW() and the 
-		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an 
+		// As long as this is called before .includeNSFW() and the
+		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an
 		// AND.
-		"\n" + "AND url LIKE ?" + selected_order_by_clause,
+		"\n"+"AND url LIKE ?"+selected_order_by_clause,
 		1,
 	)
 	tl.hasAndAfterJoins = true
 
 	// insert into args in 2nd-to-last position
-	last_arg := tl.Args[len(tl.Args) - 1]
-	tl.Args = tl.Args[:len(tl.Args) - 1]
-	tl.Args = append(tl.Args, "%" + snippet + "%")
+	last_arg := tl.Args[len(tl.Args)-1]
+	tl.Args = tl.Args[:len(tl.Args)-1]
+	tl.Args = append(tl.Args, "%"+snippet+"%")
 	tl.Args = append(tl.Args, last_arg)
 
 	return tl
@@ -259,25 +258,25 @@ func (tl *TopLinks) whereURLLacks(snippet string) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		selected_order_by_clause,
-		// As long as this is called before .includeNSFW() and the 
-		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an 
+		// As long as this is called before .includeNSFW() and the
+		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an
 		// AND.
-		"\n" + "AND url NOT LIKE ?" + selected_order_by_clause,
+		"\n"+"AND url NOT LIKE ?"+selected_order_by_clause,
 		1,
 	)
 	tl.hasAndAfterJoins = true
 
 	// insert into args in 2nd-to-last position
-	last_arg := tl.Args[len(tl.Args) - 1]
-	tl.Args = tl.Args[:len(tl.Args) - 1]
-	tl.Args = append(tl.Args, "%" + snippet + "%")
+	last_arg := tl.Args[len(tl.Args)-1]
+	tl.Args = tl.Args[:len(tl.Args)-1]
+	tl.Args = append(tl.Args, "%"+snippet+"%")
 	tl.Args = append(tl.Args, last_arg)
 
 	return tl
 }
 
 func (tl *TopLinks) duringPeriod(period model.Period) *TopLinks {
-	if (period == "all") {
+	if period == "all" {
 		return tl
 	}
 	period_clause, err := getPeriodClause(period)
@@ -290,10 +289,10 @@ func (tl *TopLinks) duringPeriod(period model.Period) *TopLinks {
 	tl.Text = strings.Replace(
 		tl.Text,
 		selected_order_by_clause,
-		// As long as this is called before .includeNSFW() and the 
-		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an 
+		// As long as this is called before .includeNSFW() and the
+		// LINKS_NO_NSFW_CATS_WHERE clause is still there, this should be an
 		// AND.
-		"\n" + "AND " + period_clause + selected_order_by_clause,
+		"\n"+"AND "+period_clause+selected_order_by_clause,
 		1,
 	)
 	tl.hasAndAfterJoins = true
@@ -303,16 +302,16 @@ func (tl *TopLinks) duringPeriod(period model.Period) *TopLinks {
 
 func (tl *TopLinks) asSignedInUser(req_user_id string) *TopLinks {
 	auth_replacer := strings.NewReplacer(
-		LINKS_BASE_CTES, LINKS_BASE_CTES + LINKS_AUTH_CTE,
-		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS + LINKS_AUTH_FIELD,
-		LINKS_BASE_JOINS, LINKS_BASE_JOINS + LINKS_AUTH_JOIN,
+		LINKS_BASE_CTES, LINKS_BASE_CTES+LINKS_AUTH_CTE,
+		LINKS_BASE_FIELDS, LINKS_BASE_FIELDS+LINKS_AUTH_FIELD,
+		LINKS_BASE_JOINS, LINKS_BASE_JOINS+LINKS_AUTH_JOIN,
 	)
 	tl.Text = auth_replacer.Replace(tl.Text)
 
 	first_arg := tl.Args[0]
 	trailing_args := tl.Args[1:]
 
-	new_args := make([]any, 0, len(tl.Args) + 2)
+	new_args := make([]any, 0, len(tl.Args)+2)
 	new_args = append(new_args, first_arg)
 	new_args = append(new_args, req_user_id)
 	new_args = append(new_args, trailing_args...)
@@ -344,13 +343,13 @@ func (tl *TopLinks) includeNSFW() *TopLinks {
 	if tl.hasAndAfterJoins {
 		tl.Text = strings.Replace(
 			tl.Text,
-			LINKS_NO_NSFW_CATS_WHERE + "\nAND",
+			LINKS_NO_NSFW_CATS_WHERE+"\nAND",
 			"\nWHERE",
 			1,
 		)
-	// e.g.,
-	// INNER JOIN ...
-	// WHERE l.id NOT IN ( ... )
+		// e.g.,
+		// INNER JOIN ...
+		// WHERE l.id NOT IN ( ... )
 	} else {
 		tl.Text = strings.Replace(
 			tl.Text,
@@ -369,8 +368,8 @@ func (tl *TopLinks) page(page uint) *TopLinks {
 	}
 
 	// Pop limit arg and replace with limit + 1
-	tl.Args = tl.Args[:len(tl.Args) - 1]
-	tl.Args = append(tl.Args, LINKS_PAGE_LIMIT + 1)
+	tl.Args = tl.Args[:len(tl.Args)-1]
+	tl.Args = append(tl.Args, LINKS_PAGE_LIMIT+1)
 
 	if page > 1 {
 		// Add offset
@@ -380,7 +379,7 @@ func (tl *TopLinks) page(page uint) *TopLinks {
 			"LIMIT ? OFFSET ?",
 			1)
 
-			tl.Args = append(tl.Args, (page - 1) * LINKS_PAGE_LIMIT)
+		tl.Args = append(tl.Args, (page-1)*LINKS_PAGE_LIMIT)
 
 	}
 
@@ -395,7 +394,7 @@ func (tl *TopLinks) CountNSFWLinks() *TopLinks {
 	// (if first works second will be no-op)
 	tl.Text = strings.Replace(
 		tl.Text,
-		LINKS_BASE_FIELDS + LINKS_AUTH_FIELD,
+		LINKS_BASE_FIELDS+LINKS_AUTH_FIELD,
 		count_select,
 		1,
 	)
@@ -427,7 +426,7 @@ func (tl *TopLinks) CountNSFWLinks() *TopLinks {
 			nsfw_clause,
 			1,
 		)
-	// Otherwise confirm whether to say WHERE or AND
+		// Otherwise confirm whether to say WHERE or AND
 	} else {
 		// It is possible for there actually not to be an AND after the joins
 		// even while this flag is set (if some method sets it and then
@@ -439,14 +438,14 @@ func (tl *TopLinks) CountNSFWLinks() *TopLinks {
 			tl.Text = strings.Replace(
 				tl.Text,
 				selected_order_by_clause,
-				strings.Replace(nsfw_clause, "WHERE", "AND", 1) + selected_order_by_clause,
+				strings.Replace(nsfw_clause, "WHERE", "AND", 1)+selected_order_by_clause,
 				1,
 			)
 		} else {
 			tl.Text = strings.Replace(
 				tl.Text,
 				selected_order_by_clause,
-				nsfw_clause + selected_order_by_clause,
+				nsfw_clause+selected_order_by_clause,
 				1,
 			)
 		}
@@ -454,11 +453,11 @@ func (tl *TopLinks) CountNSFWLinks() *TopLinks {
 
 	// Remove ORDER BY
 	tl.Text = strings.Replace(
-			tl.Text,
-			selected_order_by_clause,
-			"",
-			1,
-		)
+		tl.Text,
+		selected_order_by_clause,
+		"",
+		1,
+	)
 
 	// Remove LIMIT and OFFET clause
 	// and pop their respective args
@@ -472,7 +471,7 @@ func (tl *TopLinks) CountNSFWLinks() *TopLinks {
 			"",
 			1,
 		)
-		tl.Args = tl.Args[:len(tl.Args) - 2]
+		tl.Args = tl.Args[:len(tl.Args)-2]
 	} else {
 		tl.Text = strings.Replace(
 			tl.Text,
@@ -480,7 +479,7 @@ func (tl *TopLinks) CountNSFWLinks() *TopLinks {
 			"",
 			1,
 		)
-		tl.Args = tl.Args[:len(tl.Args) - 1]
+		tl.Args = tl.Args[:len(tl.Args)-1]
 	}
 
 	return tl
@@ -543,9 +542,9 @@ SELECT
 	COALESCE(clc.click_count, 0) AS click_count, 
     COALESCE(tc.tag_count, 0) AS tag_count,
     COALESCE(l.img_file, '') AS img_file,
-	(COUNT(*) OVER() + %d - 1) / %d AS pages`, 
-LINKS_PAGE_LIMIT,
-LINKS_PAGE_LIMIT)
+	(COUNT(*) OVER() + %d - 1) / %d AS pages`,
+	LINKS_PAGE_LIMIT,
+	LINKS_PAGE_LIMIT)
 
 const LINKS_FROM = `
 FROM
@@ -748,21 +747,21 @@ func (sl *SingleLink) AsSignedInUser(user_id string) *SingleLink {
 	sl.Text = strings.Replace(
 		sl.Text,
 		SINGLE_LINK_BASE_CTES,
-		SINGLE_LINK_BASE_CTES + SINGLE_LINK_AUTH_CTE,
+		SINGLE_LINK_BASE_CTES+SINGLE_LINK_AUTH_CTE,
 		1,
 	)
 
 	sl.Text = strings.Replace(
 		sl.Text,
 		SINGLE_LINK_BASE_FIELDS,
-		SINGLE_LINK_BASE_FIELDS + SINGLE_LINK_AUTH_FIELD,
+		SINGLE_LINK_BASE_FIELDS+SINGLE_LINK_AUTH_FIELD,
 		1,
 	)
 
 	sl.Text = strings.Replace(
 		sl.Text,
 		SINGLE_LINK_BASE_JOINS,
-		SINGLE_LINK_BASE_JOINS + SINGLE_LINK_AUTH_JOIN,
+		SINGLE_LINK_BASE_JOINS+SINGLE_LINK_AUTH_JOIN,
 		1,
 	)
 

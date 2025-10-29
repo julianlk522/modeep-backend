@@ -32,17 +32,16 @@ func TestGetContributorsOptionsFromRequestParams(t *testing.T) {
 
 	for _, tp := range test_params {
 		if _, err := GetTopContributorsOptionsFromRequestParams(url.Values{
-			"cats": tp.CatFiltersWithSpellingVariants,
-			"neutered": tp.NeuteredCatFilters,
+			"cats":         tp.CatFiltersWithSpellingVariants,
+			"neutered":     tp.NeuteredCatFilters,
 			"url_contains": []string{tp.URLContains},
-			"url_lacks": []string{tp.URLLacks},
-			"period": []string{string(tp.Period)},
+			"url_lacks":    []string{tp.URLLacks},
+			"period":       []string{string(tp.Period)},
 		}); err != nil {
 			t.Fatal(err)
 		}
 	}
 }
-	
 
 func TestNewTopContributors(t *testing.T) {
 	contributors_sql := query.NewTopContributors()
@@ -84,7 +83,7 @@ func TestTopContributorsFromOptions(t *testing.T) {
 			t.Fatal(err)
 		} else if ls != contributor.LinksSubmitted {
 			t.Fatalf(
-				"expected %d links submitted, got %d (contributor: %s)", 
+				"expected %d links submitted, got %d (contributor: %s)",
 				contributor.LinksSubmitted,
 				ls,
 				contributor.LoginName,
@@ -119,7 +118,7 @@ func TestTopContributorsFromOptions(t *testing.T) {
 			t.Fatal(err)
 		} else if ls != contributor.LinksSubmitted {
 			t.Fatalf(
-				"expected %d links submitted, got %d (contributor: %s)", 
+				"expected %d links submitted, got %d (contributor: %s)",
 				contributor.LinksSubmitted,
 				ls,
 				contributor.LoginName,

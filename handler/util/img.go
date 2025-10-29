@@ -44,16 +44,16 @@ func SaveUploadedImgAndGetNewFileName(upload *model.ImgUpload) (string, error) {
 
 	var path_prefix string
 	switch upload.Purpose {
-		case "LinkPreview":
-			path_prefix = preview_pic_dir
-		case "ProfilePic":
-			path_prefix = Profile_pic_dir
+	case "LinkPreview":
+		path_prefix = preview_pic_dir
+	case "ProfilePic":
+		path_prefix = Profile_pic_dir
 
-			if !hasAcceptableAspectRatio(img) {
-				return "", e.ErrInvalidProfilePicAspectRatio
-			}
-		default:
-			return "", e.ErrInvalidImgUploadPurpose
+		if !hasAcceptableAspectRatio(img) {
+			return "", e.ErrInvalidProfilePicAspectRatio
+		}
+	default:
+		return "", e.ErrInvalidImgUploadPurpose
 	}
 
 	// Create file
@@ -64,7 +64,7 @@ func SaveUploadedImgAndGetNewFileName(upload *model.ImgUpload) (string, error) {
 	}
 	defer out_file.Close()
 
-	// Scale down if needed	
+	// Scale down if needed
 	// have not yet figured out how to encode as webp... skip for now
 	if img.Bounds().Max.X > THUMBNAIL_WIDTH_PX && file_type != "webp" {
 		img = scaleToThumbnailSize(img)
@@ -92,9 +92,9 @@ func hasAcceptableAspectRatio(img image.Image) bool {
 
 func scaleToThumbnailSize(img image.Image) image.Image {
 	return resize.Resize(
-		uint(THUMBNAIL_WIDTH_PX), 
-		0, 
-		img, 
+		uint(THUMBNAIL_WIDTH_PX),
+		0,
+		img,
 		resize.Lanczos3,
 	)
 }
@@ -102,21 +102,21 @@ func scaleToThumbnailSize(img image.Image) image.Image {
 func encodeImg(img image.Image, file_type string, out_file *os.File) error {
 	var err error
 	switch file_type {
-		case "jpg":
-			err = jpeg.Encode(out_file, img, nil)
-		case "jpeg":
-			err = jpeg.Encode(out_file, img, nil)
-		case "png":
-			err = png.Encode(out_file, img)
-		case "gif":
-			err = gif.Encode(out_file, img, nil)
-		case "webp":
-			// there is no Encode function for .webp :(
-			// skip and use full sized image
-			err = e.ErrCannotEncodeAsWebp
-		default:
-			log.Printf("unknown file type: %s", file_type)
-			err = e.ErrInvalidFileType
+	case "jpg":
+		err = jpeg.Encode(out_file, img, nil)
+	case "jpeg":
+		err = jpeg.Encode(out_file, img, nil)
+	case "png":
+		err = png.Encode(out_file, img)
+	case "gif":
+		err = gif.Encode(out_file, img, nil)
+	case "webp":
+		// there is no Encode function for .webp :(
+		// skip and use full sized image
+		err = e.ErrCannotEncodeAsWebp
+	default:
+		log.Printf("unknown file type: %s", file_type)
+		err = e.ErrInvalidFileType
 	}
 
 	if err != nil {

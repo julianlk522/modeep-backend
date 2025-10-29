@@ -39,13 +39,13 @@ type CatCount struct {
 }
 
 type TopCatCountsOptions struct {
-	RawCatFilters                  []string
-	NeuteredCatFilters             []string
-	SummaryContains                string
-	URLContains                    string
-	URLLacks                       string
-	Period                         Period
-	More                           bool
+	RawCatFilters      []string
+	NeuteredCatFilters []string
+	SummaryContains    string
+	URLContains        string
+	URLLacks           string
+	Period             Period
+	More               bool
 }
 
 func SortCats(i, j CatCount) int {

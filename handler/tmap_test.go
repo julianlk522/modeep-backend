@@ -72,7 +72,7 @@ func TestEditAbout(t *testing.T) {
 				t.Fatal("failed but unable to read request body bytes")
 			} else {
 				t.Fatalf(
-					"expected status code %d, got %d (test request %+v)\n%s", 
+					"expected status code %d, got %d (test request %+v)\n%s",
 					res.StatusCode,
 					http.StatusOK,
 					tr.Payload,
@@ -80,10 +80,10 @@ func TestEditAbout(t *testing.T) {
 				)
 			}
 		} else if !tr.Valid && res.StatusCode != http.StatusBadRequest {
-			t.Fatalf("expected status code %d, got %d (test request %+v)", 
-			res.StatusCode, 
-			http.StatusBadRequest,
-			tr.Payload,
+			t.Fatalf("expected status code %d, got %d (test request %+v)",
+				res.StatusCode,
+				http.StatusBadRequest,
+				tr.Payload,
 			)
 		}
 	}

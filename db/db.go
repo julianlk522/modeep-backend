@@ -53,7 +53,7 @@ func LoadSpellfix() {
 
 	} else {
 		test_data_path := backend_root_path + "/db"
-		log.Printf("Attempting to find spellfix at %s", test_data_path + "/spellfix")
+		log.Printf("Attempting to find spellfix at %s", test_data_path+"/spellfix")
 		spellfix_path = filepath.Join(test_data_path, "spellfix")
 	}
 	sql.Register(

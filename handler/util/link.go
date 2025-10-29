@@ -22,6 +22,7 @@ import (
 )
 
 var Preview_img_dir string
+
 func init() {
 	backend_root_path := os.Getenv("MODEEP_BACKEND_ROOT")
 	if backend_root_path == "" {
@@ -32,7 +33,7 @@ func init() {
 
 func GetTopLinksOptionsFromRequestParams(params url.Values) (*model.TopLinksOptions, error) {
 	opts := &model.TopLinksOptions{}
-	
+
 	// For cats that the links must have
 	cats_params := params.Get("cats")
 	if cats_params != "" {
@@ -116,7 +117,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 	if err != nil {
 		return nil, err
 	}
-	
+
 	paginateLinks(links_page.Links)
 
 	cat_filters := options.CatFilters
@@ -126,7 +127,7 @@ func PrepareLinksPage[T model.HasCats](links_sql *query.TopLinks, options *model
 			cat_filters,
 		)
 	}
-	
+
 	hidden_links, err := getNSFWLinksCount[T](links_sql)
 	if err != nil {
 		return nil, err
@@ -250,7 +251,7 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 			&l.PreviewImgFilename,
 			&l.StarsAssigned,
 		); err != nil {
-		return nil, err
+			return nil, err
 		}
 
 		link = l
@@ -271,7 +272,7 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 			&l.TagCount,
 			&l.PreviewImgFilename,
 		); err != nil {
-		return nil, err
+			return nil, err
 		}
 
 		link = l
@@ -283,7 +284,7 @@ func ScanSingleLink[T model.Link | model.LinkSignedIn](single_link_sql *query.Si
 func paginateLinks[T model.LinkSignedIn | model.Link](links *[]T) {
 	if links == nil || len(*links) == 0 {
 		return
-	} else if len(*links) == query.LINKS_PAGE_LIMIT + 1 {
+	} else if len(*links) == query.LINKS_PAGE_LIMIT+1 {
 		*links = (*links)[0:query.LINKS_PAGE_LIMIT]
 	}
 }
@@ -304,8 +305,8 @@ func getMergedCatSpellingVariantsInLinksFromCatFilters[T model.HasCats](links *[
 				for _, cf := range cat_filters {
 					cf_lc := strings.ToLower(cf)
 
-					if CatsResembleEachOther(cat_lc, cf_lc) && 
-					!slices.Contains(merged_cats, cat) {
+					if CatsResembleEachOther(cat_lc, cf_lc) &&
+						!slices.Contains(merged_cats, cat) {
 						merged_cats = append(merged_cats, cat)
 					}
 				}
@@ -327,7 +328,7 @@ func getNSFWLinksCount[T model.HasCats](links_sql *query.TopLinks) (int, error) 
 	if err := row.Scan(&hidden_links); err != nil {
 		return 0, err
 	}
-	
+
 	return int(hidden_links.Int32), nil
 }
 
@@ -347,23 +348,23 @@ func getLinkExtraMetadataFromHTML(url *url.URL, html_md HTMLMetadata) *model.Lin
 	x_md := &model.LinkExtraMetadata{}
 
 	switch {
-		case html_md.OGDesc != "":
-			x_md.AutoSummary = html_md.OGDesc
-		case html_md.Desc != "":
-			x_md.AutoSummary = html_md.Desc
-		case html_md.OGTitle != "":
-			x_md.AutoSummary = html_md.OGTitle
-		case html_md.Title != "":
-			x_md.AutoSummary = html_md.Title
-		case html_md.OGSiteName != "":
-			x_md.AutoSummary = html_md.OGSiteName
-		case html_md.TwitterDesc != "":
-			x_md.AutoSummary = html_md.TwitterDesc
-		case html_md.TwitterTitle != "":
-			x_md.AutoSummary = html_md.TwitterTitle
+	case html_md.OGDesc != "":
+		x_md.AutoSummary = html_md.OGDesc
+	case html_md.Desc != "":
+		x_md.AutoSummary = html_md.Desc
+	case html_md.OGTitle != "":
+		x_md.AutoSummary = html_md.OGTitle
+	case html_md.Title != "":
+		x_md.AutoSummary = html_md.Title
+	case html_md.OGSiteName != "":
+		x_md.AutoSummary = html_md.OGSiteName
+	case html_md.TwitterDesc != "":
+		x_md.AutoSummary = html_md.TwitterDesc
+	case html_md.TwitterTitle != "":
+		x_md.AutoSummary = html_md.TwitterTitle
 	}
 
-	// Test preview image URL to confirm it can be accessed 
+	// Test preview image URL to confirm it can be accessed
 	// TODO cleanup
 	if html_md.OGImage != "" {
 		if !strings.HasPrefix(html_md.OGImage, "http") {
@@ -446,8 +447,8 @@ func invalidURLError(url string) error {
 }
 
 func isRedirect(status_code int) bool {
-	return status_code >= http.StatusMultipleChoices && 
-	status_code < http.StatusBadRequest
+	return status_code >= http.StatusMultipleChoices &&
+		status_code < http.StatusBadRequest
 }
 
 func SavePreviewImgAndGetFileName(url string, link_id string) (string, error) {
@@ -462,9 +463,9 @@ func SavePreviewImgAndGetFileName(url string, link_id string) (string, error) {
 	defer prevew_img_resp.Body.Close()
 
 	img_upload := &model.ImgUpload{
-		Bytes: prevew_img_resp.Body,
+		Bytes:   prevew_img_resp.Body,
 		Purpose: "LinkPreview",
-		UID: link_id,
+		UID:     link_id,
 	}
 	file_name, err := SaveUploadedImgAndGetNewFileName(img_upload)
 	if err != nil {
@@ -597,7 +598,7 @@ func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 func getDeduplicatedCats(cats []string) []string {
 	seen := make(map[string]string)
 	deduped_cats := make([]string, 0, len(cats))
-	
+
 	for _, cat := range cats {
 		lower := strings.ToLower(cat)
 		if _, exists := seen[lower]; !exists {
@@ -605,7 +606,7 @@ func getDeduplicatedCats(cats []string) []string {
 			deduped_cats = append(deduped_cats, cat)
 		}
 	}
-	
+
 	return deduped_cats
 }
 

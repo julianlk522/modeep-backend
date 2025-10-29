@@ -55,4 +55,3 @@ var ValidTmapSections = [3]TmapIndividualSectionName{
 	TmapSectionStarred,
 	TmapSectionTagged,
 }
-

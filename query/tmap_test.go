@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	TEST_LOGIN_NAME     = "jlk"
-	TEST_USER_ID        = "3"
+	TEST_LOGIN_NAME = "jlk"
+	TEST_USER_ID    = "3"
 )
 
 var test_cats = []string{"go", "coding"}
@@ -56,7 +56,7 @@ func TestNewTmapSubmitted(t *testing.T) {
 		}
 
 		submitted_links = append(submitted_links, l)
-	}	
+	}
 
 	var submitted_ids []string
 	rows, err = TestClient.Query(`SELECT id 
@@ -299,96 +299,95 @@ func TestTmapSubmittedSortBy(t *testing.T) {
 				); err != nil {
 					t.Fatal(err)
 				}
-				
+
 				links = append(links, l)
 			}
 
 			// Verify sorting
 			switch ts.Sort {
-				case model.SortByNewest:
-					last_date := time.Now() // most recent
-					for _, link := range links {
-						sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
-						if err != nil {
-							t.Fatal(err)
-						}
+			case model.SortByNewest:
+				last_date := time.Now() // most recent
+				for _, link := range links {
+					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+					if err != nil {
+						t.Fatal(err)
+					}
 
-						if sd.After(last_date) {
-							t.Fatalf(
-								"link date %s after last date %s",
-								sd,
-								last_date,
-							)
-						} else if sd.Before(last_date) {
-							last_date = sd
-						}
+					if sd.After(last_date) {
+						t.Fatalf(
+							"link date %s after last date %s",
+							sd,
+							last_date,
+						)
+					} else if sd.Before(last_date) {
+						last_date = sd
 					}
-				case model.SortByTimesStarred:
-					var last_star_count int64 = 999 // arbitrary high number
-					for _, link := range links {
-						if link.TimesStarred > last_star_count {
-							t.Fatalf(
-								"link like count %d above previous min %d",
-								link.TimesStarred,
-								last_star_count,
-							)
-						} else if link.TimesStarred < last_star_count {
-							last_star_count = link.TimesStarred
-						}
+				}
+			case model.SortByTimesStarred:
+				var last_star_count int64 = 999 // arbitrary high number
+				for _, link := range links {
+					if link.TimesStarred > last_star_count {
+						t.Fatalf(
+							"link like count %d above previous min %d",
+							link.TimesStarred,
+							last_star_count,
+						)
+					} else if link.TimesStarred < last_star_count {
+						last_star_count = link.TimesStarred
 					}
-				case model.SortByAverageStars:
-					var last_avg_stars float32 = 999
-					for _, link := range links {
-						if link.AvgStars > last_avg_stars {
-							t.Fatalf(
-								"link avg stars %f above previous min %f",
-								link.AvgStars,
-								last_avg_stars,
-							)
-						} else if link.AvgStars < last_avg_stars {
-							last_avg_stars = link.AvgStars
-						}
+				}
+			case model.SortByAverageStars:
+				var last_avg_stars float32 = 999
+				for _, link := range links {
+					if link.AvgStars > last_avg_stars {
+						t.Fatalf(
+							"link avg stars %f above previous min %f",
+							link.AvgStars,
+							last_avg_stars,
+						)
+					} else if link.AvgStars < last_avg_stars {
+						last_avg_stars = link.AvgStars
 					}
-				case model.SortByOldest:
-					first_date := time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)
-					for _, link := range links {
-						sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
-						if err != nil {
-							t.Fatal(err)
-						}
+				}
+			case model.SortByOldest:
+				first_date := time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)
+				for _, link := range links {
+					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+					if err != nil {
+						t.Fatal(err)
+					}
 
-						if sd.Before(first_date) {
-							t.Fatalf(
-								"link date %s before last date %s",
-								sd,
-								first_date,
-							)
-						} else if sd.Before(first_date) {
-							first_date = sd
-						}
+					if sd.Before(first_date) {
+						t.Fatalf(
+							"link date %s before last date %s",
+							sd,
+							first_date,
+						)
+					} else if sd.Before(first_date) {
+						first_date = sd
 					}
-				case model.SortByClicks:
-					var highest_click_count int64 = 999
-					for _, link := range links {
-						if link.ClickCount > highest_click_count {
-							t.Fatalf(
-								"link click count %d above previous min %d",
-								link.ClickCount,
-								highest_click_count,
-							)
-						} else if link.ClickCount < highest_click_count {
-							highest_click_count = link.ClickCount
-						}
+				}
+			case model.SortByClicks:
+				var highest_click_count int64 = 999
+				for _, link := range links {
+					if link.ClickCount > highest_click_count {
+						t.Fatalf(
+							"link click count %d above previous min %d",
+							link.ClickCount,
+							highest_click_count,
+						)
+					} else if link.ClickCount < highest_click_count {
+						highest_click_count = link.ClickCount
 					}
+				}
 			}
 		}
 	}
 }
 
 func TestTmapSubmittedDuringPeriod(t *testing.T) {
-	var 
-		submitted_links_no_period, 
-		submitted_links_with_all_period, 
+	var submitted_links_no_period,
+		submitted_links_with_all_period,
 		submittted_links_with_week_period []model.TmapLink
 
 	submitted_sql := NewTmapSubmitted(TEST_LOGIN_NAME).sortBy("newest").Build()
@@ -516,7 +515,7 @@ func TestTmapSubmittedDuringPeriod(t *testing.T) {
 }
 
 func TestTmapSubmittedWhereSummaryContains(t *testing.T) {
-	summary_snippet := "you" 
+	summary_snippet := "you"
 	var expected_count int
 	expected_count_sql := `WITH PossibleUserSummary AS (
     SELECT
@@ -532,11 +531,11 @@ LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id
 WHERE COALESCE(pus.user_summary, l.global_summary) LIKE '%' || ? || '%'
 AND l.submitted_by = ?;`
 	err := TestClient.QueryRow(
-		expected_count_sql, 
+		expected_count_sql,
 		TEST_LOGIN_NAME,
-		summary_snippet, 
+		summary_snippet,
 		TEST_LOGIN_NAME,
-		).Scan(&expected_count)
+	).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -569,7 +568,7 @@ AND l.submitted_by = ?;`
 		)
 		if err != nil {
 			t.Fatal(err)
-		} 
+		}
 
 		links = append(links, l)
 	}
@@ -580,17 +579,17 @@ AND l.submitted_by = ?;`
 }
 
 func TestTmapSubmittedWhereURLContains(t *testing.T) {
-	url_snippet := "red" 
+	url_snippet := "red"
 	var expected_count int
 	expected_count_sql := `SELECT count(*) as link_count
 		FROM Links l
 		WHERE l.url LIKE '%' || ? || '%'
 		AND l.submitted_by = ?;`
 	err := TestClient.QueryRow(
-		expected_count_sql, 
-		url_snippet, 
+		expected_count_sql,
+		url_snippet,
 		TEST_LOGIN_NAME,
-		).Scan(&expected_count)
+	).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -623,7 +622,7 @@ func TestTmapSubmittedWhereURLContains(t *testing.T) {
 		)
 		if err != nil {
 			t.Fatal(err)
-		} 
+		}
 
 		links = append(links, l)
 	}
@@ -808,12 +807,12 @@ func TestTmapStarredFromNeuteredCatFilters(t *testing.T) {
 		}
 
 		for cat := range strings.SplitSeq(l.Cats, ",") {
-				for _, nc := range test_cats {
-					if cat == nc {
-						t.Fatalf("got %s, should not contain %s", l.Cats, nc)
-					}
+			for _, nc := range test_cats {
+				if cat == nc {
+					t.Fatalf("got %s, should not contain %s", l.Cats, nc)
 				}
 			}
+		}
 	}
 }
 
@@ -1091,7 +1090,7 @@ func TestTmapStarredDuringPeriod(t *testing.T) {
 }
 
 func TestTmapStarredWhereSummaryContains(t *testing.T) {
-	summary_snippet := "you" 
+	summary_snippet := "you"
 	var expected_count int
 	expected_count_sql := `WITH PossibleUserSummary AS (
 		SELECT
@@ -1108,11 +1107,11 @@ func TestTmapStarredWhereSummaryContains(t *testing.T) {
 	INNER JOIN Stars s ON s.link_id = l.id AND s.user_id = u.id
 	WHERE COALESCE(pus.user_summary, l.global_summary) LIKE '%' || ? || '%';`
 	err := TestClient.QueryRow(
-			expected_count_sql,
-			TEST_LOGIN_NAME, 
-			TEST_LOGIN_NAME,
-			summary_snippet, 
-		).Scan(&expected_count)
+		expected_count_sql,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		summary_snippet,
+	).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1145,7 +1144,7 @@ func TestTmapStarredWhereSummaryContains(t *testing.T) {
 		)
 		if err != nil {
 			t.Fatal(err)
-		} 
+		}
 
 		links = append(links, l)
 	}
@@ -1156,7 +1155,7 @@ func TestTmapStarredWhereSummaryContains(t *testing.T) {
 }
 
 func TestTmapStarredWhereURLContains(t *testing.T) {
-	url_snippet := "coding" 
+	url_snippet := "coding"
 	var expected_count int
 	expected_count_sql := `SELECT count(*) as times_starred
 		FROM Stars s
@@ -1165,10 +1164,10 @@ func TestTmapStarredWhereURLContains(t *testing.T) {
 		WHERE l.url LIKE '%' || ? || '%'
 		AND s.user_id = ?;`
 	err := TestClient.QueryRow(
-			expected_count_sql, 
-			url_snippet, 
-			TEST_LOGIN_NAME,
-		).Scan(&expected_count)
+		expected_count_sql,
+		url_snippet,
+		TEST_LOGIN_NAME,
+	).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1201,7 +1200,7 @@ func TestTmapStarredWhereURLContains(t *testing.T) {
 		)
 		if err != nil {
 			t.Fatal(err)
-		} 
+		}
 
 		links = append(links, l)
 	}
@@ -1385,12 +1384,12 @@ func TestTmapTaggedFromNeuteredCatFilters(t *testing.T) {
 		}
 
 		for cat := range strings.SplitSeq(l.Cats, ",") {
-				for _, tc := range test_cats {
-					if cat == tc {
-						t.Fatalf("got %s, should not contain %s", l.Cats, tc)
-					}
+			for _, tc := range test_cats {
+				if cat == tc {
+					t.Fatalf("got %s, should not contain %s", l.Cats, tc)
 				}
 			}
+		}
 	}
 }
 
@@ -1567,13 +1566,13 @@ func TestTmapTaggedWhereSummaryContains(t *testing.T) {
 	AND l.submitted_by != ?
 	AND l.id NOT IN (SELECT link_id FROM UserStars);`
 	err := TestClient.QueryRow(
-			expected_count_sql, 
-			TEST_LOGIN_NAME,
-			TEST_LOGIN_NAME,
-			TEST_LOGIN_NAME,
-			summary_snippet,
-			TEST_LOGIN_NAME,
-		).Scan(&expected_count)
+		expected_count_sql,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		summary_snippet,
+		TEST_LOGIN_NAME,
+	).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1606,7 +1605,7 @@ func TestTmapTaggedWhereSummaryContains(t *testing.T) {
 		)
 		if err != nil {
 			t.Fatal(err)
-		} 
+		}
 
 		links = append(links, l)
 	}
@@ -1643,12 +1642,12 @@ func TestTmapTaggedWhereURLContains(t *testing.T) {
 	AND l.url LIKE '%' || ? || '%'
 	ORDER BY l.id DESC;`
 	err := TestClient.QueryRow(
-			expected_count_sql, 
-			TEST_LOGIN_NAME,
-			TEST_LOGIN_NAME,
-			TEST_LOGIN_NAME,
-			url_snippet,
-		).Scan(&expected_count)
+		expected_count_sql,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		TEST_LOGIN_NAME,
+		url_snippet,
+	).Scan(&expected_count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1681,7 +1680,7 @@ func TestTmapTaggedWhereURLContains(t *testing.T) {
 		)
 		if err != nil {
 			t.Fatal(err)
-		} 
+		}
 
 		links = append(links, l)
 	}
@@ -1823,13 +1822,13 @@ AND (
 	);`
 	if err := TestClient.QueryRow(
 		sql_manual,
-		TEST_LOGIN_NAME, 
+		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
 		strings.Join(test_cat_filters, " AND "),
 		strings.Join(test_cat_filters, " AND "),
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
-	).Scan(&expected_count); err != nil { 
+	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	} else if count != expected_count {
 		t.Fatalf("expected %d, got %d", expected_count, count)
@@ -1847,56 +1846,56 @@ func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
 
 	var test_options_and_expected_counts = []struct {
 		Options model.TmapNSFWLinksCountOptions
-		Valid bool
+		Valid   bool
 	}{
 		{
 			model.TmapNSFWLinksCountOptions{
 				CatFiltersWithSpellingVariants: test_cat_filters,
-				Period: "all",
-				URLContains: "googler",
-			}, 
-			true,
-		},
-		{
-			model.TmapNSFWLinksCountOptions{
-				CatFiltersWithSpellingVariants: test_cat_filters,
-				Period: "all",
-				URLContains: "not_googler",
-			}, 
-			true,
-		},
-		{
-			model.TmapNSFWLinksCountOptions{
-				CatFiltersWithSpellingVariants: test_cat_filters,
-				Period: "all",
+				Period:                         "all",
+				URLContains:                    "googler",
 			},
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
-				Section: "submitted",
 				CatFiltersWithSpellingVariants: test_cat_filters,
+				Period:                         "all",
+				URLContains:                    "not_googler",
 			},
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
-				Section: "tagged",
-				CatFiltersWithSpellingVariants: test_cat_filters, 
+				CatFiltersWithSpellingVariants: test_cat_filters,
+				Period:                         "all",
 			},
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
-				Section: "starred",
+				Section:                        "submitted",
 				CatFiltersWithSpellingVariants: test_cat_filters,
 			},
 			true,
 		},
 		{
 			model.TmapNSFWLinksCountOptions{
-				Section: "boop",
-				CatFiltersWithSpellingVariants: test_cat_filters, 
+				Section:                        "tagged",
+				CatFiltersWithSpellingVariants: test_cat_filters,
+			},
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				Section:                        "starred",
+				CatFiltersWithSpellingVariants: test_cat_filters,
+			},
+			true,
+		},
+		{
+			model.TmapNSFWLinksCountOptions{
+				Section:                        "boop",
+				CatFiltersWithSpellingVariants: test_cat_filters,
 			},
 			false,
 		},
@@ -1922,7 +1921,7 @@ func TestTmapNSFWLinksCountFromOptions(t *testing.T) {
 }
 
 func TestTmapNSFWLinksCountSubmittedOnly(t *testing.T) {
-	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).submittedOnly() 
+	sql := NewTmapNSFWLinksCount(TEST_LOGIN_NAME).submittedOnly()
 	row, err := sql.ValidateAndExecuteRow()
 	if err != nil {
 		t.Fatal(err)
@@ -2007,7 +2006,7 @@ WHERE
     (gnsfwc.global_cats IS NOT NULL OR pucnsfw.user_cats IS NOT NULL)
 AND l.id IN (SELECT link_id FROM UserStars);`
 	if err := TestClient.QueryRow(
-		sql_manual, 
+		sql_manual,
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
 	).Scan(&expected_count); err != nil {
@@ -2062,7 +2061,7 @@ AND l.id NOT IN
 	(SELECT link_id FROM UserStars);`
 
 	if err := TestClient.QueryRow(
-		sql_manual, 
+		sql_manual,
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
@@ -2171,7 +2170,7 @@ AND COALESCE(sm.text, l.global_summary) LIKE ?;`
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
-		"%" + test_summary_snippet + "%",
+		"%"+test_summary_snippet+"%",
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	} else if count != expected_count {
@@ -2236,7 +2235,7 @@ AND l.url LIKE ?;`
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
 		TEST_LOGIN_NAME,
-		"%" + test_url_snippet + "%",
+		"%"+test_url_snippet+"%",
 	).Scan(&expected_count); err != nil {
 		t.Fatal(err)
 	} else if count != expected_count {

@@ -96,7 +96,7 @@ func TestAddSummary(t *testing.T) {
 				t.Fatal("failed but unable to read request body bytes")
 			} else {
 				t.Fatalf(
-					"expected status code %d, got %d (test request %+v)\n%s", 
+					"expected status code %d, got %d (test request %+v)\n%s",
 					res.StatusCode,
 					http.StatusCreated,
 					tr.Payload,
@@ -104,7 +104,7 @@ func TestAddSummary(t *testing.T) {
 				)
 			}
 		} else if !tr.Valid && res.StatusCode != http.StatusBadRequest {
-			t.Fatalf("expected status code %d, got %d", 
+			t.Fatalf("expected status code %d, got %d",
 				http.StatusBadRequest,
 				res.StatusCode,
 			)

@@ -129,4 +129,3 @@ func (ear *EditAboutRequest) Bind(r *http.Request) error {
 type EditProfilePicRequest struct {
 	ProfilePic string `json:"pfp,omitempty"`
 }
-

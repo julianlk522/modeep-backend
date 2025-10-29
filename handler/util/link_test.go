@@ -15,33 +15,33 @@ import (
 
 func TestPrepareLinksPage(t *testing.T) {
 	var test_requests = []struct {
-		LinksOptions   *model.TopLinksOptions
-		PageOptions     *model.LinksPageOptions
-		Valid      bool
+		LinksOptions *model.TopLinksOptions
+		PageOptions  *model.LinksPageOptions
+		Valid        bool
 	}{
 		{
-			LinksOptions:   &model.TopLinksOptions{
+			LinksOptions: &model.TopLinksOptions{
 				Page: 1,
 			},
 			PageOptions: &model.LinksPageOptions{},
-			Valid:      true,
+			Valid:       true,
 		},
 		{
 			LinksOptions: &model.TopLinksOptions{
 				CatFiltersWithSpellingVariants: test_multiple_cats,
-				Page: 1,
+				Page:                           1,
 			},
 			PageOptions: &model.LinksPageOptions{
-				CatFilters: test_multiple_cats, 
+				CatFilters: test_multiple_cats,
 			},
-			Valid:      true,
+			Valid: true,
 		},
 		{
 			LinksOptions: &model.TopLinksOptions{
 				Period: "batman",
-				Page: 1,
+				Page:   1,
 			},
-			Valid:      false,
+			Valid: false,
 		},
 	}
 
@@ -52,7 +52,7 @@ func TestPrepareLinksPage(t *testing.T) {
 		} else if !tr.Valid && err == nil {
 			t.Fatalf("expected error for request %v", tr)
 		}
-		
+
 		if !tr.Valid {
 			continue
 		}
@@ -114,7 +114,7 @@ func TestPaginateLinks(t *testing.T) {
 	// single page
 	opts := &model.TopLinksOptions{
 		CatFiltersWithSpellingVariants: []string{"test"},
-		Page: 1,
+		Page:                           1,
 	}
 	links_sql, err := query.NewTopLinks().FromOptions(opts)
 	if err != nil {
@@ -296,8 +296,8 @@ func TestGetResolvedURLResponse(t *testing.T) {
 
 func TestHeadersAreApplied(t *testing.T) {
 	var expected_headers = map[string]string{
-		"User-Agent": MODEEP_BOT_USER_AGENT,
-		"Accept":     "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+		"User-Agent":      MODEEP_BOT_USER_AGENT,
+		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
 		"Accept-Language": "en-US,en;q=0.9",
 		"Accept-Encoding": "gzip, deflate, br",
 	}
@@ -333,94 +333,95 @@ func TestHeadersAreApplied(t *testing.T) {
 // this has to be valid and receive a reply back from a test response or
 // GetLinkExtraMetadataFromHTML() will not set it
 const TEST_PREVIEW_IMAGE_URL = "https://github.com/julianlk522/modeep-frontend/raw/main/public/home.webp"
+
 func TestGetLinkExtraMetadataFromHTML(t *testing.T) {
 	mock_metas := []HTMLMetadata{
 		// Auto Summary should be og:description,
 		// Preview image should be set
 		{
-			Title:         "title",
-			Desc:          "description",
-			OGTitle:       "og:title",
-			OGDesc:        "og:description",
-			OGImage:       TEST_PREVIEW_IMAGE_URL,
-			OGAuthor:      "",
-			OGPublisher:   "",
-			OGSiteName:    "og:site_name",
+			Title:       "title",
+			Desc:        "description",
+			OGTitle:     "og:title",
+			OGDesc:      "og:description",
+			OGImage:     TEST_PREVIEW_IMAGE_URL,
+			OGAuthor:    "",
+			OGPublisher: "",
+			OGSiteName:  "og:site_name",
 		},
 		// Auto Summary should be description
 		{
-			Title:         "",
-			Desc:          "description",
-			OGTitle:       "",
-			OGDesc:        "",
-			OGImage:       "",
-			OGAuthor:      "",
-			OGSiteName:    "",
-			OGPublisher:   "",
+			Title:       "",
+			Desc:        "description",
+			OGTitle:     "",
+			OGDesc:      "",
+			OGImage:     "",
+			OGAuthor:    "",
+			OGSiteName:  "",
+			OGPublisher: "",
 		},
 		// Auto Summary should be og:title
 		{
-			Title:         "title",
-			Desc:          "",
-			OGTitle:       "og:title",
-			OGDesc:        "",
-			OGImage:       "",
-			OGAuthor:      "",
-			OGSiteName:    "",
-			OGPublisher:   "",
+			Title:       "title",
+			Desc:        "",
+			OGTitle:     "og:title",
+			OGDesc:      "",
+			OGImage:     "",
+			OGAuthor:    "",
+			OGSiteName:  "",
+			OGPublisher: "",
 		},
 		// Auto Summary should be title
 		{
-			Title:         "title",
-			Desc:          "",
-			OGTitle:       "",
-			OGDesc:        "",
-			OGImage:       "",
-			OGAuthor:      "",
-			OGSiteName:    "test",
-			OGPublisher:   "",
+			Title:       "title",
+			Desc:        "",
+			OGTitle:     "",
+			OGDesc:      "",
+			OGImage:     "",
+			OGAuthor:    "",
+			OGSiteName:  "test",
+			OGPublisher: "",
 		},
 		// Auto Summary should be test
 		// Preview image should be set
 		{
-			Title:         "",
-			Desc:          "",
-			OGTitle:       "",
-			OGDesc:        "",
-			OGImage:       TEST_PREVIEW_IMAGE_URL,
-			OGAuthor:      "",
-			OGSiteName:    "test",
-			OGPublisher:   "",
+			Title:       "",
+			Desc:        "",
+			OGTitle:     "",
+			OGDesc:      "",
+			OGImage:     TEST_PREVIEW_IMAGE_URL,
+			OGAuthor:    "",
+			OGSiteName:  "test",
+			OGPublisher: "",
 		},
 		// Auto Summary should be twitter:desc
 		// Preview image should be set
 		{
-			Title:         "",
-			Desc:          "",
-			OGTitle:       "",
-			OGDesc:        "",
-			OGImage:       "",
-			OGAuthor:      "",
-			OGSiteName:    "",
-			OGPublisher:   "",
-			TwitterTitle:  "twitter:title",
-			TwitterDesc:   "twitter:desc",
-			TwitterImage:  TEST_PREVIEW_IMAGE_URL,
+			Title:        "",
+			Desc:         "",
+			OGTitle:      "",
+			OGDesc:       "",
+			OGImage:      "",
+			OGAuthor:     "",
+			OGSiteName:   "",
+			OGPublisher:  "",
+			TwitterTitle: "twitter:title",
+			TwitterDesc:  "twitter:desc",
+			TwitterImage: TEST_PREVIEW_IMAGE_URL,
 		},
 		// Auto Summary should be twitter:title
 		// Preview image should be set
 		{
-			Title:         "",
-			Desc:          "",
-			OGTitle:       "",
-			OGDesc:        "",
-			OGImage:       "",
-			OGAuthor:      "",
-			OGSiteName:    "",
-			OGPublisher:   "",
-			TwitterTitle:  "twitter:title",
-			TwitterDesc:   "",
-			TwitterImage:  TEST_PREVIEW_IMAGE_URL,
+			Title:        "",
+			Desc:         "",
+			OGTitle:      "",
+			OGDesc:       "",
+			OGImage:      "",
+			OGAuthor:     "",
+			OGSiteName:   "",
+			OGPublisher:  "",
+			TwitterTitle: "twitter:title",
+			TwitterDesc:  "",
+			TwitterImage: TEST_PREVIEW_IMAGE_URL,
 		},
 	}
 
@@ -428,59 +429,59 @@ func TestGetLinkExtraMetadataFromHTML(t *testing.T) {
 		x_md := getLinkExtraMetadataFromHTML(&url.URL{}, meta)
 
 		switch i {
-			case 0:
-				if x_md.AutoSummary != "og:description" {
-					t.Fatalf("og:description provided but auto summary set to: %s", x_md.AutoSummary)
-				} 
-				if x_md.PreviewImgURL != mock_metas[0].OGImage {
-					t.Fatalf(
-						"expected og:image to be set to %s, got %s",
-						mock_metas[0].OGImage,
-						x_md.PreviewImgURL,
-					)
-				}
-			case 1:
-				if x_md.AutoSummary != "description" {
-					t.Fatalf("description provided but auto summary set to: %s", x_md.AutoSummary)
-				}
-			case 2:
-				if x_md.AutoSummary != "og:title" {
-					t.Fatalf("og:title provided but auto summary set to: %s", x_md.AutoSummary)
-				}
-			case 3:
-				if x_md.AutoSummary != "title" {
-					t.Fatalf("title provided but auto summary set to: %s", x_md.AutoSummary)
-				}
-			case 4:
-				if x_md.AutoSummary != "test" {
-					t.Fatalf("og:sitename provided but auto summary set to: %s", x_md.AutoSummary)
-				} 
+		case 0:
+			if x_md.AutoSummary != "og:description" {
+				t.Fatalf("og:description provided but auto summary set to: %s", x_md.AutoSummary)
+			}
+			if x_md.PreviewImgURL != mock_metas[0].OGImage {
+				t.Fatalf(
+					"expected og:image to be set to %s, got %s",
+					mock_metas[0].OGImage,
+					x_md.PreviewImgURL,
+				)
+			}
+		case 1:
+			if x_md.AutoSummary != "description" {
+				t.Fatalf("description provided but auto summary set to: %s", x_md.AutoSummary)
+			}
+		case 2:
+			if x_md.AutoSummary != "og:title" {
+				t.Fatalf("og:title provided but auto summary set to: %s", x_md.AutoSummary)
+			}
+		case 3:
+			if x_md.AutoSummary != "title" {
+				t.Fatalf("title provided but auto summary set to: %s", x_md.AutoSummary)
+			}
+		case 4:
+			if x_md.AutoSummary != "test" {
+				t.Fatalf("og:sitename provided but auto summary set to: %s", x_md.AutoSummary)
+			}
 
-				if x_md.PreviewImgURL != mock_metas[4].OGImage {
-					t.Fatalf(
-						"expected og:image to be set to %s, got %s",
-						mock_metas[4].OGImage,
-						x_md.PreviewImgURL,
-					)
-				}
-			case 5:
-				if x_md.AutoSummary != "twitter:desc" {
-					t.Fatalf("twitter:desc provided but auto summary set to: %s", x_md.AutoSummary)	
-				} 
+			if x_md.PreviewImgURL != mock_metas[4].OGImage {
+				t.Fatalf(
+					"expected og:image to be set to %s, got %s",
+					mock_metas[4].OGImage,
+					x_md.PreviewImgURL,
+				)
+			}
+		case 5:
+			if x_md.AutoSummary != "twitter:desc" {
+				t.Fatalf("twitter:desc provided but auto summary set to: %s", x_md.AutoSummary)
+			}
 
-				if x_md.PreviewImgURL != mock_metas[5].TwitterImage {
-					t.Fatalf(
-						"expected twitter:image to be set to %s, got %s",
-						mock_metas[5].TwitterImage,
-						x_md.PreviewImgURL,
-					)
-				}
-			case 6:
-				if x_md.AutoSummary != "twitter:title" {
-					t.Fatalf("twitter:title provided but auto summary set to: %s", x_md.AutoSummary)	
-				}
-			default:
-				t.Fatal("unhandled case, you f'ed up")
+			if x_md.PreviewImgURL != mock_metas[5].TwitterImage {
+				t.Fatalf(
+					"expected twitter:image to be set to %s, got %s",
+					mock_metas[5].TwitterImage,
+					x_md.PreviewImgURL,
+				)
+			}
+		case 6:
+			if x_md.AutoSummary != "twitter:title" {
+				t.Fatalf("twitter:title provided but auto summary set to: %s", x_md.AutoSummary)
+			}
+		default:
+			t.Fatal("unhandled case, you f'ed up")
 		}
 	}
 }
@@ -590,7 +591,7 @@ func TestDecrementSpellfixRanksForCats(t *testing.T) {
 
 func TestGetDeduplicatedCats(t *testing.T) {
 	var test_cats = []struct {
-		Cats []string
+		Cats                []string
 		ExpectedDedupedCats []string
 	}{
 		{
@@ -635,7 +636,7 @@ func TestUserSubmittedLink(t *testing.T) {
 
 func TestUserHasStarredLink(t *testing.T) {
 	var test_links = []struct {
-		ID              string
+		ID                string
 		StarredByTestUser bool
 	}{
 		// user jlk starred links with ID 24, 32, 103

@@ -19,12 +19,12 @@ func GetTotals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = row.Scan(&totals.Links,
-			&totals.Clicks,
-			&totals.Contributors,
-			&totals.LinksStarred,
-			&totals.Tags,
-			&totals.Summaries,
-		); err != nil {
+		&totals.Clicks,
+		&totals.Contributors,
+		&totals.LinksStarred,
+		&totals.Tags,
+		&totals.Summaries,
+	); err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 		return
 	}

@@ -66,7 +66,7 @@ func ScanTagRankings(tag_rankings_sql *query.TagRankingsForLink) (*[]model.TagRa
 
 func GetTopGlobalCatsOptionsFromRequestParams(params url.Values) (*model.TopCatCountsOptions, error) {
 	opts := &model.TopCatCountsOptions{}
-	
+
 	cat_filters_params := params.Get("cats")
 	if cat_filters_params != "" {
 		// Use raw values since the NOT IN clause in .fromCatFilters() needs
@@ -132,7 +132,7 @@ func ScanGlobalCatCounts(global_cats_sql *query.TopGlobalCatCounts) (*[]model.Ca
 
 func GetSpellfixOptionsFromRequestParams(params url.Values) (*model.SpellfixMatchesOptions, error) {
 	opts := &model.SpellfixMatchesOptions{}
-	
+
 	tmap_params := params.Get("tmap")
 	if tmap_params != "" {
 		opts.IsTmapAndOwnerIs = tmap_params
@@ -145,14 +145,14 @@ func GetSpellfixOptionsFromRequestParams(params url.Values) (*model.SpellfixMatc
 	if cat_filters_params != "" {
 		// Spelling variants NOT used in spellfix1 queries.
 		// Snippets sent to spellfix work better when not expanded to include
-		// variations e.g., ("test" OR "tests"). Levenshtein distance (or just
-		// "distance") used by spellfix1
+		// variations e.g., ("test" OR "tests"). Levenshtein distance
+		// ("distance") used by spellfix1
 		// (https://www.sqlite.org/spellfix1.html#:~:text=statement.-,distance)
 		// is not ideal for this use case: it approximates number of character
-		// edits required to transform one string into another, meaning it
-		// interprets the above as a literal 19-character string, many edits 
-		// away from "test." It's fine to forego normal variation matching here, 
-		// spellfix helps with that anyway.
+		// edits required to transform one string into another, so it
+		// interprets the example above as a literal 19-character string, many
+		// edits away from "test." It's fine to forego normal variation matching
+		// here, spellfix helps with that anyway.
 		opts.CatFilters = strings.Split(cat_filters_params, ",")
 	}
 	return opts, nil
@@ -161,11 +161,11 @@ func GetSpellfixOptionsFromRequestParams(params url.Values) (*model.SpellfixMatc
 func CatsResembleEachOther(a string, b string) bool {
 	a, b = strings.ToLower(a), strings.ToLower(b)
 	// Capitalization variants
-	if a == b || 
-	// Or singular/plural variants
-	a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a {
+	if a == b ||
+		// Or singular/plural variants
+		a+"s" == b || b+"s" == a || a+"es" == b || b+"es" == a {
 		return true
-	} 
+	}
 
 	return false
 }
@@ -271,7 +271,7 @@ func CalculateAndSetGlobalCats(link_id string) error {
 	if global_cats_sql.Error != nil {
 		return global_cats_sql.Error
 	}
-	
+
 	var new_global_cats string
 	row, err := global_cats_sql.ValidateAndExecuteRow()
 	if err != nil {

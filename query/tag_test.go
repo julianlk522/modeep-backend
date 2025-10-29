@@ -92,13 +92,13 @@ func TestNewGlobalCatsForLink(t *testing.T) {
 			cat = strings.ToLower(cat)
 
 			if cat == found_cat {
-				t.Fatalf("found cat %s twice", cat)	
+				t.Fatalf("found cat %s twice", cat)
 			}
-			
-			if cat + "s" == found_cat || 
-			found_cat + "s" == cat || 
-			cat + "es" == found_cat || 
-			found_cat + "es" == cat {
+
+			if cat+"s" == found_cat ||
+				found_cat+"s" == cat ||
+				cat+"es" == found_cat ||
+				found_cat+"es" == cat {
 				t.Fatalf(
 					"found cat %s and %s are singular or plural variations of each other",
 					found_cat,
@@ -163,25 +163,25 @@ func TestTopGlobalCatCountsFromCatFilters(t *testing.T) {
 
 	// None of the counts should be capitalization/pluralization variants of
 	// cat filters
-	var lc_cat_filters []string 
+	var lc_cat_filters []string
 	for _, cf := range test_cats {
 		lc_cat_filters = append(lc_cat_filters, strings.ToLower(cf))
 	}
-	
+
 	for _, c := range counts {
 		c.Category = strings.ToLower(c.Category)
 
 		for _, lc_cf := range lc_cat_filters {
-			if c.Category + "s" == lc_cf ||
-			lc_cf + "s" == c.Category ||
-			c.Category + "es" == lc_cf ||
-			lc_cf + "es" == c.Category {
+			if c.Category+"s" == lc_cf ||
+				lc_cf+"s" == c.Category ||
+				c.Category+"es" == lc_cf ||
+				lc_cf+"es" == c.Category {
 				t.Fatalf(
 					"found cat %s and %s resemble each other",
 					lc_cf,
 					c.Category,
 				)
-			} 
+			}
 		}
 	}
 }
@@ -211,7 +211,7 @@ func TestTopGlobalCatCountsFromNeuteredCatFilters(t *testing.T) {
 		}
 		counts = append(counts, c)
 	}
-	
+
 	for _, cc := range counts {
 		if slices.Contains(test_cats, cc.Category) {
 			t.Fatalf(
@@ -276,7 +276,7 @@ func TestTopGlobalCatCountsWhereSummaryContains(t *testing.T) {
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
-	 
+
 	rows, err = counts_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
@@ -376,7 +376,7 @@ func TestTopGlobalCatCountsWhereURLLacks(t *testing.T) {
 	counts_sql := NewTopGlobalCatCounts().
 		fromCatFilters(test_cats).
 		whereURLLacks("GooGlE")
-	
+
 	if counts_sql.Error != nil {
 		t.Fatal(counts_sql.Error)
 	}
@@ -488,14 +488,14 @@ func TestNewSpellfixMatchesForSnippet(t *testing.T) {
 }
 
 func TestSpellfixMatchesFromTmap(t *testing.T) {
-	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromTmap(TEST_LOGIN_NAME) 
+	matches_sql := NewSpellfixMatchesForSnippet(TEST_SNIPPET).fromTmap(TEST_LOGIN_NAME)
 	rows, err := matches_sql.ValidateAndExecuteRows()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var found_cats []model.CatCount
-	
+
 	for rows.Next() {
 		var word string
 		var count int32
@@ -515,11 +515,11 @@ func TestSpellfixMatchesFromTmap(t *testing.T) {
 	var tagged_sql = NewTmapTagged(TEST_LOGIN_NAME)
 
 	var all_tmap_links []model.TmapLink
-	for _, q := range []*Query {
-	    {submitted_sql.Text, submitted_sql.Args, nil},
-	    {starred_sql.Text, starred_sql.Args, nil},
-	    {tagged_sql.Text, tagged_sql.Args, nil},
-	}{
+	for _, q := range []*Query{
+		{submitted_sql.Text, submitted_sql.Args, nil},
+		{starred_sql.Text, starred_sql.Args, nil},
+		{tagged_sql.Text, tagged_sql.Args, nil},
+	} {
 		rows, err := q.ValidateAndExecuteRows()
 		if err != nil {
 			t.Fatal(err)
@@ -554,8 +554,8 @@ func TestSpellfixMatchesFromTmap(t *testing.T) {
 	for _, l := range all_tmap_links {
 		// doesn't really matter if this collects duplicates
 		all_tmap_cats = append(all_tmap_cats, strings.Split(l.Cats, ",")...)
-	} 
-	
+	}
+
 	for _, cat := range found_cats {
 		if !slices.Contains(all_tmap_cats, cat.Category) {
 			t.Fatalf("cat %s not found on user's Tmap", cat.Category)

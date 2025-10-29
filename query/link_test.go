@@ -55,8 +55,8 @@ func TestNewTopLinks(t *testing.T) {
 
 func TestTopLinksFromCatFilters(t *testing.T) {
 	var test_cats = []struct {
-		CatFilters  []string
-		Valid bool
+		CatFilters []string
+		Valid      bool
 	}{
 		{[]string{}, false},
 		{[]string{""}, false},
@@ -597,61 +597,61 @@ func TestTopLinksSortBy(t *testing.T) {
 
 		// Verify results correctly sorted
 		switch ts.Sort {
-			case model.SortByTimesStarred:
-				var last_star_count int64 = 999 // arbitrary high number
-				for _, link := range links {
-					if link.TimesStarred > last_star_count {
-						t.Fatalf("link like count %d above previous min %d", link.TimesStarred, last_star_count)
-					} else if link.TimesStarred < last_star_count {
-						last_star_count = link.TimesStarred
-					}
+		case model.SortByTimesStarred:
+			var last_star_count int64 = 999 // arbitrary high number
+			for _, link := range links {
+				if link.TimesStarred > last_star_count {
+					t.Fatalf("link like count %d above previous min %d", link.TimesStarred, last_star_count)
+				} else if link.TimesStarred < last_star_count {
+					last_star_count = link.TimesStarred
 				}
-			case model.SortByAverageStars:
-				var last_avg_stars float32 = 999
-				for _, link := range links {
-					if link.AvgStars > last_avg_stars {
-						t.Fatalf("link avg stars %f above previous min %f", link.AvgStars, last_avg_stars)
-					} else if link.AvgStars < last_avg_stars {
-						last_avg_stars = link.AvgStars
-					}
+			}
+		case model.SortByAverageStars:
+			var last_avg_stars float32 = 999
+			for _, link := range links {
+				if link.AvgStars > last_avg_stars {
+					t.Fatalf("link avg stars %f above previous min %f", link.AvgStars, last_avg_stars)
+				} else if link.AvgStars < last_avg_stars {
+					last_avg_stars = link.AvgStars
 				}
-			case model.SortByNewest:
-				last_date := time.Now() // most recent
-				for _, link := range links {
-					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
-					if err != nil {
-						t.Fatal(err)
-					}
+			}
+		case model.SortByNewest:
+			last_date := time.Now() // most recent
+			for _, link := range links {
+				sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+				if err != nil {
+					t.Fatal(err)
+				}
 
-					if sd.After(last_date) {
-						t.Fatalf("link date %s after last date %s", sd, last_date)
-					} else if sd.Before(last_date) {
-						last_date = sd
-					}
+				if sd.After(last_date) {
+					t.Fatalf("link date %s after last date %s", sd, last_date)
+				} else if sd.Before(last_date) {
+					last_date = sd
 				}
-			case model.SortByOldest:
-				last_date := time.Unix(0, 0) // oldest
-				for _, link := range links {
-					sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
-					if err != nil {
-						t.Fatal(err)
-					}
+			}
+		case model.SortByOldest:
+			last_date := time.Unix(0, 0) // oldest
+			for _, link := range links {
+				sd, err := time.Parse("2006-01-02T15:04:05Z07:00", link.SubmitDate)
+				if err != nil {
+					t.Fatal(err)
+				}
 
-					if sd.Before(last_date) {
-						t.Fatalf("link date %s before last date %s", sd, last_date)
-					} else if sd.After(last_date) {
-						last_date = sd
-					}
+				if sd.Before(last_date) {
+					t.Fatalf("link date %s before last date %s", sd, last_date)
+				} else if sd.After(last_date) {
+					last_date = sd
 				}
-			case model.SortByClicks:
-				var last_click_count int64 = 999 // arbitrary high number
-				for _, link := range links {
-					if link.ClickCount > last_click_count {
-						t.Fatalf("link click count %d above previous min %d", link.ClickCount, last_click_count)
-					} else if link.ClickCount < last_click_count {
-						last_click_count = link.ClickCount
-					}
+			}
+		case model.SortByClicks:
+			var last_click_count int64 = 999 // arbitrary high number
+			for _, link := range links {
+				if link.ClickCount > last_click_count {
+					t.Fatalf("link click count %d above previous min %d", link.ClickCount, last_click_count)
+				} else if link.ClickCount < last_click_count {
+					last_click_count = link.ClickCount
 				}
+			}
 		}
 
 	}
@@ -666,8 +666,8 @@ func TestTopLinksAsSignedInUser(t *testing.T) {
 	defer rows.Close()
 
 	var expected_args = []any{
-		mutil.EARLIEST_STARRERS_LIMIT, 
-		TEST_USER_ID, 
+		mutil.EARLIEST_STARRERS_LIMIT,
+		TEST_USER_ID,
 		LINKS_PAGE_LIMIT,
 	}
 	for i, arg := range links_sql.Args {
@@ -691,9 +691,9 @@ func TestTopLinksAsSignedInUser(t *testing.T) {
 	}
 
 	expected_args = []any{
-		mutil.EARLIEST_STARRERS_LIMIT, 
-		TEST_USER_ID, 
-		strings.Join(test_cats_with_spelling_variants, " AND "), 
+		mutil.EARLIEST_STARRERS_LIMIT,
+		TEST_USER_ID,
+		strings.Join(test_cats_with_spelling_variants, " AND "),
 		LINKS_PAGE_LIMIT,
 	}
 	for i, arg := range links_sql.Args {
@@ -732,7 +732,7 @@ func TestTopLinksIncludeNSFW(t *testing.T) {
 	id_of_test_link_having_nsfw_cats := "76"
 	var l model.LinkSignedIn
 	var pages int
-	// there is 
+
 	for rows.Next() {
 		if err := rows.Scan(
 			&l.ID,
@@ -818,8 +818,8 @@ func TestTopLinksPage(t *testing.T) {
 		}
 
 		if tc.Page > 1 {
-			limit_arg := links_sql.Args[len(links_sql.Args) - 2]
-			offset_arg := links_sql.Args[len(links_sql.Args) - 1]
+			limit_arg := links_sql.Args[len(links_sql.Args)-2]
+			offset_arg := links_sql.Args[len(links_sql.Args)-1]
 
 			if limit_arg != tc.WantLimitArg {
 				t.Fatalf(
@@ -840,10 +840,10 @@ func TestTopLinksPage(t *testing.T) {
 			continue
 		}
 
-		if links_sql.Args[len(links_sql.Args) - 1] != tc.WantLimitArg {
+		if links_sql.Args[len(links_sql.Args)-1] != tc.WantLimitArg {
 			t.Fatalf(
 				"got %d, want %d with page %d",
-				links_sql.Args[len(links_sql.Args) - 1],
+				links_sql.Args[len(links_sql.Args)-1],
 				tc.WantLimitArg,
 				tc.Page,
 			)
@@ -874,7 +874,7 @@ func TestTopLinksCountNSFWLinks(t *testing.T) {
 	if err := row.Scan(&nsfw_links); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// with NSFW params
 	links_sql = NewTopLinks().
 		includeNSFW().

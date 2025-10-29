@@ -12,7 +12,7 @@ import (
 
 func GetTopContributorsOptionsFromRequestParams(params url.Values) (*model.TopContributorsOptions, error) {
 	var opts = &model.TopContributorsOptions{}
-	
+
 	cat_filters_params := params.Get("cats")
 	if cat_filters_params != "" {
 		opts.CatFiltersWithSpellingVariants = query.GetCatsOptionalPluralOrSingularForms(

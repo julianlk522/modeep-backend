@@ -85,8 +85,8 @@ func TestScanGlobalCatCounts(t *testing.T) {
 
 func TestCatsResembleEachOther(t *testing.T) {
 	var test_cats = []struct {
-		CatA string
-		CatB string
+		CatA           string
+		CatB           string
 		ExpectedResult bool
 	}{
 		{"test", "tests", true},
@@ -115,7 +115,7 @@ func TestCatsResembleEachOther(t *testing.T) {
 
 func TestTidyCats(t *testing.T) {
 	var test_cats = []struct {
-		Cats string
+		Cats           string
 		ExpectedResult string
 	}{
 		{"", ""},

@@ -63,24 +63,24 @@ func GetCatsOptionalPluralOrSingularForms(cats []string) []string {
 func withOptionalPluralOrSingularForm(cat string) string {
 	lc_cat := strings.ToLower(cat)
 	if strings.HasSuffix(lc_cat, "ss") {
-		return fmt.Sprintf("(%s OR %s)", 
-			getCatSurroundedInDoubleQuotes(lc_cat), 
+		return fmt.Sprintf("(%s OR %s)",
+			getCatSurroundedInDoubleQuotes(lc_cat),
 			getCatSurroundedInDoubleQuotes(lc_cat+"es"),
 		)
 	} else if strings.HasSuffix(lc_cat, "sses") {
-		return fmt.Sprintf("(%s OR %s)", 
-			getCatSurroundedInDoubleQuotes(lc_cat), 
+		return fmt.Sprintf("(%s OR %s)",
+			getCatSurroundedInDoubleQuotes(lc_cat),
 			getCatSurroundedInDoubleQuotes(strings.TrimSuffix(lc_cat, "es")),
 		)
 	} else if strings.HasSuffix(lc_cat, "s") {
-		return fmt.Sprintf("(%s OR %s OR %s)", 
-			getCatSurroundedInDoubleQuotes(lc_cat), 
-			getCatSurroundedInDoubleQuotes(lc_cat+"es"), 
+		return fmt.Sprintf("(%s OR %s OR %s)",
+			getCatSurroundedInDoubleQuotes(lc_cat),
+			getCatSurroundedInDoubleQuotes(lc_cat+"es"),
 			getCatSurroundedInDoubleQuotes(strings.TrimSuffix(lc_cat, "s")),
 		)
 	} else {
-		return fmt.Sprintf("(%s OR %s)", 
-			getCatSurroundedInDoubleQuotes(lc_cat), 
+		return fmt.Sprintf("(%s OR %s)",
+			getCatSurroundedInDoubleQuotes(lc_cat),
 			getCatSurroundedInDoubleQuotes(lc_cat+"s"),
 		)
 	}

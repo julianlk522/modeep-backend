@@ -115,7 +115,7 @@ func (ts *TmapSubmitted) fromCatFilters(cat_filters []string) TmapLinksQueryBuil
 	ts.Text = strings.Replace(
 		ts.Text,
 		POSSIBLE_USER_CATS_CTE,
-		"\n" + TMAP_CAT_FILTERS_CTES,
+		"\n"+TMAP_CAT_FILTERS_CTES,
 		1,
 	)
 	// Add JOINs
@@ -136,7 +136,7 @@ func (ts *TmapSubmitted) fromCatFilters(cat_filters []string) TmapLinksQueryBuil
 	ts.Text = strings.Replace(
 		ts.Text,
 		SUBMITTED_AND,
-		"\n" + TMAP_CAT_FILTERS_AND + SUBMITTED_AND,
+		"\n"+TMAP_CAT_FILTERS_AND+SUBMITTED_AND,
 		1,
 	)
 
@@ -154,10 +154,10 @@ func (ts *TmapSubmitted) fromCatFilters(cat_filters []string) TmapLinksQueryBuil
 	// match_arg x 2, login_name x 2]
 	// so can insert before last 2
 	login_name := ts.Args[1]
-	up_to_last_2_args := ts.Args[:len(ts.Args) - 2]
-	last_2_args := ts.Args[len(ts.Args) - 2:]
+	up_to_last_2_args := ts.Args[:len(ts.Args)-2]
+	last_2_args := ts.Args[len(ts.Args)-2:]
 
-	new_args := make([]any, 0, len(ts.Args) + 3)
+	new_args := make([]any, 0, len(ts.Args)+3)
 	new_args = append(new_args, up_to_last_2_args...)
 	new_args = append(new_args, login_name, match_arg, match_arg)
 	new_args = append(new_args, last_2_args...)
@@ -185,14 +185,14 @@ func (ts *TmapSubmitted) fromNeuteredCatFilters(neutered_cat_filters []string) T
 	ts.Text = strings.Replace(
 		ts.Text,
 		POSSIBLE_USER_SUMMARY_CTE,
-		POSSIBLE_USER_SUMMARY_CTE + ",\n" + neutered_cat_filters_ctes,
+		POSSIBLE_USER_SUMMARY_CTE+",\n"+neutered_cat_filters_ctes,
 		1,
 	)
 	// Add AND condition
 	ts.Text = strings.Replace(
 		ts.Text,
 		SUBMITTED_AND,
-		"\n" + TMAP_NEUTERED_CAT_FILTERS_AND + SUBMITTED_AND,
+		"\n"+TMAP_NEUTERED_CAT_FILTERS_AND+SUBMITTED_AND,
 		1,
 	)
 
@@ -218,7 +218,7 @@ func (ts *TmapSubmitted) fromNeuteredCatFilters(neutered_cat_filters []string) T
 	// so can insert 2nd-to-last before login_name
 	login_name := ts.Args[1]
 
-	ts.Args = append(ts.Args[:len(ts.Args) - 1], neutered_cat_filters_args...)
+	ts.Args = append(ts.Args[:len(ts.Args)-1], neutered_cat_filters_args...)
 	ts.Args = append(ts.Args, login_name)
 
 	return ts
@@ -226,18 +226,18 @@ func (ts *TmapSubmitted) fromNeuteredCatFilters(neutered_cat_filters []string) T
 
 func (ts *TmapSubmitted) asSignedInUser(user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
-		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
+		TMAP_BASE_CTES, TMAP_BASE_CTES+TMAP_AUTH_CTE+",",
+		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS+TMAP_AUTH_FIELD,
 		// in case TMAP_BASE_FIELDS are modified by .fromCatFilters
-		TMAP_FROM_CATS_FIELDS, TMAP_FROM_CATS_FIELDS + TMAP_AUTH_FIELD,
-		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
+		TMAP_FROM_CATS_FIELDS, TMAP_FROM_CATS_FIELDS+TMAP_AUTH_FIELD,
+		TMAP_BASE_JOINS, TMAP_BASE_JOINS+TMAP_AUTH_JOIN,
 		// in case TMAP_BASE_JOINS are modified by .fromCatFilters
-		TMAP_CAT_FILTERS_JOINS, TMAP_CAT_FILTERS_JOINS + TMAP_AUTH_JOIN,
+		TMAP_CAT_FILTERS_JOINS, TMAP_CAT_FILTERS_JOINS+TMAP_AUTH_JOIN,
 	)
 	ts.Text = fields_replacer.Replace(ts.Text)
 
 	// Add args after first index
-	new_args := make([]any, 0, len(ts.Args) + 1)
+	new_args := make([]any, 0, len(ts.Args)+1)
 
 	first_arg := ts.Args[0]
 	trailing_args := ts.Args[1:]
@@ -329,7 +329,7 @@ func (ts *TmapSubmitted) duringPeriod(period model.Period) TmapLinksQueryBuilder
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"\nAND " + period_clause + order_by_clause,
+			"\nAND "+period_clause+order_by_clause,
 			1,
 		)
 	}
@@ -342,12 +342,12 @@ func (ts *TmapSubmitted) whereSummaryContains(snippet string) TmapLinksQueryBuil
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"\nAND summary LIKE ?" + order_by_clause,
+			"\nAND summary LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	ts.Args = append(ts.Args, "%" + snippet + "%")
+	ts.Args = append(ts.Args, "%"+snippet+"%")
 	return ts
 }
 
@@ -356,12 +356,12 @@ func (ts *TmapSubmitted) whereURLContains(snippet string) TmapLinksQueryBuilder 
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"\nAND " + "url LIKE ?" + order_by_clause,
+			"\nAND "+"url LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	ts.Args = append(ts.Args, "%" + snippet + "%")
+	ts.Args = append(ts.Args, "%"+snippet+"%")
 	return ts
 }
 
@@ -370,12 +370,12 @@ func (ts *TmapSubmitted) whereURLLacks(snippet string) TmapLinksQueryBuilder {
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"AND url NOT LIKE ?" + order_by_clause,
+			"AND url NOT LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	ts.Args = append(ts.Args, "%" + snippet + "%")
+	ts.Args = append(ts.Args, "%"+snippet+"%")
 	return ts
 }
 
@@ -455,7 +455,7 @@ func (ts *TmapStarred) fromCatFilters(cat_filters []string) TmapLinksQueryBuilde
 	ts.Text = strings.Replace(
 		ts.Text,
 		POSSIBLE_USER_CATS_CTE,
-		"\n" + TMAP_CAT_FILTERS_CTES,
+		"\n"+TMAP_CAT_FILTERS_CTES,
 		1,
 	)
 	// Add JOINs
@@ -476,7 +476,7 @@ func (ts *TmapStarred) fromCatFilters(cat_filters []string) TmapLinksQueryBuilde
 	ts.Text = strings.Replace(
 		ts.Text,
 		TMAP_NO_NSFW_CATS_WHERE,
-		TMAP_NO_NSFW_CATS_WHERE + "\n" + TMAP_CAT_FILTERS_AND,
+		TMAP_NO_NSFW_CATS_WHERE+"\n"+TMAP_CAT_FILTERS_AND,
 		1,
 	)
 
@@ -492,9 +492,9 @@ func (ts *TmapStarred) fromCatFilters(cat_filters []string) TmapLinksQueryBuilde
 	// match_arg x 2, login_name x 2]
 	// so insert before last 2
 	login_name := ts.Args[1]
-	last_2_args := ts.Args[len(ts.Args) - 2:]
+	last_2_args := ts.Args[len(ts.Args)-2:]
 
-	new_args := append([]any{}, ts.Args[:len(ts.Args) - 2]...)
+	new_args := append([]any{}, ts.Args[:len(ts.Args)-2]...)
 	new_args = append(new_args, login_name, match_arg, match_arg)
 	new_args = append(new_args, last_2_args...)
 	ts.Args = new_args
@@ -525,14 +525,14 @@ func (ts *TmapStarred) fromNeuteredCatFilters(neutered_cat_filters []string) Tma
 	ts.Text = strings.Replace(
 		ts.Text,
 		POSSIBLE_USER_SUMMARY_CTE,
-		POSSIBLE_USER_SUMMARY_CTE + ",\n" + neutered_cat_filters_ctes,
+		POSSIBLE_USER_SUMMARY_CTE+",\n"+neutered_cat_filters_ctes,
 		1,
 	)
 	// Add AND condition
 	ts.Text = strings.Replace(
 		ts.Text,
 		STARRED_AND,
-		"\n" + TMAP_NEUTERED_CAT_FILTERS_AND + STARRED_AND,
+		"\n"+TMAP_NEUTERED_CAT_FILTERS_AND+STARRED_AND,
 		1,
 	)
 
@@ -545,7 +545,7 @@ func (ts *TmapStarred) fromNeuteredCatFilters(neutered_cat_filters []string) Tma
 	}
 
 	// old: [EARLIEST_STARRERS_LIMIT, login_name x 5]
-	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4, 
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4,
 	// neutered_cat_filters..., login_name]
 
 	// OR if .fromCatFilters called first:
@@ -558,7 +558,7 @@ func (ts *TmapStarred) fromNeuteredCatFilters(neutered_cat_filters []string) Tma
 	// so can insert 2nd-to-last before login_name
 	login_name := ts.Args[1]
 
-	ts.Args = append(ts.Args[:len(ts.Args) - 1], neutered_cat_filters_args...)
+	ts.Args = append(ts.Args[:len(ts.Args)-1], neutered_cat_filters_args...)
 	ts.Args = append(ts.Args, login_name)
 
 	return ts
@@ -566,13 +566,13 @@ func (ts *TmapStarred) fromNeuteredCatFilters(neutered_cat_filters []string) Tma
 
 func (ts *TmapStarred) asSignedInUser(req_user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
-		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS + TMAP_AUTH_FIELD,
+		TMAP_BASE_CTES, TMAP_BASE_CTES+TMAP_AUTH_CTE+",",
+		TMAP_BASE_FIELDS, TMAP_BASE_FIELDS+TMAP_AUTH_FIELD,
 		// in case TMAP_BASE_FIELDS are modified by .fromCatFilters
-		TMAP_FROM_CATS_FIELDS, TMAP_FROM_CATS_FIELDS + TMAP_AUTH_FIELD,
-		TMAP_BASE_JOINS, TMAP_BASE_JOINS + TMAP_AUTH_JOIN,
+		TMAP_FROM_CATS_FIELDS, TMAP_FROM_CATS_FIELDS+TMAP_AUTH_FIELD,
+		TMAP_BASE_JOINS, TMAP_BASE_JOINS+TMAP_AUTH_JOIN,
 		// in case TMAP_BASE_JOINS are modified by .fromCatFilters
-		TMAP_CAT_FILTERS_JOINS, TMAP_CAT_FILTERS_JOINS + TMAP_AUTH_JOIN,
+		TMAP_CAT_FILTERS_JOINS, TMAP_CAT_FILTERS_JOINS+TMAP_AUTH_JOIN,
 	)
 
 	ts.Text = fields_replacer.Replace(ts.Text)
@@ -586,7 +586,7 @@ func (ts *TmapStarred) asSignedInUser(req_user_id string) TmapLinksQueryBuilder 
 	first_arg := ts.Args[0]
 	trailing_args := ts.Args[1:]
 
-	new_args := make([]any, 0, len(ts.Args) + 1)
+	new_args := make([]any, 0, len(ts.Args)+1)
 	new_args = append(new_args, first_arg, req_user_id)
 	new_args = append(new_args, trailing_args...)
 
@@ -673,7 +673,7 @@ func (ts *TmapStarred) duringPeriod(period model.Period) TmapLinksQueryBuilder {
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"\nAND " + period_clause + order_by_clause,
+			"\nAND "+period_clause+order_by_clause,
 			1,
 		)
 	}
@@ -686,12 +686,12 @@ func (ts *TmapStarred) whereSummaryContains(snippet string) TmapLinksQueryBuilde
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"\nAND summary LIKE ?" + order_by_clause,
+			"\nAND summary LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	ts.Args = append(ts.Args, "%" + snippet + "%")
+	ts.Args = append(ts.Args, "%"+snippet+"%")
 	return ts
 }
 
@@ -700,12 +700,12 @@ func (ts *TmapStarred) whereURLContains(snippet string) TmapLinksQueryBuilder {
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"\nAND " + "url LIKE ?" + order_by_clause,
+			"\nAND "+"url LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	ts.Args = append(ts.Args, "%" + snippet + "%")
+	ts.Args = append(ts.Args, "%"+snippet+"%")
 	return ts
 }
 
@@ -714,12 +714,12 @@ func (ts *TmapStarred) whereURLLacks(snippet string) TmapLinksQueryBuilder {
 		ts.Text = strings.Replace(
 			ts.Text,
 			order_by_clause,
-			"AND url NOT LIKE ?" + order_by_clause,
+			"AND url NOT LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	ts.Args = append(ts.Args, "%" + snippet + "%")
+	ts.Args = append(ts.Args, "%"+snippet+"%")
 	return ts
 }
 
@@ -842,7 +842,7 @@ func (tt *TmapTagged) fromCatFilters(cat_filters []string) TmapLinksQueryBuilder
 	tt.Text = strings.Replace(
 		tt.Text,
 		TMAP_ORDER_BY_TIMES_STARRED,
-		match_clause + TMAP_ORDER_BY_TIMES_STARRED,
+		match_clause+TMAP_ORDER_BY_TIMES_STARRED,
 		1,
 	)
 
@@ -880,17 +880,17 @@ func (tt *TmapTagged) fromNeuteredCatFilters(neutered_cat_filters []string) Tmap
 	tt.Text = strings.Replace(
 		tt.Text,
 		TAGGED_FIELDS,
-		",\n" + neutered_cat_filters_ctes + TAGGED_FIELDS,
+		",\n"+neutered_cat_filters_ctes+TAGGED_FIELDS,
 		1,
 	)
-	
+
 	// Add AND condition
 	// .sortBy hasn't been called yet - can safely assume
 	// it will have this one
 	tt.Text = strings.Replace(
 		tt.Text,
 		TMAP_ORDER_BY_TIMES_STARRED,
-		"\n" + TMAP_NEUTERED_CAT_FILTERS_AND + TMAP_ORDER_BY_TIMES_STARRED,
+		"\n"+TMAP_NEUTERED_CAT_FILTERS_AND+TMAP_ORDER_BY_TIMES_STARRED,
 		1,
 	)
 	// this works a bit better than replacing TAGGED_AND since it arranges the
@@ -905,20 +905,20 @@ func (tt *TmapTagged) fromNeuteredCatFilters(neutered_cat_filters []string) Tmap
 	}
 
 	// old: [EARLIEST_STARRERS_LIMIT, login_name x 5]
-	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4, 
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4,
 	// neutered_cat_filters..., login_name]
 
 	// OR if .fromCatFilters called first:
 
 	// old: [EARLIEST_STARRERS_LIMIT, login_name x 4, match_arg, login_name]
-	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4, match_arg, 
+	// new: [EARLIEST_STARRERS_LIMIT, login_name x 4, match_arg,
 	// neutered_cat_filters..., login_name]
 
 	// so can insert in 2nd-to-last position before login_name
-	login_name := tt.Args[len(tt.Args) - 1]
-	tt.Args = append(tt.Args[:len(tt.Args) - 1], neutered_cat_filters_args...)
+	login_name := tt.Args[len(tt.Args)-1]
+	tt.Args = append(tt.Args[:len(tt.Args)-1], neutered_cat_filters_args...)
 	tt.Args = append(tt.Args, login_name)
-	
+
 	return tt
 }
 
@@ -940,9 +940,9 @@ ExcludedLinksDueToNeutering AS (
 
 func (tt *TmapTagged) asSignedInUser(req_user_id string) TmapLinksQueryBuilder {
 	fields_replacer := strings.NewReplacer(
-		TMAP_BASE_CTES, TMAP_BASE_CTES + TMAP_AUTH_CTE + ",",
-		TAGGED_FIELDS, TAGGED_FIELDS + TMAP_AUTH_FIELD,
-		TAGGED_JOINS, TAGGED_JOINS + TMAP_AUTH_JOIN,
+		TMAP_BASE_CTES, TMAP_BASE_CTES+TMAP_AUTH_CTE+",",
+		TAGGED_FIELDS, TAGGED_FIELDS+TMAP_AUTH_FIELD,
+		TAGGED_JOINS, TAGGED_JOINS+TMAP_AUTH_JOIN,
 	)
 	tt.Text = fields_replacer.Replace(tt.Text)
 
@@ -1043,7 +1043,7 @@ func (tt *TmapTagged) duringPeriod(period model.Period) TmapLinksQueryBuilder {
 		tt.Text = strings.Replace(
 			tt.Text,
 			order_by_clause,
-			"\nAND " + period_clause + order_by_clause,
+			"\nAND "+period_clause+order_by_clause,
 			1,
 		)
 	}
@@ -1056,12 +1056,12 @@ func (tt *TmapTagged) whereSummaryContains(snippet string) TmapLinksQueryBuilder
 		tt.Text = strings.Replace(
 			tt.Text,
 			order_by_clause,
-			"\nAND summary LIKE ?" + order_by_clause,
+			"\nAND summary LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	tt.Args = append(tt.Args, "%" + snippet + "%")
+	tt.Args = append(tt.Args, "%"+snippet+"%")
 	return tt
 }
 
@@ -1070,12 +1070,12 @@ func (tt *TmapTagged) whereURLContains(snippet string) TmapLinksQueryBuilder {
 		tt.Text = strings.Replace(
 			tt.Text,
 			order_by_clause,
-			"\nAND " + "url LIKE ?" + order_by_clause,
+			"\nAND "+"url LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	tt.Args = append(tt.Args, "%" + snippet + "%")
+	tt.Args = append(tt.Args, "%"+snippet+"%")
 	return tt
 }
 
@@ -1084,12 +1084,12 @@ func (tt *TmapTagged) whereURLLacks(snippet string) TmapLinksQueryBuilder {
 		tt.Text = strings.Replace(
 			tt.Text,
 			order_by_clause,
-			"AND url NOT LIKE ?" + order_by_clause,
+			"AND url NOT LIKE ?"+order_by_clause,
 			1,
 		)
 	}
 
-	tt.Args = append(tt.Args, "%" + snippet + "%")
+	tt.Args = append(tt.Args, "%"+snippet+"%")
 	return tt
 }
 
@@ -1181,7 +1181,6 @@ LEFT JOIN EarliestStarrers es ON l.id = es.link_id
 LEFT JOIN ClickCount clc ON l.id = clc.link_id
 LEFT JOIN TagCount tc ON l.id = tc.link_id
 LEFT JOIN SummaryCount sc ON l.id = sc.link_id`
-
 
 var tmap_order_by_clauses = map[model.SortBy]string{
 	model.SortByTimesStarred: TMAP_ORDER_BY_TIMES_STARRED,
@@ -1413,7 +1412,7 @@ func (tnlc *TmapNSFWLinksCount) fromCatFilters(cat_filters []string) *TmapNSFWLi
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		NSFW_LINKS_COUNT_WHERE,
-		NSFW_LINKS_COUNT_WHERE + "\n" + TMAP_CAT_FILTERS_AND,
+		NSFW_LINKS_COUNT_WHERE+"\n"+TMAP_CAT_FILTERS_AND,
 		1,
 	)
 
@@ -1426,7 +1425,7 @@ func (tnlc *TmapNSFWLinksCount) fromCatFilters(cat_filters []string) *TmapNSFWLi
 	}
 
 	// Add args: login_name, match arg x2
-	new_args := make([]any, 0, len(tnlc.Args) + 3)
+	new_args := make([]any, 0, len(tnlc.Args)+3)
 	// since other methods push new args to end of slice,
 	// better to insert these from the start (always after the first 2,
 	// which are login_name x2)
@@ -1463,7 +1462,7 @@ func (tnlc *TmapNSFWLinksCount) duringPeriod(period model.Period) *TmapNSFWLinks
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		";",
-		"\nAND " + period_clause + ";",
+		"\nAND "+period_clause+";",
 		1,
 	)
 
@@ -1476,13 +1475,13 @@ func (tnlc *TmapNSFWLinksCount) whereSummaryContains(snippet string) *TmapNSFWLi
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER,
-		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER + ",\n" + POSSIBLE_USER_SUMMARY_CTE,
+		POSSIBLE_USER_CATS_CTE_NO_CATS_FROM_USER+",\n"+POSSIBLE_USER_SUMMARY_CTE,
 		1,
 	)
 	tnlc.Text = strings.Replace(
 		tnlc.Text,
 		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id",
-		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id" + "\n" + "LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id",
+		"LEFT JOIN PossibleUserCatsAny puca ON l.id = puca.link_id"+"\n"+"LEFT JOIN PossibleUserSummary pus ON l.id = pus.link_id",
 		1,
 	)
 	tnlc.Text = strings.Replace(
@@ -1497,7 +1496,7 @@ func (tnlc *TmapNSFWLinksCount) whereSummaryContains(snippet string) *TmapNSFWLi
 	login_name := tnlc.Args[0]
 	tnlc.Args = append([]any{login_name}, tnlc.Args...)
 	// Append summary snippet arg
-	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
+	tnlc.Args = append(tnlc.Args, "%"+snippet+"%")
 
 	return tnlc
 }
@@ -1509,7 +1508,7 @@ func (tnlc *TmapNSFWLinksCount) whereURLContains(snippet string) *TmapNSFWLinksC
 		"\nAND url LIKE ?;",
 		1,
 	)
-	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
+	tnlc.Args = append(tnlc.Args, "%"+snippet+"%")
 	return tnlc
 }
 
@@ -1520,7 +1519,7 @@ func (tnlc *TmapNSFWLinksCount) whereURLLacks(snippet string) *TmapNSFWLinksCoun
 		"\nAND url NOT LIKE ?;",
 		1,
 	)
-	tnlc.Args = append(tnlc.Args, "%" + snippet + "%")
+	tnlc.Args = append(tnlc.Args, "%"+snippet+"%")
 	return tnlc
 }
 

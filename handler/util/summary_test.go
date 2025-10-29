@@ -235,7 +235,7 @@ func TestIsAutoSummaryForLinkSubmittedByUser(t *testing.T) {
 		t.Fatalf("failed with error: %s", err)
 	}
 	defer rows.Close()
-	
+
 	var test_user_link_ids []string
 	for rows.Next() {
 		var test_user_link_id string
