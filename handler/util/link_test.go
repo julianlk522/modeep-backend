@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"testing"
 
 	"github.com/julianlk522/modeep/db"
@@ -583,6 +584,29 @@ func TestDecrementSpellfixRanksForCats(t *testing.T) {
 					"expected rank for", cat, "to be", tc.CurrentRanks[i]-1, "got", rank,
 				)
 			}
+		}
+	}
+}
+
+func TestGetDeduplicatedCats(t *testing.T) {
+	var test_cats = []struct {
+		Cats []string
+		ExpectedDedupedCats []string
+	}{
+		{
+			[]string{"test", "Test", "TEST"},
+			[]string{"test"},
+		},
+		{
+			[]string{"Person Name", "person name"},
+			[]string{"Person Name"}, // should preserve casing of first spelling
+		},
+	}
+
+	for _, tc := range test_cats {
+		cats := getDeduplicatedCats(tc.Cats)
+		if !reflect.DeepEqual(cats, tc.ExpectedDedupedCats) {
+			t.Fatalf("expected %v, got %v", tc.ExpectedDedupedCats, cats)
 		}
 	}
 }

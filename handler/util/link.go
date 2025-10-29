@@ -595,15 +595,18 @@ func DecrementSpellfixRanksForCats(tx *sql.Tx, cats []string) error {
 
 // "ham,Ham,cheese,cHeEsE" -> "ham,cheese"
 func getDeduplicatedCats(cats []string) []string {
-	cats_set := make(map[string]bool)
+	seen := make(map[string]string)
+	deduped_cats := make([]string, 0, len(cats))
+	
 	for _, cat := range cats {
-		cats_set[strings.ToLower(cat)] = true
+		lower := strings.ToLower(cat)
+		if _, exists := seen[lower]; !exists {
+			seen[lower] = cat
+			deduped_cats = append(deduped_cats, cat)
+		}
 	}
-	cats = make([]string, 0, len(cats_set))
-	for cat := range cats_set {
-		cats = append(cats, cat)
-	}
-	return cats
+	
+	return deduped_cats
 }
 
 // Star link
