@@ -84,7 +84,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req_login_name := r.Context().Value(m.JWTClaimsKey).(map[string]any)["login_name"].(string)
-
 	if user_submitted_max_daily_links, err := util.UserHasSubmittedMaxDailyLinks(req_login_name); err != nil {
 		render.Render(w, r, e.ErrInternalServerError(err))
 		return
@@ -93,31 +92,54 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Test URL response
-	var resp *http.Response
-	resp, err := util.GetResolvedURLResponse(request.URL)
-	if err != nil {
-		render.Render(w, r, e.ErrUnprocessable(err))
-		return
+	var new_link = &model.NewLink{
+		SubmittedBy:    req_login_name,
+		NewLinkRequest: &model.NewLinkRequest{},
 	}
-	defer resp.Body.Close()
-
-	// Save adjusted URL (after any redirects e.g., to wwww.)
-	// unless modified due to 302/401/403/429 etc. redirect
-	url_after_redirects := resp.Request.URL.String()
 	var final_url string
 
-	is_unauthorized := resp.StatusCode == http.StatusUnauthorized
-	is_forbidden := resp.StatusCode == http.StatusForbidden
-	is_too_many_requests := resp.StatusCode == http.StatusTooManyRequests
-	is_302_redirect := resp.StatusCode == http.StatusFound
-	is_google_sorry_page := strings.Contains(url_after_redirects, "google.com/sorry")
-
-	// Trim extra characters
-	if is_unauthorized || is_forbidden || is_too_many_requests || is_302_redirect || is_google_sorry_page {
-		final_url = strings.TrimSuffix(request.URL, "/")
+	// Check for YT video:
+	// In that case test request needs to use API key
+	if util.IsYTVideo(request.URL) {
+		if yt_md, err := util.GetYTVideoMetadata(request.URL); err == nil {
+			final_url = "https://www.youtube.com/watch?v=" + yt_md.ID
+			new_link.AutoSummary = yt_md.Items[0].Snippet.Title
+			new_link.PreviewImgURL = yt_md.Items[0].Snippet.Thumbnails.Default.URL
+		}
 	} else {
-		final_url = strings.TrimSuffix(url_after_redirects, "/")
+		// Test URL response
+		var resp *http.Response
+		resp, err := util.GetResolvedURLResponse(request.URL)
+		if err != nil {
+			render.Render(w, r, e.ErrUnprocessable(err))
+			return
+		}
+		defer resp.Body.Close()
+		// Save adjusted URL (after any redirects e.g., to wwww.)...
+		url_after_redirects := resp.Request.URL.String()
+
+		// ...unless modified due to 302/401/403/429 etc. redirect
+		is_unauthorized := resp.StatusCode == http.StatusUnauthorized
+		is_forbidden := resp.StatusCode == http.StatusForbidden
+		is_too_many_requests := resp.StatusCode == http.StatusTooManyRequests
+		is_302_redirect := resp.StatusCode == http.StatusFound
+		is_google_sorry_page := strings.Contains(url_after_redirects, "google.com/sorry")
+
+		if is_unauthorized || is_forbidden || is_too_many_requests || is_302_redirect || is_google_sorry_page {
+			final_url = strings.TrimSuffix(request.URL, "/")
+		} else {
+			final_url = strings.TrimSuffix(url_after_redirects, "/")
+		}
+
+		// Get metadata for non-YT links
+		if x_md := util.GetLinkExtraMetadataFromResponse(resp); x_md != nil {
+			if x_md.AutoSummary != "" {
+				new_link.AutoSummary = x_md.AutoSummary
+			}
+			if x_md.PreviewImgURL != "" {
+				new_link.PreviewImgURL = x_md.PreviewImgURL
+			}
+		}
 	}
 
 	if is_duplicate, link_id := util.LinkAlreadyAdded(final_url); is_duplicate {
@@ -126,33 +148,6 @@ func AddLink(w http.ResponseWriter, r *http.Request) {
 			e.ErrDuplicateLink(final_url, link_id),
 		))
 		return
-	}
-
-	var new_link = &model.NewLink{
-		SubmittedBy:    req_login_name,
-		NewLinkRequest: &model.NewLinkRequest{},
-	}
-	var x_md *model.LinkExtraMetadata
-
-	has_yt_video_metadata := false
-	if util.IsYTVideo(final_url) {
-		if yt_md, err := util.GetYTVideoMetadata(final_url); err == nil {
-			new_link.URL = "https://www.youtube.com/watch?v=" + yt_md.ID
-			new_link.AutoSummary = yt_md.Items[0].Snippet.Title
-			new_link.PreviewImgURL = yt_md.Items[0].Snippet.Thumbnails.Default.URL
-
-			has_yt_video_metadata = true
-		}
-	}
-	if !has_yt_video_metadata {
-		if x_md = util.GetLinkExtraMetadataFromResponse(resp); x_md != nil {
-			if x_md.AutoSummary != "" {
-				new_link.AutoSummary = x_md.AutoSummary
-			}
-			if x_md.PreviewImgURL != "" {
-				new_link.PreviewImgURL = x_md.PreviewImgURL
-			}
-		}
 	}
 
 	// Verified: add link
