@@ -27,9 +27,9 @@ func main() {
 	r := chi.NewRouter()
 	defer func() {
 		if err := http.ListenAndServeTLS(
-		API_URL,
-			"/etc/letsencrypt/live/api.modeep.org/fullchain.pem",
-			"/etc/letsencrypt/live/api.modeep.org/privkey.pem",
+			API_URL,
+			"/etc/letsencrypt/live/modeep.org/fullchain.pem",
+			"/etc/letsencrypt/live/modeep.org/privkey.pem",
 			r,
 		); err != nil {
 			log.Fatal(err)
