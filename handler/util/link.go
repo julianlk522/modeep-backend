@@ -394,7 +394,6 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 	} else {
 		urls_to_try = []string{"https://" + url, "http://" + url}
 	}
-	
 	for _, full_url := range urls_to_try {
 		req, err := http.NewRequest("GET", full_url, nil)
 		if err != nil {
@@ -434,7 +433,10 @@ func GetResolvedURLResponse(url string) (*http.Response, error) {
 			continue
 		}
 
-		if resp.StatusCode >= http.StatusBadRequest {
+		if resp.StatusCode == http.StatusBadRequest {
+			// Other 400+ status codes are OK - e.g., 403 maybe means the site is real and they just don't like the
+			// Modeep-Bot user agent. Or a 500 could mean down temporarily. Can give the benefit of the doubt in those
+			// cases.
 			continue
 		} else if isRedirect(resp.StatusCode) {
 			return nil, e.ErrRedirect
